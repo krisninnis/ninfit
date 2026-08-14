@@ -1,0 +1,137 @@
+@layer tokens {
+  /**
+   * Semantic tokens: what a component actually asks for.
+   *
+   * Components reference only these. Nothing below is a raw colour - every value
+   * points at the palette - which is what lets a theme or a path accent change
+   * everything from one place.
+   *
+   * THREE-WAY THEMING, ready for a future setting:
+   *   :root                                default, light
+   *   @media (prefers-color-scheme: dark)  follows the system when unset
+   *   [data-theme='light' | 'dark']        an explicit choice wins over both
+   *
+   * The attribute hook is unused today. When Settings offers System / Light / Dark
+   * it sets `data-theme` on the root element and nothing else has to change.
+   */
+
+  :root {
+    color-scheme: light dark;
+
+    /* Surfaces */
+    --ft-surface-page: var(--palette-warm-98);
+    --ft-surface-raised: var(--palette-warm-100);
+    --ft-surface-sunken: var(--palette-warm-95);
+    /* New in Phase 1, unused until dialogs arrive. */
+    --ft-surface-overlay: var(--palette-warm-100);
+
+    /* Lines */
+    --ft-border-subtle: var(--palette-warm-90);
+    --ft-border-strong: var(--palette-warm-83);
+    /* Separate from the card edge, so list rules can be lightened independently. */
+    --ft-divider: var(--palette-warm-90);
+
+    /* Text. Three genuinely distinct steps, all at or above AA on every surface. */
+    --ft-text-primary: var(--palette-warm-25);
+    --ft-text-secondary: var(--palette-warm-45);
+    --ft-text-tertiary: var(--palette-warm-53);
+    --ft-text-disabled: var(--palette-warm-83);
+
+    /* Accent. Phase 4 will override these per path via [data-path]. */
+    --ft-accent: var(--palette-sage-48);
+    --ft-accent-strong: var(--palette-sage-40);
+    --ft-accent-soft: var(--palette-sage-94);
+    --ft-text-on-accent: var(--palette-warm-100);
+    --ft-accent-ring: var(--palette-sage-40);
+
+    /* Attention: recorded symptom changes only. */
+    --ft-attention: var(--palette-amber-52);
+    --ft-attention-soft: var(--palette-amber-96);
+
+    /* Depth. Dark mode replaces these with surface stepping - see below. */
+    --ft-shadow-none: none;
+    --ft-shadow-card: 0 1px 2px rgb(43 43 40 / 5%), 0 1px 8px rgb(43 43 40 / 4%);
+    --ft-shadow-raised: 0 1px 2px rgb(43 43 40 / 6%), 0 4px 14px rgb(43 43 40 / 7%);
+    --ft-shadow-reward: 0 2px 4px rgb(43 43 40 / 8%), 0 10px 28px rgb(43 43 40 / 10%);
+    --ft-shadow-overlay: 0 8px 40px rgb(43 43 40 / 16%);
+    --ft-shadow-bar: 0 -1px 0 var(--ft-border-subtle), 0 -8px 24px rgb(43 43 40 / 4%);
+  }
+
+  /* Dark values, applied either by system preference or by explicit choice. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --ft-surface-page: var(--palette-ink-16);
+      --ft-surface-raised: var(--palette-ink-22);
+      --ft-surface-sunken: var(--palette-ink-26);
+      --ft-surface-overlay: var(--palette-ink-26);
+
+      --ft-border-subtle: var(--palette-ink-32);
+      --ft-border-strong: var(--palette-ink-40);
+      --ft-divider: var(--palette-ink-32);
+
+      --ft-text-primary: var(--palette-ink-92);
+      --ft-text-secondary: var(--palette-ink-70);
+      --ft-text-tertiary: var(--palette-ink-64);
+      --ft-text-disabled: var(--palette-ink-40);
+
+      --ft-accent: var(--palette-sage-74);
+      --ft-accent-strong: var(--palette-sage-81);
+      --ft-accent-soft: var(--palette-sage-27);
+      --ft-text-on-accent: var(--palette-sage-19);
+      --ft-accent-ring: var(--palette-sage-81);
+
+      --ft-attention: var(--palette-amber-76);
+      --ft-attention-soft: var(--palette-amber-25);
+
+      /*
+       * Shadow is nearly invisible on a dark surface and only muddies it, so depth
+       * in dark mode comes from surface lightness stepping instead.
+       */
+      --ft-shadow-card: none;
+      --ft-shadow-raised: none;
+      --ft-shadow-reward: none;
+      --ft-shadow-overlay: 0 8px 40px rgb(0 0 0 / 45%);
+      --ft-shadow-bar: 0 -1px 0 var(--ft-border-subtle);
+    }
+  }
+
+  /* An explicit dark choice, regardless of what the system prefers. */
+  :root[data-theme='dark'] {
+    --ft-surface-page: var(--palette-ink-16);
+    --ft-surface-raised: var(--palette-ink-22);
+    --ft-surface-sunken: var(--palette-ink-26);
+    --ft-surface-overlay: var(--palette-ink-26);
+
+    --ft-border-subtle: var(--palette-ink-32);
+    --ft-border-strong: var(--palette-ink-40);
+    --ft-divider: var(--palette-ink-32);
+
+    --ft-text-primary: var(--palette-ink-92);
+    --ft-text-secondary: var(--palette-ink-70);
+    --ft-text-tertiary: var(--palette-ink-64);
+    --ft-text-disabled: var(--palette-ink-40);
+
+    --ft-accent: var(--palette-sage-74);
+    --ft-accent-strong: var(--palette-sage-81);
+    --ft-accent-soft: var(--palette-sage-27);
+    --ft-text-on-accent: var(--palette-sage-19);
+    --ft-accent-ring: var(--palette-sage-81);
+
+    --ft-attention: var(--palette-amber-76);
+    --ft-attention-soft: var(--palette-amber-25);
+
+    --ft-shadow-card: none;
+    --ft-shadow-raised: none;
+    --ft-shadow-reward: none;
+    --ft-shadow-overlay: 0 8px 40px rgb(0 0 0 / 45%);
+    --ft-shadow-bar: 0 -1px 0 var(--ft-border-subtle);
+  }
+
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+  }
+
+  :root[data-theme='light'] {
+    color-scheme: light;
+  }
+}

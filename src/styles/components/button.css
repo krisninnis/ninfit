@@ -1,0 +1,132 @@
+/**
+ * Buttons.
+ *
+ * Four roles, so a screen can show what matters without every control shouting:
+ *
+ *   .btn--primary     the one thing this card is for
+ *   .btn--secondary   a real alternative, including Cancel
+ *   .btn--quiet       a link-like aside
+ *   .btn--attention   confirming something consequential
+ *
+ * `.btn--attention` is amber, NOT red. There is no red in this palette and there is
+ * not going to be one - a destructive-ish confirmation is carried by the wording and
+ * by which button sits where, not by an alarm colour.
+ *
+ * Heights come from the three control tokens only. No new fixed heights.
+ */
+
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ft-space-2);
+    min-height: var(--ft-control-md);
+    padding: 0 var(--ft-space-4);
+    border: 1px solid transparent;
+    border-radius: var(--ft-radius-md);
+    font-size: var(--ft-text-sm);
+    font-weight: var(--ft-weight-semibold);
+    text-align: center;
+    text-decoration: none;
+    /* Colour and shadow only: nothing here may move the layout on press. */
+    transition:
+      background var(--ft-motion-instant) var(--ft-ease-out),
+      border-color var(--ft-motion-instant) var(--ft-ease-out),
+      box-shadow var(--ft-motion-instant) var(--ft-ease-out);
+  }
+
+  .btn--block {
+    display: flex;
+    width: 100%;
+  }
+
+  /* --- Primary ------------------------------------------------------------ */
+
+  .btn--primary {
+    min-height: var(--ft-control-lg);
+    background: var(--ft-accent);
+    border-color: var(--ft-accent);
+    color: var(--ft-text-on-accent);
+    font-size: var(--ft-text-base);
+    box-shadow: var(--ft-shadow-card);
+  }
+
+  .btn--primary:active {
+    background: var(--ft-accent-strong);
+    border-color: var(--ft-accent-strong);
+    box-shadow: var(--ft-shadow-none);
+  }
+
+  @media (hover: hover) {
+    .btn--primary:hover {
+      background: var(--ft-accent-strong);
+      border-color: var(--ft-accent-strong);
+    }
+  }
+
+  .btn--primary:disabled {
+    background: var(--ft-surface-sunken);
+    border-color: var(--ft-border-subtle);
+    color: var(--ft-text-disabled);
+    box-shadow: var(--ft-shadow-none);
+  }
+
+  /* Focus needs to survive on top of the accent fill. */
+  .btn--primary:focus-visible {
+    outline-color: var(--ft-accent-ring);
+    outline-offset: 3px;
+  }
+
+  /* --- Secondary ---------------------------------------------------------- */
+
+  .btn--secondary {
+    background: var(--ft-surface-raised);
+    border-color: var(--ft-border-strong);
+    color: var(--ft-text-primary);
+  }
+
+  .btn--secondary:active {
+    background: var(--ft-surface-sunken);
+  }
+
+  @media (hover: hover) {
+    .btn--secondary:hover {
+      background: var(--ft-surface-sunken);
+    }
+  }
+
+  /* --- Quiet -------------------------------------------------------------- */
+
+  .btn--quiet {
+    min-height: var(--ft-control-sm);
+    padding: 0 var(--ft-space-2);
+    background: none;
+    color: var(--ft-text-secondary);
+    font-weight: var(--ft-weight-medium);
+    text-decoration: underline;
+  }
+
+  @media (hover: hover) {
+    .btn--quiet:hover {
+      color: var(--ft-text-primary);
+    }
+  }
+
+  /* --- Attention ---------------------------------------------------------- */
+
+  .btn--attention {
+    background: var(--ft-attention);
+    border-color: var(--ft-attention);
+    color: var(--ft-surface-raised);
+  }
+
+  .btn--attention:active {
+    box-shadow: var(--ft-shadow-none);
+  }
+
+  .btn--attention:focus-visible {
+    outline-color: var(--ft-attention);
+    outline-offset: 3px;
+  }
+}

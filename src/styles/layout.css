@@ -1,0 +1,123 @@
+/**
+ * The app shell and the frame every screen sits in.
+ *
+ * Safe-area handling lives here and nowhere else.
+ */
+
+@layer layout {
+/* ---------- App shell ---------- */
+
+/*
+ * One gutter token, stepped at two breakpoints. Every screen inherits it, so
+ * horizontal rhythm is decided in one place rather than per screen.
+ *
+ * Mobile stays primary: the phone value is the default and the larger sizes are
+ * additive, not the other way round.
+ */
+:root {
+  --ft-gutter: var(--ft-space-4);
+}
+
+@media (min-width: 600px) {
+  :root {
+    --ft-gutter: var(--ft-space-5);
+  }
+}
+
+@media (min-width: 900px) {
+  :root {
+    --ft-gutter: var(--ft-space-6);
+  }
+}
+
+.app {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  height: 100%;
+  min-height: 100dvh;
+  max-width: var(--ft-content-max);
+  margin-inline: auto;
+}
+
+.app__main {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-block: var(--ft-space-5) var(--ft-space-6);
+  padding-top: max(var(--ft-space-5), env(safe-area-inset-top));
+  /*
+   * Landscape on a notched phone puts the cutout down one side, so the gutter has
+   * to be at least the inset. `max()` keeps the normal gutter everywhere else.
+   */
+  padding-left: max(var(--ft-gutter), env(safe-area-inset-left));
+  padding-right: max(var(--ft-gutter), env(safe-area-inset-right));
+}
+
+/* --- Tablet -------------------------------------------------------------- */
+
+@media (min-width: 600px) {
+  .app__main {
+    padding-block: var(--ft-space-6) var(--ft-space-7);
+  }
+}
+
+/* --- Desktop -------------------------------------------------------------- */
+
+/*
+ * The column widens to the approved 720px and is framed deliberately: the page
+ * behind it steps a shade darker and the app sits on its own surface with a hairline
+ * edge. Without that it reads as a phone layout stranded in the middle of a monitor.
+ *
+ * It does not stretch further. A fitness journal read at arm's length gets worse
+ * past roughly 75 characters, not better.
+ */
+@media (min-width: 900px) {
+  body {
+    background: color-mix(in oklab, var(--ft-surface-page) 82%, var(--ft-border-strong));
+  }
+
+  .app {
+    max-width: var(--ft-content-max-wide);
+    background: var(--ft-surface-page);
+    border-inline: 1px solid var(--ft-border-subtle);
+    box-shadow: var(--ft-shadow-card);
+  }
+}
+/* ---------- Screens ---------- */
+
+.screen__header {
+  margin-bottom: var(--ft-space-5);
+}
+
+.screen__title {
+}
+
+.screen__subtitle {
+  margin-top: var(--ft-space-1);
+  color: var(--ft-text-secondary);
+}
+
+.screen__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-4);
+}
+
+
+.placeholder {
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-sm);
+}
+
+.placeholder__step {
+  display: inline-block;
+  margin-bottom: var(--ft-space-2);
+  padding: 2px 10px;
+  border-radius: var(--ft-radius-pill);
+  background: var(--ft-surface-sunken);
+  color: var(--ft-text-tertiary);
+  font-size: var(--ft-text-xs);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+}

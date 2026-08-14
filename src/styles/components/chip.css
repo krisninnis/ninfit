@@ -1,0 +1,171 @@
+/**
+ * Stats, chips and small inline labels.
+ *
+ * ONE stat vocabulary. The app previously had two that arrived in different steps -
+ * `.stat` tiles and `.statrow` rows - which meant the same information looked
+ * different depending on which screen you were on. They are now one primitive with
+ * two layouts and the same three parts:
+ *
+ *   .stat__value   the number or answer
+ *   .stat__label   what it is
+ *   .stat__meta    how many readings it rests on, or other quiet context
+ *
+ *   .stat--row     label left, value right, in a `.stats` list
+ *   .stat--tile    stacked, in a `.statgrid`
+ *
+ * Every value uses tabular figures, so a number changing from 9 to 10 does not
+ * shuffle its neighbours sideways.
+ */
+
+@layer components {
+  .stats {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .statgrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--ft-space-4);
+  }
+
+  /*
+   * From tablet up the tiles flow to fit rather than staying locked at two, so a
+   * pair of stats does not stretch across the full width while four stay cramped.
+   */
+  @media (min-width: 600px) {
+    .statgrid {
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+  }
+
+  .stat {
+    min-width: 0;
+  }
+
+  .stat--row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--ft-space-3);
+    padding: var(--ft-space-2) 0;
+    border-bottom: 1px solid var(--ft-divider);
+    font-size: var(--ft-text-sm);
+  }
+
+  .stat--row:last-child {
+    border-bottom: none;
+  }
+
+  .stat--tile {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ft-space-0);
+  }
+
+  .stat__label {
+    color: var(--ft-text-secondary);
+  }
+
+  .stat--tile .stat__label {
+    font-size: var(--ft-text-xs);
+  }
+
+  .stat__value {
+    text-align: right;
+  }
+
+  .stat--tile .stat__value {
+    font-size: var(--ft-text-lg);
+    font-weight: var(--ft-weight-semibold);
+    text-align: left;
+  }
+
+  .stat__meta {
+    color: var(--ft-text-tertiary);
+    font-size: var(--ft-text-xs);
+  }
+
+  /* --- Attention chip ------------------------------------------------------ */
+
+  /*
+   * Amber plus a symbol plus words. The symbol is what keeps the meaning intact in
+   * greyscale, and it is what will keep "a symptom changed" distinguishable from a
+   * path accent once Phase 4 introduces five accent families.
+   */
+  .attention-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ft-space-1);
+    margin-left: var(--ft-space-2);
+    padding: 1px var(--ft-space-2);
+    border: 1px solid color-mix(in oklab, var(--ft-attention) 35%, transparent);
+    border-radius: var(--ft-radius-pill);
+    background: var(--ft-attention-soft);
+    color: var(--ft-attention);
+    font-size: var(--ft-text-xs);
+    font-weight: var(--ft-weight-medium);
+    white-space: nowrap;
+  }
+
+  .attention-chip .icon-attention {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* A block-level version, for a line of explanation inside a card. */
+  .attention-note {
+    display: flex;
+    align-items: center;
+    gap: var(--ft-space-2);
+    padding: var(--ft-space-2) var(--ft-space-3);
+    border-radius: var(--ft-radius-sm);
+    background: var(--ft-attention-soft);
+    color: var(--ft-attention);
+    font-size: var(--ft-text-sm);
+  }
+
+  .icon-attention {
+    flex: none;
+    width: 18px;
+    height: 18px;
+  }
+
+  /* --- Small text roles ---------------------------------------------------- */
+
+  .empty,
+  .footnote {
+    color: var(--ft-text-tertiary);
+  }
+
+  /* Size comes from the .t-small role. */
+  .empty {
+    font-size: var(--ft-text-sm);
+  }
+
+  /* Size, weight and tracking come from the .t-caption role. */
+  .footnote {
+    margin-top: var(--ft-space-3);
+  }
+
+  .muted {
+    color: var(--ft-text-tertiary);
+  }
+}
+
+@layer components {
+  /*
+   * Skill focus. Deliberately NOT the attention treatment: a highlighted skill is
+   * emphasis, and attention means a recorded symptom change. They must not look
+   * alike.
+   */
+  .stat__flag {
+    margin-left: var(--ft-space-2);
+    padding: 1px var(--ft-space-2);
+    border: 1px solid var(--ft-accent);
+    border-radius: var(--ft-radius-pill);
+    color: var(--ft-accent);
+    font-size: var(--ft-text-xs);
+    font-weight: var(--ft-weight-medium);
+  }
+}

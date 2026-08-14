@@ -1,0 +1,19 @@
+/**
+ * Motion, last in the cascade.
+ *
+ * One rule neutralises every animation and transition in the app for anyone who
+ * has asked for reduced motion. It is deliberately global and `!important`, so no
+ * component has to remember to opt in - which is why it has held correctly through
+ * seven feature steps.
+ */
+
+@layer motion {
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+}

@@ -1,0 +1,144 @@
+/**
+ * Onboarding stepper.
+ *
+ * The rules for the pre-stepper single-page onboarding were removed in the Phase 1
+ * split after verifying that no component references them.
+ */
+
+@layer screens {
+/* ---------- Onboarding stepper ---------- */
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-5);
+  min-height: 70dvh;
+}
+
+.step__progress {
+  height: 6px;
+  border-radius: var(--ft-radius-pill);
+  background: var(--ft-surface-sunken);
+  border: 1px solid var(--ft-border-subtle);
+  overflow: hidden;
+}
+
+.step__progressFill {
+  display: block;
+  height: 100%;
+  background: var(--ft-accent);
+  transition: width 260ms ease;
+}
+
+.step__body {
+  flex: 1 1 auto;
+  animation: step-in 220ms ease-out;
+}
+
+/* Covered by the global prefers-reduced-motion rule, which drops this to 0.01ms. */
+@keyframes step-in {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.step__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-3);
+}
+
+.step__title {
+}
+
+.step__prompt {
+}
+
+.step__help {
+  color: var(--ft-text-secondary);
+}
+
+.step__options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-3);
+  margin-top: var(--ft-space-2);
+}
+
+.step__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ft-space-3);
+  min-height: var(--ft-control-lg);
+  padding: 0 var(--ft-space-4);
+  border: 1.5px solid var(--ft-border-subtle);
+  border-radius: var(--ft-radius-md);
+  background: var(--ft-surface-raised);
+  color: var(--ft-text-primary);
+  font-size: var(--ft-text-base);
+  text-align: left;
+}
+
+.step__option--selected {
+  background: var(--ft-accent-soft);
+  border-color: var(--ft-accent);
+  color: var(--ft-accent);
+  font-weight: 600;
+}
+
+.step__optionMark {
+  flex: none;
+  width: 1.2em;
+  text-align: right;
+}
+
+.step__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--ft-space-3);
+  padding-top: var(--ft-space-2);
+}
+
+
+.step__next {
+  flex: 1 1 auto;
+}
+
+.step__paths {
+  list-style: none;
+  margin: var(--ft-space-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-3);
+}
+
+/* Composes with .surface. */
+.step__path {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-2);
+  padding: var(--ft-space-4);
+}
+/* ---------- Onboarding ---------- */
+
+.onboard__label {
+  color: var(--ft-text-tertiary);
+  font-size: var(--ft-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.onboard__path {
+  margin-top: 2px;
+}
+
+.onboard__why {
+  margin-top: var(--ft-space-2);
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-sm);
+}
+
+
+
+}

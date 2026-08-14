@@ -1,0 +1,85 @@
+@layer tokens {
+  /**
+   * Dimensional scales: spacing, radius, motion, type and control sizes.
+   *
+   * These do not change between themes. Everything is a fixed step on a named
+   * scale so that a component never has to invent a value.
+   */
+
+  :root {
+    /* --- Spacing ---------------------------------------------------------- */
+    --ft-space-0: 2px;
+    --ft-space-1: 4px;
+    --ft-space-2: 8px;
+    --ft-space-3: 12px;
+    --ft-space-4: 16px;
+    --ft-space-5: 24px;
+    --ft-space-6: 32px;
+    --ft-space-7: 48px;
+    --ft-space-8: 64px;
+
+    /* --- Radius ----------------------------------------------------------- */
+    --ft-radius-sm: 8px;
+    --ft-radius-md: 12px;
+    --ft-radius-lg: 18px;
+    /* Reward surfaces and dialogs, so they can differ from tracking cards
+       without anyone inventing a value at the call site. Unused until Phase 2. */
+    --ft-radius-xl: 24px;
+    --ft-radius-pill: 999px;
+    --ft-radius-circle: 50%;
+
+    /* --- Interactive sizing ----------------------------------------------- */
+    /* Three sizes, replacing the five hand-written heights that had drifted in.
+       44px is the accessibility floor and nothing interactive goes below it. */
+    --ft-control-sm: 44px;
+    --ft-control-md: 48px;
+    --ft-control-lg: 56px;
+
+    /* --- Layout ----------------------------------------------------------- */
+    --ft-content-max: 560px;
+    /* Applied in Phase 3, when width breakpoints arrive. */
+    --ft-content-max-wide: 720px;
+
+    /* --- Motion ------------------------------------------------------------ */
+    /* Four tiers. The intensity of a transition is proportional to how rare the
+       moment is: pressing a toggle is not rare, hatching an egg is. */
+    --ft-motion-instant: 120ms;
+    --ft-motion-standard: 220ms;
+    --ft-motion-reward: 420ms;
+    --ft-motion-cinematic: 900ms;
+
+    --ft-ease-out: ease-out;
+    --ft-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    --ft-ease-reward: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+    /* --- Typography -------------------------------------------------------- */
+    --ft-font-body:
+      ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+      sans-serif;
+    /* Display shares the family for now. A custom face is deferred to branding. */
+    --ft-font-display: var(--ft-font-body);
+
+    --ft-text-xs: 0.75rem;
+    --ft-text-sm: 0.875rem;
+    --ft-text-base: 1rem;
+    --ft-text-lg: 1.125rem;
+    --ft-text-xl: 1.375rem;
+    --ft-text-2xl: 1.75rem;
+    --ft-text-3xl: 2.25rem;
+
+    /* Paired line heights, so vertical rhythm stops being decided per rule. */
+    --ft-leading-tight: 1.1;
+    --ft-leading-snug: 1.3;
+    --ft-leading-normal: 1.5;
+
+    --ft-weight-regular: 400;
+    --ft-weight-medium: 500;
+    --ft-weight-semibold: 600;
+    --ft-weight-bold: 700;
+
+    --ft-tracking-tight: -0.03em;
+    --ft-tracking-snug: -0.015em;
+    --ft-tracking-normal: 0;
+    --ft-tracking-wide: 0.02em;
+  }
+}

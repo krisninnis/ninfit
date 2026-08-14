@@ -1,0 +1,117 @@
+/**
+ * Today: the game header sits above the plan, and the plan stays the primary action.
+ */
+
+@layer screens {
+/* ---------- Today ---------- */
+
+.today__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ft-space-3);
+  margin-top: calc(var(--ft-space-4) * -1);
+  margin-bottom: var(--ft-space-4);
+}
+
+.today__programme {
+  color: var(--ft-accent);
+  font-size: var(--ft-text-sm);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.savedot {
+  font-size: var(--ft-text-xs);
+  color: var(--ft-text-tertiary);
+  transition: opacity 200ms ease;
+}
+
+.savedot--saved {
+  color: var(--ft-accent);
+}
+
+.savedot--failed {
+  color: var(--ft-attention);
+}
+
+
+.today__footer {
+  margin-top: var(--ft-space-2);
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-sm);
+  text-align: center;
+}
+
+.today__disclaimer {
+  color: var(--ft-text-tertiary);
+  font-size: var(--ft-text-xs);
+  text-align: center;
+}
+/* ---------- Plan card ---------- */
+
+.plan__title {
+}
+
+.plan__effort,
+.plan__hint,
+.plan__rest {
+  margin-top: var(--ft-space-2);
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-sm);
+}
+
+.plan__rest {
+  color: var(--ft-text-primary);
+  font-size: var(--ft-text-base);
+}
+
+.plan__activities {
+  list-style: none;
+  margin: var(--ft-space-4) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-3);
+}
+
+/* Composes with .surface. */
+.activity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-2);
+  padding: var(--ft-space-2) var(--ft-space-3);
+}
+
+.activity__link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ft-space-2);
+  min-height: var(--ft-control-md);
+  border-radius: var(--ft-radius-md);
+  background: var(--ft-accent);
+  color: var(--ft-text-on-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.activity__credit {
+  color: var(--ft-text-tertiary);
+  font-size: var(--ft-text-xs);
+  text-align: center;
+}
+
+.plan__status {
+  margin-top: var(--ft-space-3);
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-sm);
+  text-align: center;
+}
+
+.plan__complete {
+  margin-top: var(--ft-space-4);
+  padding-top: var(--ft-space-3);
+  border-top: 1px solid var(--ft-border-subtle);
+}
+}

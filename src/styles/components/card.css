@@ -1,0 +1,194 @@
+/**
+ * Card surfaces.
+ *
+ * Five roles, one recipe. A card's role says what it is FOR, and the visual weight
+ * follows from that rather than from whoever styled the screen:
+ *
+ *   .card                 tracking - the quiet default, for routine recording
+ *   .card--action         something to do; the strongest thing on its screen
+ *   .card--reward         a game moment; the only card allowed a tint
+ *   .card--info           explanation or empty state; barely there
+ *   .card--attention      a recorded symptom change, a storage issue, a caution
+ *   .surface              a nested panel INSIDE a card, not another card
+ *
+ * Depth carries the hierarchy in light mode. In dark mode shadow is invisible and
+ * only muddies the surface, so the tokens resolve to `none` and the hierarchy comes
+ * from surface lightness and border weight instead. Both are legible.
+ */
+
+@layer components {
+  :root {
+    /*
+     * Padding steps. Derived from the spacing scale rather than typed as pixels,
+     * so the 16 / 20 / 24 hierarchy stays tied to the scale.
+     */
+    --card-pad-tracking: var(--ft-space-4);
+    --card-pad-action: calc(var(--ft-space-4) + var(--ft-space-1));
+    --card-pad-reward: var(--ft-space-5);
+  }
+
+  /* --- Tracking: the default ---------------------------------------------- */
+
+  .card {
+    background: var(--ft-surface-raised);
+    border: 1px solid var(--ft-border-subtle);
+    border-radius: var(--ft-radius-lg);
+    box-shadow: var(--ft-shadow-card);
+    padding: var(--card-pad-tracking);
+  }
+
+  /* --- Action: what you are meant to do ----------------------------------- */
+
+  .card--action {
+    padding: var(--card-pad-action);
+    border-color: var(--ft-border-strong);
+    box-shadow: var(--ft-shadow-raised);
+  }
+
+  /* Dark mode has no shadow to lean on, so the action card steps up a surface. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) .card--action {
+      background: var(--ft-surface-sunken);
+    }
+  }
+
+  :root[data-theme='dark'] .card--action {
+    background: var(--ft-surface-sunken);
+  }
+
+  /* --- Reward: a game moment ---------------------------------------------- */
+
+  .card--reward {
+    padding: var(--card-pad-reward);
+    border-radius: var(--ft-radius-xl);
+    border-color: var(--ft-accent-soft);
+    background: var(--ft-accent-soft);
+    box-shadow: var(--ft-shadow-reward);
+  }
+
+  /*
+   * The only glow in the app, and deliberately faint. Cinematic treatment for
+   * hatching and evolution is Phase 8; this is just "something good is here".
+   */
+  .card--reward-glow {
+    box-shadow:
+      var(--ft-shadow-reward),
+      0 0 24px color-mix(in oklab, var(--ft-accent) 18%, transparent);
+  }
+
+  /* --- Information: explanation and empty states -------------------------- */
+
+  .card--info {
+    background: var(--ft-surface-sunken);
+    border-color: var(--ft-border-subtle);
+    box-shadow: var(--ft-shadow-none);
+    color: var(--ft-text-secondary);
+  }
+
+  /* --- Attention: amber, and never colour alone --------------------------- */
+
+  .card--attention {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--ft-space-3);
+    align-items: start;
+    background: var(--ft-attention-soft);
+    border-color: var(--ft-attention);
+    box-shadow: var(--ft-shadow-none);
+    color: var(--ft-text-primary);
+    font-size: var(--ft-text-sm);
+  }
+
+  /*
+   * The icon holds column one for the whole card and every other child falls into
+   * column two, so an attention card can carry one paragraph or five without a
+   * wrapper element at the call site.
+   */
+  .card--attention > .icon-attention {
+    grid-row: 1 / -1;
+    color: var(--ft-attention);
+    margin-top: 1px;
+  }
+
+  .card--attention > *:not(.icon-attention) {
+    grid-column: 2;
+  }
+
+  .card__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ft-space-2);
+    min-width: 0;
+  }
+
+  /* --- Sunken: a panel inside a card, not another card -------------------- */
+
+  .surface {
+    padding: var(--ft-space-3);
+    background: var(--ft-surface-sunken);
+    border-radius: var(--ft-radius-md);
+    box-shadow: var(--ft-shadow-none);
+  }
+
+  /* --- Collapsible section, built on the tracking card -------------------- */
+
+  .section {
+    padding: 0;
+  }
+
+  .section__header {
+    display: flex;
+    align-items: center;
+    gap: var(--ft-space-2);
+    width: 100%;
+    min-height: var(--ft-control-lg);
+    padding: var(--card-pad-tracking);
+    text-align: left;
+    border-radius: var(--ft-radius-lg);
+    transition: background var(--ft-motion-instant) var(--ft-ease-out);
+  }
+
+  .section__header:active {
+    background: var(--ft-surface-sunken);
+  }
+
+  @media (hover: hover) {
+    .section__header:hover {
+      background: var(--ft-surface-sunken);
+    }
+  }
+
+  .section__title {
+    flex: 1 1 auto;
+  }
+
+  .section__summary {
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-sm);
+  }
+
+  .section__chevron {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    color: var(--ft-text-tertiary);
+    transition: transform var(--ft-motion-standard) var(--ft-ease-standard);
+  }
+
+  .section__chevron svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .section__chevron--open {
+    transform: rotate(180deg);
+  }
+
+  .section__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ft-space-5);
+    padding: 0 var(--card-pad-tracking) var(--card-pad-tracking);
+  }
+}

@@ -1,0 +1,72 @@
+@layer tokens {
+  /**
+   * Trophy tier colours.
+   *
+   * These were the only hardcoded colours left in the app, sitting inside the
+   * component rules where no theme could reach them. Values are unchanged from
+   * what shipped - each tier keeps its measured contrast (5.17 to 6.37:1) - they
+   * simply live here now.
+   *
+   * `sheen` is currently unused. Phase 2 will pair it with `base` in a gradient to
+   * give the tiers a metallic read without any image asset.
+   *
+   * Tier is NEVER carried by colour alone. Every presentation prints the tier name
+   * alongside the chip, and that must remain true in the future Trophy Room.
+   */
+
+  :root {
+    --ft-tier-bronze-base: #e8d5c0;
+    --ft-tier-bronze-sheen: #f5e8da;
+    --ft-tier-bronze-ink: #6b4a28;
+
+    --ft-tier-silver-base: #e2e4e6;
+    --ft-tier-silver-sheen: #f3f4f5;
+    --ft-tier-silver-ink: #4d5257;
+
+    --ft-tier-gold-base: #f0e2bd;
+    --ft-tier-gold-sheen: #faf1d8;
+    --ft-tier-gold-ink: #6f5a20;
+
+    --ft-tier-platinum-base: #dbe6ea;
+    --ft-tier-platinum-sheen: #eef4f6;
+    --ft-tier-platinum-ink: #37545e;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --ft-tier-bronze-base: #3d2f22;
+      --ft-tier-bronze-sheen: #4d3c2c;
+      --ft-tier-bronze-ink: #d6b28a;
+
+      --ft-tier-silver-base: #2f3336;
+      --ft-tier-silver-sheen: #3c4145;
+      --ft-tier-silver-ink: #c7ccd1;
+
+      --ft-tier-gold-base: #3b3421;
+      --ft-tier-gold-sheen: #4a412a;
+      --ft-tier-gold-ink: #ddc684;
+
+      --ft-tier-platinum-base: #23343a;
+      --ft-tier-platinum-sheen: #2e434a;
+      --ft-tier-platinum-ink: #a9ccd8;
+    }
+  }
+
+  :root[data-theme='dark'] {
+    --ft-tier-bronze-base: #3d2f22;
+    --ft-tier-bronze-sheen: #4d3c2c;
+    --ft-tier-bronze-ink: #d6b28a;
+
+    --ft-tier-silver-base: #2f3336;
+    --ft-tier-silver-sheen: #3c4145;
+    --ft-tier-silver-ink: #c7ccd1;
+
+    --ft-tier-gold-base: #3b3421;
+    --ft-tier-gold-sheen: #4a412a;
+    --ft-tier-gold-ink: #ddc684;
+
+    --ft-tier-platinum-base: #23343a;
+    --ft-tier-platinum-sheen: #2e434a;
+    --ft-tier-platinum-ink: #a9ccd8;
+  }
+}

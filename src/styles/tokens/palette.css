@@ -1,0 +1,65 @@
+@layer tokens {
+  /**
+   * Raw palette.
+   *
+   * NEVER reference these from a component. Components use the semantic tokens in
+   * semantic.css, which is what makes theming and the future per-path accent work.
+   *
+   * Values are expressed in oklch() because lightness there is perceptually even:
+   * two hues at the same L read as the same weight, which is what makes generating
+   * the five path accent families in Phase 4 tractable rather than a hand-tuning
+   * exercise. Every value below was converted from the previous hex and verified to
+   * round-trip to the identical sRGB byte, so this file changes nothing on screen.
+   *
+   * The two exceptions are the tertiary and secondary text steps, which were
+   * deliberately darkened to reach AA - see the note on each.
+   */
+
+  :root {
+    /* --- Warm neutral ramp (light surfaces and dark text) ------------------- */
+    --palette-warm-98: oklch(0.9722 0.0035 106.42); /* page       #f7f6f3 */
+    --palette-warm-100: oklch(1 0 0); /* raised     #ffffff */
+    --palette-warm-95: oklch(0.9503 0.0053 91.14); /* sunken     #f1efea */
+    --palette-warm-90: oklch(0.9021 0.0088 89.47); /* border     #e4e1d9 */
+    --palette-warm-83: oklch(0.8368 0.0148 88.53); /* border str #d3cfc4 */
+
+    --palette-warm-25: oklch(0.2760 0.0043 106.62); /* text       #2b2b28 */
+    --palette-warm-45: oklch(0.4470 0.0127 106.90); /* text 2nd   #55554d */
+    --palette-warm-53: oklch(0.5329 0.0138 101.69); /* text 3rd   #6e6d64 */
+
+    /* --- Charcoal ramp (dark surfaces and light text) ----------------------- */
+    --palette-ink-16: oklch(0.2032 0.0041 228.10); /* page       #16181a */
+    --palette-ink-22: oklch(0.2531 0.0059 236.44); /* raised     #1e2124 */
+    --palette-ink-26: oklch(0.2857 0.0060 228.90); /* sunken     #24282b */
+    --palette-ink-32: oklch(0.3444 0.0073 236.63); /* border     #30353a */
+    --palette-ink-40: oklch(0.4144 0.0095 236.71); /* border str #3d444a */
+
+    --palette-ink-92: oklch(0.9216 0.0059 91.24); /* text       #e9e7e1 */
+    --palette-ink-70: oklch(0.7115 0.0055 100.32); /* text 2nd   #a5a49d */
+    --palette-ink-64: oklch(0.6443 0.0117 106.72); /* text 3rd   #8e8e86 */
+
+    /* --- Sage accent -------------------------------------------------------- */
+    --palette-sage-48: oklch(0.4938 0.0530 172.05); /* accent light  #40766a */
+    --palette-sage-40: oklch(0.4088 0.0468 172.14); /* strong light  #2f5a51 */
+    --palette-sage-94: oklch(0.9358 0.0189 168.24); /* soft light    #e3efeb */
+    --palette-sage-74: oklch(0.7382 0.0530 172.99); /* accent dark   #7fb8a9 */
+    --palette-sage-81: oklch(0.8060 0.0499 171.34); /* strong dark   #9bcbbe */
+    --palette-sage-27: oklch(0.2867 0.0192 170.02); /* soft dark     #22322e */
+    --palette-sage-19: oklch(0.2143 0.0246 170.86); /* on-accent drk #10201c */
+
+    /* --- Attention amber ---------------------------------------------------- */
+    /* Reserved for recorded symptom changes. Never for incompleteness, and never
+       as a path accent - see the Build Strength decision in DESIGN.md. */
+    --palette-amber-52: oklch(0.5391 0.0929 65.35); /* light         #9a6b31 */
+    --palette-amber-96: oklch(0.9576 0.0201 82.71); /* soft light    #f7efe2 */
+    --palette-amber-76: oklch(0.7599 0.0819 72.68); /* dark          #d4a469 */
+    --palette-amber-25: oklch(0.2604 0.0207 74.66); /* soft dark     #2e2720 */
+
+    /*
+     * There is deliberately NO red in this palette, and no error colour.
+     * Incompleteness must never read as failure, so the colour that would allow it
+     * does not exist. Failures are communicated with the attention amber plus
+     * explicit wording. Please do not add one.
+     */
+  }
+}

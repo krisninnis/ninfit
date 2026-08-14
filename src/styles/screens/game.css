@@ -1,0 +1,176 @@
+/**
+ * The game layer: egg, mascot, level, XP bar and trophy tiers.
+ *
+ * Tier colours now come from tokens rather than being hardcoded here.
+ */
+
+@layer screens {
+/* ---------- Game layer ---------- */
+
+/* Composes with .card .card--reward. Layout only. */
+.game {
+  position: relative;
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: var(--ft-space-4);
+  align-items: center;
+  margin-top: calc(var(--ft-space-4) * -1);
+}
+
+.game__art {
+  display: grid;
+  place-items: center;
+}
+
+.egg {
+  width: 68px;
+  height: 84px;
+}
+
+.egg__shell {
+  fill: var(--ft-surface-raised);
+  stroke: var(--ft-border-strong);
+  stroke-width: 2;
+}
+
+.egg__speck {
+  fill: var(--ft-accent);
+  opacity: 0.18;
+}
+
+/* A gentle rock, not a demand for attention. */
+.egg--ready {
+  animation: egg-rock 2.4s ease-in-out infinite;
+  transform-origin: 50% 90%;
+}
+
+@keyframes egg-rock {
+  0%, 70%, 100% { transform: rotate(0deg); }
+  78% { transform: rotate(-5deg); }
+  86% { transform: rotate(5deg); }
+  94% { transform: rotate(-2deg); }
+}
+
+.mascot {
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  border-radius: var(--ft-radius-circle);
+  background: var(--ft-surface-raised);
+  border: 2px solid var(--ft-accent);
+  color: var(--ft-accent);
+  font-size: var(--ft-text-2xl);
+  font-weight: 700;
+}
+
+.game__titles {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ft-space-2);
+}
+
+.game__name {
+  font-weight: 600;
+}
+
+.game__level {
+  color: var(--ft-accent);
+  font-size: var(--ft-text-sm);
+  font-weight: 600;
+}
+
+.xpbar {
+  display: block;
+  height: 8px;
+  margin-top: var(--ft-space-2);
+  border-radius: var(--ft-radius-pill);
+  background: var(--ft-surface-raised);
+  border: 1px solid var(--ft-border-subtle);
+  overflow: hidden;
+}
+
+.xpbar__fill {
+  display: block;
+  height: 100%;
+  background: var(--ft-accent);
+  transition: width 400ms ease;
+}
+
+/*
+ * Secondary rather than tertiary: the reward card's accent tint is lighter than the
+ * page, and tertiary text on it measured 4.42:1 - just under AA.
+ */
+.game__xp,
+.game__stage {
+  display: block;
+  margin-top: var(--ft-space-1);
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-xs);
+}
+
+.game__message {
+  margin-top: var(--ft-space-2);
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-sm);
+}
+
+.game__action {
+  margin-top: var(--ft-space-3);
+  width: 100%;
+}
+
+.xpfloat {
+  position: absolute;
+  top: var(--ft-space-3);
+  right: var(--ft-space-4);
+  padding: 3px 10px;
+  border-radius: var(--ft-radius-pill);
+  background: var(--ft-accent);
+  color: var(--ft-text-on-accent);
+  font-size: var(--ft-text-xs);
+  font-weight: 700;
+  animation: xp-float 2.2s ease-out forwards;
+}
+
+@keyframes xp-float {
+  0% { opacity: 0; transform: translateY(6px); }
+  15% { opacity: 1; transform: translateY(0); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+
+.tier {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: var(--ft-radius-pill);
+  font-size: var(--ft-text-xs);
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.tier--bronze {
+  background: linear-gradient(145deg, var(--ft-tier-bronze-sheen), var(--ft-tier-bronze-base));
+  border: 1px solid color-mix(in oklab, var(--ft-tier-bronze-ink) 22%, transparent);
+  color: var(--ft-tier-bronze-ink);
+}
+
+.tier--silver {
+  background: linear-gradient(145deg, var(--ft-tier-silver-sheen), var(--ft-tier-silver-base));
+  border: 1px solid color-mix(in oklab, var(--ft-tier-silver-ink) 22%, transparent);
+  color: var(--ft-tier-silver-ink);
+}
+
+.tier--gold {
+  background: linear-gradient(145deg, var(--ft-tier-gold-sheen), var(--ft-tier-gold-base));
+  border: 1px solid color-mix(in oklab, var(--ft-tier-gold-ink) 22%, transparent);
+  color: var(--ft-tier-gold-ink);
+}
+
+.tier--platinum {
+  background: linear-gradient(145deg, var(--ft-tier-platinum-sheen), var(--ft-tier-platinum-base));
+  border: 1px solid color-mix(in oklab, var(--ft-tier-platinum-ink) 22%, transparent);
+  color: var(--ft-tier-platinum-ink);
+}
+}

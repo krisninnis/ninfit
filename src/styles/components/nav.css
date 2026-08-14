@@ -1,0 +1,45 @@
+/**
+ * Bottom navigation.
+ */
+
+@layer components {
+/* ---------- Tab bar ---------- */
+
+.tabbar {
+  display: flex;
+  background: var(--ft-surface-raised);
+  box-shadow: var(--ft-shadow-bar);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+.tabbar__tab {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: var(--ft-control-lg);
+  padding: var(--ft-space-2) var(--ft-space-1);
+  color: var(--ft-text-tertiary);
+  font-size: var(--ft-text-xs);
+  font-weight: 500;
+  transition: color 140ms ease;
+}
+
+.tabbar__tab[aria-current='page'] {
+  color: var(--ft-accent);
+}
+
+.tabbar__icon {
+  width: 24px;
+  height: 24px;
+  flex: none;
+}
+
+.tabbar__label {
+  line-height: 1.2;
+}
+}

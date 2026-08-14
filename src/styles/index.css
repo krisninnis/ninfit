@@ -1,0 +1,45 @@
+/**
+ * The single stylesheet entry point.
+ *
+ * Cascade order is declared here rather than being an accident of import order,
+ * which ends the whole class of bug where a screen rule loses to a component rule
+ * because a file moved. Vite inlines these imports at build time, so the runtime
+ * cost is one stylesheet.
+ *
+ *   tokens      values only, no selectors that paint
+ *   base        element defaults and typography
+ *   layout      app shell, safe areas
+ *   components  reusable pieces
+ *   screens     screen-specific composition
+ *   motion      the reduced-motion override, last
+ *   overrides   reserved; nothing should need it
+ */
+
+@layer tokens, base, layout, components, screens, motion, overrides;
+
+@import './tokens/palette.css';
+@import './tokens/semantic.css';
+@import './tokens/scales.css';
+@import './tokens/tiers.css';
+/* Phase 4 adds ./tokens/paths.css here, for the [data-path] accent families. */
+
+@import './base.css';
+@import './layout.css';
+
+@import './components/typography.css';
+@import './components/card.css';
+@import './components/button.css';
+@import './components/field.css';
+@import './components/chip.css';
+@import './components/chart.css';
+@import './components/nav.css';
+
+@import './screens/onboarding.css';
+@import './screens/today.css';
+@import './screens/week.css';
+@import './screens/progress.css';
+@import './screens/profile.css';
+@import './screens/data.css';
+@import './screens/game.css';
+
+@import './motion.css';

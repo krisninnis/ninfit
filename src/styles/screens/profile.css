@@ -1,0 +1,73 @@
+/**
+ * Profile: paired fields, confirmation panel and health-note list.
+ */
+
+@layer screens {
+/* ---------- Profile ---------- */
+
+.pairfield {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ft-space-3);
+}
+
+
+.confirm {
+  padding: var(--ft-space-3);
+  border-radius: var(--ft-radius-md);
+  background: var(--ft-attention-soft);
+  color: var(--ft-text-primary);
+  font-size: var(--ft-text-sm);
+}
+
+.confirm__actions {
+  display: flex;
+  gap: var(--ft-space-2);
+  margin-top: var(--ft-space-3);
+}
+
+
+
+
+.notelist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-2);
+}
+
+/* Composes with .surface. */
+.notelist__item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ft-space-3);
+}
+
+.notelist__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notelist__label {
+  font-size: var(--ft-text-sm);
+  font-weight: 500;
+}
+
+.notelist__detail {
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-xs);
+}
+
+.notelist__remove {
+  flex: none;
+  min-height: var(--ft-control-sm);
+  padding: 0 var(--ft-space-2);
+  color: var(--ft-text-tertiary);
+  font-size: var(--ft-text-xs);
+  text-decoration: underline;
+}
+}

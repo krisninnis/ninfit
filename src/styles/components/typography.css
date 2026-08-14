@@ -1,0 +1,102 @@
+/**
+ * Typography roles.
+ *
+ * Eight named roles, each a complete recipe: size, line height, weight and tracking
+ * all decided together. Before this, a rule set a size and left the other three to
+ * whatever it inherited, which is why vertical rhythm drifted from screen to screen.
+ *
+ * Roles are applied through the existing component classes rather than by sprinkling
+ * utility classes through the markup - the `.t-*` classes exist for the few places
+ * that genuinely need a role and have no component class of their own.
+ *
+ * The system font stack stays. No webfont, and `--ft-font-display` currently points
+ * at the same family: the display role earns its character from tighter tracking and
+ * more weight, not from a second typeface.
+ */
+
+@layer components {
+  /* --- Role recipes -------------------------------------------------------- */
+
+  .t-display {
+    font-family: var(--ft-font-display);
+    font-size: var(--ft-text-3xl);
+    line-height: var(--ft-leading-tight);
+    font-weight: var(--ft-weight-bold);
+    letter-spacing: var(--ft-tracking-tight);
+  }
+
+  .t-title,
+  .screen__title,
+  .step__title {
+    font-family: var(--ft-font-display);
+    font-size: var(--ft-text-2xl);
+    line-height: var(--ft-leading-snug);
+    font-weight: var(--ft-weight-semibold);
+    letter-spacing: var(--ft-tracking-snug);
+  }
+
+  .t-heading,
+  .plan__title,
+  .step__prompt,
+  .onboard__path {
+    font-size: var(--ft-text-xl);
+    line-height: var(--ft-leading-snug);
+    font-weight: var(--ft-weight-semibold);
+    letter-spacing: var(--ft-tracking-snug);
+  }
+
+  .t-body {
+    font-size: var(--ft-text-base);
+    line-height: var(--ft-leading-normal);
+    font-weight: var(--ft-weight-regular);
+  }
+
+  .t-body-strong,
+  .section__title {
+    font-size: var(--ft-text-base);
+    line-height: var(--ft-leading-normal);
+    font-weight: var(--ft-weight-semibold);
+  }
+
+  .t-small,
+  .screen__subtitle,
+  .step__help,
+  .empty {
+    font-size: var(--ft-text-sm);
+    line-height: var(--ft-leading-normal);
+    font-weight: var(--ft-weight-regular);
+  }
+
+  .t-caption,
+  .footnote {
+    font-size: var(--ft-text-xs);
+    line-height: var(--ft-leading-normal);
+    font-weight: var(--ft-weight-medium);
+    letter-spacing: var(--ft-tracking-wide);
+  }
+
+  /*
+   * Stat.
+   *
+   * Tabular figures live here rather than being declared in six separate places.
+   * Any number that changes - XP, steps, a weight, a level - must use this role, so
+   * that going from 9 to 10 does not shuffle everything beside it sideways.
+   */
+  .t-stat,
+  .stat--tile .stat__value,
+  .stat__value,
+  .control__value strong,
+  .stepper__value strong,
+  .numberfield__input,
+  .bars__value,
+  .trend__value {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--ft-tracking-snug);
+  }
+
+  .t-stat {
+    font-size: var(--ft-text-xl);
+    line-height: var(--ft-leading-tight);
+    font-weight: var(--ft-weight-semibold);
+  }
+}

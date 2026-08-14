@@ -1,0 +1,10 @@
+/*
+ * SUPERSEDED - this file is no longer imported by the app.
+ *
+ * The stylesheet was split in the Phase 1 design pass into src/styles/, which is
+ * now the only entry point (see src/styles/index.css and src/main.tsx).
+ *
+ * It is left here as an empty placeholder only because the sandbox this refactor
+ * ran in was not permitted to delete files. It contains no rules, contributes
+ * nothing to the bundle, and can safely be deleted.
+ */

@@ -1,0 +1,132 @@
+/**
+ * Week: seven stacked day cards.
+ */
+
+@layer screens {
+/* ---------- Week ---------- */
+
+.week__intro {
+  margin-top: calc(var(--ft-space-4) * -1);
+  margin-bottom: var(--ft-space-2);
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-sm);
+}
+
+.week__days {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-3);
+}
+
+/* Composes with .card. Only the state rail belongs to this screen. */
+.weekday {
+  border-left: 3px solid var(--ft-border-subtle);
+}
+
+/* Today is marked by presence, not by alarm. */
+.weekday--today {
+  border-left-color: var(--ft-accent);
+  background: var(--ft-accent-soft);
+}
+
+.weekday--complete {
+  border-left-color: var(--ft-accent);
+}
+
+.weekday--partial {
+  border-left-color: var(--ft-border-strong);
+}
+
+/* Rest is intentional, so it reads as a deliberate part of the week. */
+.weekday--rest {
+  background: var(--ft-surface-sunken);
+}
+
+/* Days still to come are quiet. They are not overdue and must never look it. */
+.weekday--future {
+  opacity: 0.72;
+}
+
+.weekday__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--ft-space-2);
+}
+
+.weekday__index {
+  font-weight: 600;
+}
+
+.weekday__date {
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-sm);
+}
+
+.weekday__today {
+  padding: 2px 8px;
+  border-radius: var(--ft-radius-pill);
+  background: var(--ft-accent);
+  color: var(--ft-text-on-accent);
+  font-size: var(--ft-text-xs);
+  font-weight: 600;
+}
+
+.weekday__state {
+  margin-left: auto;
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-xs);
+  font-weight: 500;
+}
+
+.weekday__rest,
+.weekday__note,
+.weekday__facts {
+  margin-top: var(--ft-space-2);
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-sm);
+}
+
+
+.weekday__activities {
+  list-style: none;
+  margin: var(--ft-space-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-2);
+}
+
+.weekact {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ft-space-2);
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-sm);
+}
+
+.weekact--done {
+  color: var(--ft-text-primary);
+}
+
+.weekact__mark {
+  width: 1.1em;
+  color: var(--ft-text-tertiary);
+}
+
+.weekact--done .weekact__mark {
+  color: var(--ft-accent);
+}
+
+.weekact__label {
+  flex: 1 1 auto;
+}
+
+.weekact__duration {
+  color: var(--ft-text-tertiary);
+  font-size: var(--ft-text-xs);
+}
+}
