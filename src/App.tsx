@@ -38,6 +38,9 @@ export default function App() {
   }, [tab]);
 
   if (game.needsOnboarding && !dismissedOnboarding) {
+    // No data-path here, deliberately. Onboarding is where a path is chosen, so
+    // there is nothing to theme yet, and tinting the chooser in one path's colour
+    // would quietly argue for that path.
     return (
       <div className="app">
         <main className="app__main" ref={mainRef}>
@@ -53,7 +56,11 @@ export default function App() {
   const CurrentScreen = SCREENS[tab];
 
   return (
-    <div className="app">
+    // The single place a path becomes visible. Every accent in the app resolves
+    // from this attribute (see styles/tokens/paths.css), so no component needs to
+    // know which path is active. Undefined when no path has been chosen - the
+    // attribute is then absent and the neutral sage accent applies.
+    <div className="app" data-path={game.state.pathId}>
       <main className="app__main" ref={mainRef}>
         <CurrentScreen />
       </main>

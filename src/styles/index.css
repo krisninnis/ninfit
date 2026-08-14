@@ -21,7 +21,8 @@
 @import './tokens/semantic.css';
 @import './tokens/scales.css';
 @import './tokens/tiers.css';
-/* Phase 4 adds ./tokens/paths.css here, for the [data-path] accent families. */
+/* Must follow semantic.css: the path mapping wins on source order, not specificity. */
+@import './tokens/paths.css';
 
 @import './base.css';
 @import './layout.css';

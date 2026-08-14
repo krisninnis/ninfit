@@ -1,0 +1,124 @@
+@layer tokens {
+  /**
+   * The theme engine: five fitness paths, each in light and dark.
+   *
+   * WHAT A PATH MAY CHANGE. Five semantic tokens, and nothing else:
+   *
+   *   --ft-accent            the accent fill and accent text
+   *   --ft-accent-strong     hover, press, and the focus ring
+   *   --ft-accent-soft       the tinted background behind accent content
+   *   --ft-text-on-accent    text sitting on top of --ft-accent
+   *   --ft-accent-ring       the focus ring
+   *
+   * Surfaces, text, borders, shadows and the attention amber are identical in
+   * every path. A path is a change of accent, not a reskin: someone switching
+   * from Build Strength to Start Moving should recognise the same app.
+   *
+   * WHY THE INDIRECTION. `data-path` lives on `.app`, not on `<html>`, so a
+   * path block cannot simply restate the `--ft-*` tokens and expect the light
+   * and dark values in semantic.css to keep working - those are resolved at
+   * `:root`, above the path element, and custom properties do not re-resolve
+   * on the way down. So each path declares mode-tagged `--path-*` values, and
+   * the three blocks at the bottom of this file decide which set becomes the
+   * semantic token. That keeps this file at five path blocks plus three mode
+   * blocks instead of the fifteen a light/dark cross product would need.
+   *
+   * ORDER MATTERS. This file is imported after semantic.css and lives in the
+   * same layer, so `[data-path]` (0,1,0) beats the `:root` defaults at equal
+   * specificity by source order. The two dark blocks are more specific again,
+   * so they win over the light mapping regardless.
+   *
+   * FALLBACKS ARE LOAD-BEARING. Every mapping falls back to the neutral sage.
+   * If `data-path` ever carries a value with no block here - a future sixth
+   * path, or stale data from an old export - the app quietly stays neutral
+   * rather than losing its accent to an invalid computed value.
+   */
+
+  /* ----- The five families. Mode-tagged values only; no mapping yet. ------ */
+
+  [data-path='start_moving'] {
+    --path-accent-light: var(--palette-moss-50);
+    --path-accent-strong-light: var(--palette-moss-47);
+    --path-accent-soft-light: var(--palette-moss-94);
+    --path-on-accent-light: var(--palette-warm-100);
+    --path-accent-dark: var(--palette-moss-67);
+    --path-accent-strong-dark: var(--palette-moss-71);
+    --path-accent-soft-dark: var(--palette-moss-29);
+    --path-on-accent-dark: var(--palette-moss-22);
+  }
+
+  [data-path='build_strength'] {
+    --path-accent-light: var(--palette-clay-43);
+    --path-accent-strong-light: var(--palette-clay-40);
+    --path-accent-soft-light: var(--palette-clay-94);
+    --path-on-accent-light: var(--palette-warm-100);
+    --path-accent-dark: var(--palette-clay-87);
+    --path-accent-strong-dark: var(--palette-clay-91);
+    --path-accent-soft-dark: var(--palette-clay-29);
+    --path-on-accent-dark: var(--palette-clay-22);
+  }
+
+  [data-path='build_stamina'] {
+    --path-accent-light: var(--palette-azure-45);
+    --path-accent-strong-light: var(--palette-azure-42);
+    --path-accent-soft-light: var(--palette-azure-94);
+    --path-on-accent-light: var(--palette-warm-100);
+    --path-accent-dark: var(--palette-azure-72);
+    --path-accent-strong-dark: var(--palette-azure-76);
+    --path-accent-soft-dark: var(--palette-azure-29);
+    --path-on-accent-dark: var(--palette-azure-22);
+  }
+
+  [data-path='balanced_fitness'] {
+    --path-accent-light: var(--palette-teal-48);
+    --path-accent-strong-light: var(--palette-teal-45);
+    --path-accent-soft-light: var(--palette-teal-94);
+    --path-on-accent-light: var(--palette-warm-100);
+    --path-accent-dark: var(--palette-teal-68);
+    --path-accent-strong-dark: var(--palette-teal-72);
+    --path-accent-soft-dark: var(--palette-teal-29);
+    --path-on-accent-dark: var(--palette-teal-22);
+  }
+
+  [data-path='return_to_fitness'] {
+    --path-accent-light: var(--palette-iris-40);
+    --path-accent-strong-light: var(--palette-iris-37);
+    --path-accent-soft-light: var(--palette-iris-94);
+    --path-on-accent-light: var(--palette-warm-100);
+    --path-accent-dark: var(--palette-iris-80);
+    --path-accent-strong-dark: var(--palette-iris-84);
+    --path-accent-soft-dark: var(--palette-iris-29);
+    --path-on-accent-dark: var(--palette-iris-22);
+  }
+
+  /* ----- The mapping. Written once per mode, not once per path. ----------- */
+
+  /* Light, and the default when no colour scheme is expressed. */
+  [data-path] {
+    --ft-accent: var(--path-accent-light, var(--palette-sage-48));
+    --ft-accent-strong: var(--path-accent-strong-light, var(--palette-sage-40));
+    --ft-accent-soft: var(--path-accent-soft-light, var(--palette-sage-94));
+    --ft-text-on-accent: var(--path-on-accent-light, var(--palette-warm-100));
+    --ft-accent-ring: var(--path-accent-strong-light, var(--palette-sage-40));
+  }
+
+  /* Dark by system preference, unless light has been chosen explicitly. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) [data-path] {
+      --ft-accent: var(--path-accent-dark, var(--palette-sage-74));
+      --ft-accent-strong: var(--path-accent-strong-dark, var(--palette-sage-81));
+      --ft-accent-soft: var(--path-accent-soft-dark, var(--palette-sage-27));
+      --ft-text-on-accent: var(--path-on-accent-dark, var(--palette-sage-19));
+      --ft-accent-ring: var(--path-accent-strong-dark, var(--palette-sage-81));
+    }
+  }
+
+  /* Dark by explicit choice, whatever the system prefers. */
+  :root[data-theme='dark'] [data-path] {
+    --ft-accent: var(--path-accent-dark, var(--palette-sage-74));
+    --ft-accent-strong: var(--path-accent-strong-dark, var(--palette-sage-81));
+    --ft-accent-soft: var(--path-accent-soft-dark, var(--palette-sage-27));
+    --ft-text-on-accent: var(--path-on-accent-dark, var(--palette-sage-19));
+    --ft-accent-ring: var(--path-accent-strong-dark, var(--palette-sage-81));
+  }
+}

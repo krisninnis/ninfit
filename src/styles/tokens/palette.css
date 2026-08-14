@@ -61,5 +61,83 @@
      * does not exist. Failures are communicated with the attention amber plus
      * explicit wording. Please do not add one.
      */
+
+    /* =====================================================================
+     * PATH ACCENT FAMILIES (Phase 4)
+     *
+     * One family per fitness path. Only ever consumed by tokens/paths.css,
+     * which maps them onto the semantic accent tokens - no component and no
+     * screen may reference a --palette-* name.
+     *
+     * HOW THESE WERE CHOSEN. Not by eye. Each lightness was solved
+     * numerically for a target contrast ratio against the *binding* surface -
+     * sunken, which is the darkest light surface and the lightest dark one -
+     * so clearing it there clears page and raised as well. Chroma is then
+     * clamped to the sRGB gamut at that lightness, which is why the numbers
+     * are not round.
+     *
+     * The contrast targets are deliberately DIFFERENT per path rather than
+     * all sitting at the 4.5 minimum. Equal contrast would mean equal
+     * luminance, and every path would then be the same grey in greyscale.
+     *
+     * Every value below was verified for: AA text contrast on page, raised
+     * and sunken in both modes; on-accent text over accent; primary text over
+     * the soft tint; and sRGB gamut. See src/test/pathTheme.test.ts, which
+     * re-derives the checks from this file rather than trusting this comment.
+     * ===================================================================== */
+
+    /* --- Start Moving: soft green, the calmest and lightest family --------- */
+    --palette-moss-50: oklch(0.5016 0.078 145); /* accent light   #467047 */
+    --palette-moss-47: oklch(0.467 0.078 145); /* strong light   #3d653e */
+    --palette-moss-94: oklch(0.945 0.0234 145); /* soft light     #e4f1e3 */
+    --palette-moss-67: oklch(0.6722 0.0562 145); /* accent dark    #81a081 */
+    --palette-moss-71: oklch(0.7107 0.0562 145); /* strong dark    #8cab8c */
+    --palette-moss-29: oklch(0.287 0.018 145); /* soft dark      #252d25 */
+    --palette-moss-22: oklch(0.215 0.0202 145); /* on-accent drk  #141c14 */
+
+    /*
+     * --- Build Strength: terracotta ---------------------------------------
+     * The one family that needed care. Its hue sits about 20 degrees from the
+     * attention amber, which is the closest of any path, and accent and
+     * attention DO appear on screen together. Hue alone is not enough
+     * separation at that distance, so this family separates by luminance too:
+     * in dark mode it is deliberately much lighter than amber (1.50:1) rather
+     * than the mid tone that would otherwise have fallen out of the ladder,
+     * where it measured 1.06:1 and read as the same colour.
+     */
+    --palette-clay-43: oklch(0.4345 0.115 45); /* accent light   #82380e */
+    --palette-clay-40: oklch(0.4003 0.115 45); /* strong light   #782e00 */
+    --palette-clay-94: oklch(0.945 0.028 45); /* soft light     #fee8de */
+    --palette-clay-87: oklch(0.8722 0.0733 45); /* accent dark    #ffc6ad */
+    --palette-clay-91: oklch(0.9118 0.049 45); /* strong dark    #ffd8c8 */
+    --palette-clay-29: oklch(0.287 0.024 45); /* soft dark      #352721 */
+    --palette-clay-22: oklch(0.215 0.026 45); /* on-accent drk  #24160f */
+
+    /* --- Build Stamina: clear blue ---------------------------------------- */
+    --palette-azure-45: oklch(0.4515 0.0992 237); /* accent light   #005d85 */
+    --palette-azure-42: oklch(0.4172 0.0918 237); /* strong light   #005278 */
+    --palette-azure-94: oklch(0.945 0.028 237); /* soft light     #dcf0fe */
+    --palette-azure-72: oklch(0.7201 0.0792 237); /* accent dark    #74acd0 */
+    --palette-azure-76: oklch(0.7611 0.0792 237); /* strong dark    #80b9de */
+    --palette-azure-29: oklch(0.287 0.024 237); /* soft dark      #1f2d35 */
+    --palette-azure-22: oklch(0.215 0.026 237); /* on-accent drk  #0d1b24 */
+
+    /* --- Balanced Fitness: teal, sitting between the green and the blue ---- */
+    --palette-teal-48: oklch(0.4831 0.08 192); /* accent light   #0c6d6a */
+    --palette-teal-45: oklch(0.4465 0.0771 192); /* strong light   #00615f */
+    --palette-teal-94: oklch(0.945 0.024 192); /* soft light     #dcf2f1 */
+    --palette-teal-68: oklch(0.6816 0.0576 192); /* accent dark    #6ea4a2 */
+    --palette-teal-72: oklch(0.7231 0.0576 192); /* strong dark    #7bb1af */
+    --palette-teal-29: oklch(0.287 0.0184 192); /* soft dark      #202e2d */
+    --palette-teal-22: oklch(0.215 0.0207 192); /* on-accent drk  #0e1d1c */
+
+    /* --- Return to Fitness: deep violet, the darkest family in light mode -- */
+    --palette-iris-40: oklch(0.3998 0.115 292); /* accent light   #4a397f */
+    --palette-iris-37: oklch(0.3676 0.115 292); /* strong light   #423076 */
+    --palette-iris-94: oklch(0.945 0.028 292); /* soft light     #edeaff */
+    --palette-iris-80: oklch(0.8037 0.0828 292); /* accent dark    #bfb6f1 */
+    --palette-iris-84: oklch(0.8406 0.0828 292); /* strong dark    #cbc2fd */
+    --palette-iris-29: oklch(0.287 0.024 292); /* soft dark      #2b2936 */
+    --palette-iris-22: oklch(0.215 0.026 292); /* on-accent drk  #1a1725 */
   }
 }
