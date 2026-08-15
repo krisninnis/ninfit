@@ -39,6 +39,7 @@ import {
   Toggle,
 } from '../components/Field';
 import { AttentionIcon } from '../components/Icon';
+import { AccountSection } from '../components/AccountSection';
 import { Screen } from '../components/Screen';
 import { formatShortDay } from '../format';
 import { useProfile, type ProfileSaveStatus } from '../hooks/useProfile';
@@ -225,6 +226,8 @@ export function ProfileScreen() {
         <span className="today__programme">Everything here is editable</span>
         <SaveNote status={status} />
       </div>
+
+      <AccountSection />
 
       {hasStorageIssues ? (
         <section className="card card--attention">
@@ -448,7 +451,7 @@ export function ProfileScreen() {
                     measurement.hrvMs === undefined ? undefined : `${measurement.hrvMs} ms`,
                   ]
                     .filter((part) => part !== undefined)
-                    .join(' · ')}
+                    .join(' Â· ')}
                 </span>
               </div>
             ))}
@@ -570,7 +573,7 @@ function GameSettingsSection() {
           <div className="stat stat--row">
             <span className="stat__label">Level</span>
             <span className="stat__value">
-              {state.xp.level} · {state.xp.total} XP
+              {state.xp.level} Â· {state.xp.total} XP
             </span>
           </div>
         </div>
@@ -593,7 +596,7 @@ function GameSettingsSection() {
                 ) : null}
               </span>
               <span className="stat__value">
-                Level {skill.level} · {skill.xp} XP
+                Level {skill.level} Â· {skill.xp} XP
               </span>
             </div>
           ))}
