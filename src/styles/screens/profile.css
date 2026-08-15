@@ -70,4 +70,291 @@
   font-size: var(--ft-text-xs);
   text-decoration: underline;
 }
+
+/* ---------- NinFit Journey Card ---------- */
+
+.account-journey {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-5);
 }
+
+.account-journey--quiet {
+  gap: var(--ft-space-2);
+}
+
+.account-journey__intro {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-3);
+  padding: var(--ft-space-5);
+  border: 1px solid var(--ft-border-subtle);
+  border-radius: var(--ft-radius-lg);
+  background:
+    radial-gradient(
+      circle at 100% 0%,
+      var(--ft-accent-soft) 0,
+      transparent 42%
+    ),
+    var(--ft-surface-sunken);
+}
+
+.account-journey__eyebrow {
+  color: var(--ft-accent-strong);
+  font-size: var(--ft-text-xs);
+  font-weight: var(--ft-weight-bold);
+  letter-spacing: var(--ft-tracking-wide);
+  text-transform: uppercase;
+}
+
+.account-journey__title {
+  max-width: 22rem;
+  margin: 0;
+  color: var(--ft-text-primary);
+  font-family: var(--ft-font-display);
+  font-size: var(--ft-text-xl);
+  font-weight: var(--ft-weight-bold);
+  line-height: var(--ft-leading-snug);
+  letter-spacing: var(--ft-tracking-snug);
+}
+
+.account-journey__copy {
+  max-width: 34rem;
+  margin: 0;
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-sm);
+  line-height: var(--ft-leading-normal);
+}
+
+.account-journey__privacy {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ft-space-2);
+  padding-top: var(--ft-space-1);
+  color: var(--ft-text-tertiary);
+  font-size: var(--ft-text-xs);
+  line-height: var(--ft-leading-normal);
+}
+
+.account-journey__privacy-mark {
+  flex: none;
+  color: var(--ft-accent);
+  font-size: var(--ft-text-base);
+  line-height: 1;
+}
+
+.account-journey__mode {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ft-space-1);
+  padding: var(--ft-space-1);
+  border: 1px solid var(--ft-border-subtle);
+  border-radius: var(--ft-radius-md);
+  background: var(--ft-surface-sunken);
+}
+
+.account-journey__mode-button {
+  min-height: var(--ft-control-sm);
+  padding: 0 var(--ft-space-3);
+  border: 0;
+  border-radius: var(--ft-radius-sm);
+  background: transparent;
+  color: var(--ft-text-secondary);
+  font: inherit;
+  font-size: var(--ft-text-sm);
+  font-weight: var(--ft-weight-semibold);
+  cursor: pointer;
+}
+
+.account-journey__mode-button--active {
+  background: var(--ft-surface-raised);
+  color: var(--ft-text-primary);
+  box-shadow: var(--ft-shadow-card);
+}
+
+.account-journey__auth {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-4);
+}
+
+.account-journey__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-2);
+}
+
+.account-journey__field-label {
+  color: var(--ft-text-primary);
+  font-size: var(--ft-text-sm);
+  font-weight: var(--ft-weight-semibold);
+}
+
+.account-journey__input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--ft-control-lg);
+  padding: 0 var(--ft-space-4);
+  border: 1px solid var(--ft-border-strong);
+  border-radius: var(--ft-radius-md);
+  outline: none;
+  background: var(--ft-surface-raised);
+  color: var(--ft-text-primary);
+  font: inherit;
+  font-size: var(--ft-text-base);
+}
+
+.account-journey__input::placeholder {
+  color: var(--ft-text-tertiary);
+}
+
+.account-journey__input:focus-visible {
+  border-color: var(--ft-accent);
+  box-shadow: 0 0 0 3px var(--ft-accent-soft);
+}
+
+.account-journey__submit {
+  min-height: var(--ft-control-lg);
+  margin-top: var(--ft-space-1);
+}
+
+.account-journey__message {
+  margin: 0;
+  padding: var(--ft-space-3);
+  border-radius: var(--ft-radius-md);
+  background: var(--ft-accent-soft);
+  color: var(--ft-text-primary);
+  font-size: var(--ft-text-sm);
+  line-height: var(--ft-leading-normal);
+}
+
+.account-journey__message--error {
+  background: var(--ft-attention-soft);
+}
+
+.account-journey__summary {
+  display: grid;
+  gap: var(--ft-space-2);
+}
+
+.account-journey__stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ft-space-3);
+  min-height: var(--ft-control-sm);
+  padding: 0 var(--ft-space-3);
+  border-radius: var(--ft-radius-md);
+  background: var(--ft-surface-sunken);
+}
+
+.account-journey__stat-label {
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-sm);
+}
+
+.account-journey__stat-value {
+  color: var(--ft-text-primary);
+  font-size: var(--ft-text-sm);
+  font-weight: var(--ft-weight-semibold);
+  text-align: right;
+}
+
+@media (max-width: 430px) {
+  .account-journey {
+    gap: var(--ft-space-4);
+  }
+
+  .account-journey__intro {
+    padding: var(--ft-space-4);
+  }
+
+  .account-journey__mode {
+    grid-template-columns: 1fr;
+  }
+}
+.account-journey__password-wrap {
+  position: relative;
+  display: block;
+}
+
+.account-journey__input--password {
+  padding-right: var(--ft-control-lg);
+}
+
+.account-journey__reveal {
+  position: absolute;
+  top: 50%;
+  right: var(--ft-space-2);
+  display: grid;
+  place-items: center;
+  width: var(--ft-control-sm);
+  height: var(--ft-control-sm);
+  padding: 0;
+  border: 0;
+  border-radius: var(--ft-radius-sm);
+  transform: translateY(-50%);
+  background: transparent;
+  color: var(--ft-text-secondary);
+  font: inherit;
+  font-size: var(--ft-text-lg);
+  cursor: pointer;
+}
+
+.account-journey__reveal:hover {
+  background: var(--ft-surface-sunken);
+  color: var(--ft-text-primary);
+}
+
+.account-journey__reveal:focus-visible {
+  outline: 2px solid var(--ft-accent-ring);
+  outline-offset: 2px;
+}
+
+.account-journey__requirements {
+  padding: var(--ft-space-4);
+  border-radius: var(--ft-radius-md);
+  background: var(--ft-surface-sunken);
+}
+
+.account-journey__requirements-title {
+  display: block;
+  margin-bottom: var(--ft-space-2);
+  color: var(--ft-text-primary);
+  font-size: var(--ft-text-sm);
+  font-weight: var(--ft-weight-semibold);
+}
+
+.account-journey__requirements-list {
+  display: grid;
+  gap: var(--ft-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-xs);
+}
+
+.account-journey__requirements-list li {
+  position: relative;
+  padding-left: var(--ft-space-5);
+}
+
+.account-journey__requirements-list li::before {
+  content: '○';
+  position: absolute;
+  left: 0;
+  color: var(--ft-text-tertiary);
+}
+
+.account-journey__requirements-list li.is-met::before {
+  content: '✓';
+  color: var(--ft-accent-strong);
+  font-weight: var(--ft-weight-bold);
+}
+
+.account-journey__requirements-list li.is-met {
+  color: var(--ft-text-primary);
+}}

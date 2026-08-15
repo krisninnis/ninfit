@@ -43,8 +43,14 @@ describe('NinFit account integration', () => {
     expect(account).toContain('await signOut')
   })
 
-  it('uses a password input rather than displaying the password', () => {
-    expect(account).toContain('type="password"')
+  it('keeps password fields hidden unless the user reveals them', () => {
+    expect(account).toContain(
+      "type={showPassword ? 'text' : 'password'}",
+    )
+    expect(account).toContain(
+      "type={showRepeatPassword ? 'text' : 'password'}",
+    )
+    expect(account).toContain("useState(false)")
   })
 
   it('states that an account is optional', () => {
@@ -67,5 +73,71 @@ describe('NinFit account integration', () => {
 
   it('contains no privileged Supabase credential names', () => {
     expect(account).not.toMatch(/service[_-]?role|secret[_-]?key/i)
+  })
+
+  it('uses the Journey Card identity language', () => {
+    expect(account).toContain('Take your journey with you.')
+  })
+
+  it('states the local-first privacy promise', () => {
+    expect(account).toContain('Local by default · You choose what syncs')
+  })
+
+  it('uses dedicated full-width account inputs', () => {
+    expect(account).toContain('account-journey__input')
+  })
+
+  it('uses the Journey Card layout primitive', () => {
+    expect(account).toContain('account-journey')
+  })
+
+  it('gives the account action a NinFit-specific label', () => {
+    expect(account).toContain('Create my NinFit ID')
+  })
+
+  it('lazy-loads the cloud account feature', () => {
+    expect(profile).toContain("lazy(() =>")
+    expect(profile).toContain("import('../components/AccountSection')")
+  })
+
+  it('does not statically import the cloud account feature', () => {
+    expect(profile).not.toContain(
+      "import { AccountSection } from '../components/AccountSection'",
+    )
+  })
+
+  it('provides a loading fallback while cloud code arrives', () => {
+    expect(profile).toContain('<Suspense')
+    expect(profile).toContain('Account controls loading…')
+  })
+
+  it('asks for the password twice during account creation', () => {
+    expect(account).toContain('Repeat password')
+    expect(account).toContain('repeatPassword')
+  })
+
+  it('rejects mismatched account-creation passwords', () => {
+    expect(account).toContain('The passwords do not match.')
+  })
+
+  it('requires at least twelve characters when creating an account', () => {
+    expect(account).toContain('password.length < 12')
+    expect(account).toContain('Be at least 12 characters')
+  })
+
+  it('lets the user reveal and hide their password', () => {
+    expect(account).toContain('Show password')
+    expect(account).toContain('Hide password')
+    expect(account).toContain('showPassword')
+  })
+
+  it('lets the user reveal and hide the repeated password', () => {
+    expect(account).toContain('Show repeated password')
+    expect(account).toContain('Hide repeated password')
+  })
+
+  it('shows account password requirements', () => {
+    expect(account).toContain('Your password should:')
+    expect(account).toContain('Password requirements')
   })
 })
