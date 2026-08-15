@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs';
+﻿import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -62,7 +62,10 @@ describe('the path is activated only where it is meant to be', () => {
     const offenders = sourceFiles(SRC)
       .filter((path) => !path.includes('test'))
       .filter((path) => readFileSync(path, 'utf8').includes('data-path='))
-      .filter((path) => !ACTIVATION_FILES.some((allowed) => path.endsWith(allowed)));
+      .filter((path) => {
+        const normalised = path.replaceAll('\\', '/');
+        return !ACTIVATION_FILES.some((allowed) => normalised.endsWith(allowed));
+      });
 
     expect(
       offenders,
