@@ -56,4 +56,20 @@ describe('Supabase auth boundary', () => {
       /service[_-]?role|secret[_-]?key/i,
     )
   })
+
+  it('directs confirmation emails back to NinFit', () => {
+    expect(source).toContain('emailRedirectTo')
+    expect(source).toContain('/#/profile')
+  })
+
+  it('returns both user and session from signup', () => {
+    expect(source).toContain('user: data.user')
+    expect(source).toContain('session: data.session')
+  })
+
+  it('can resend a signup confirmation email', () => {
+    expect(source).toContain('resendConfirmation')
+    expect(source).toContain('supabase.auth.resend')
+    expect(source).toContain("type: 'signup'")
+  })
 })

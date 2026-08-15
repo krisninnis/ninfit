@@ -10,11 +10,20 @@ export type SignUpCredentials = AuthCredentials & {
   displayName?: string
 }
 
+export type SignUpResult = {
+  user: User | null
+  session: Session | null
+}
+
+function confirmationRedirectUrl(): string {
+  return `${window.location.origin}/#/profile`
+}
+
 export async function signUp({
   email,
   password,
   displayName,
-}: SignUpCredentials): Promise<User | null> {
+}: SignUpCredentials): Promise<SignUpResult> {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -22,6 +31,7 @@ export async function signUp({
       data: displayName
         ? { display_name: displayName }
         : undefined,
+      emailRedirectTo: confirmationRedirectUrl(),
     },
   })
 
@@ -29,7 +39,10 @@ export async function signUp({
     throw error
   }
 
-  return data.user
+  return {
+    user: data.user,
+    session: data.session,
+  }
 }
 
 export async function signIn({
@@ -81,4 +94,17 @@ export function onAuthStateChange(
   })
 
   return () => subscription.unsubscribe()
+}
+export async function resendConfirmation(email: string): Promise<void> {
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email: email.trim(),
+    options: {
+      emailRedirectTo: confirmationRedirectUrl(),
+    },
+  })
+
+  if (error) {
+    throw error
+  }
 }
