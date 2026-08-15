@@ -451,7 +451,7 @@ export function ProfileScreen() {
                     measurement.hrvMs === undefined ? undefined : `${measurement.hrvMs} ms`,
                   ]
                     .filter((part) => part !== undefined)
-                    .join(' Â· ')}
+                    .join(' · ')}
                 </span>
               </div>
             ))}
@@ -573,7 +573,7 @@ function GameSettingsSection() {
           <div className="stat stat--row">
             <span className="stat__label">Level</span>
             <span className="stat__value">
-              {state.xp.level} Â· {state.xp.total} XP
+              {state.xp.level} · {state.xp.total} XP
             </span>
           </div>
         </div>
@@ -596,7 +596,7 @@ function GameSettingsSection() {
                 ) : null}
               </span>
               <span className="stat__value">
-                Level {skill.level} Â· {skill.xp} XP
+                Level {skill.level} · {skill.xp} XP
               </span>
             </div>
           ))}
