@@ -10,3 +10,5 @@ coverage/
 
 .verify/
 dump.tmp.ts
+
+.vercel
