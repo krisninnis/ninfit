@@ -37,6 +37,7 @@
 @import './components/egg.css';
 
 @import './screens/onboarding.css';
+@import './screens/ninfit-id.css';
 @import './screens/today.css';
 @import './screens/week.css';
 @import './screens/progress.css';

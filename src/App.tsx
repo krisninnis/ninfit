@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ComponentType } from 'react';
 import { TabBar } from './ui/components/TabBar';
 import { OnboardingScreen } from './ui/screens/OnboardingScreen';
+import { NinFitIdScreen } from './ui/screens/NinFitIdScreen';
 import { DataScreen } from './ui/screens/DataScreen';
 import { ProfileScreen } from './ui/screens/ProfileScreen';
 import { ProgressScreen } from './ui/screens/ProgressScreen';
@@ -24,6 +25,7 @@ export default function App() {
   // "Not now" hides onboarding for this session only. Nothing is written, and the
   // tracker is fully usable without ever answering a question.
   const [dismissedOnboarding, setDismissedOnboarding] = useState(false);
+  const [showNinFitId, setShowNinFitId] = useState(false);
 
   // Keep state in step with the URL so the phone's back button moves between tabs.
   useEffect(() => {
@@ -45,7 +47,10 @@ export default function App() {
       <div className="app">
         <main className="app__main" ref={mainRef}>
           <OnboardingScreen
-            onComplete={(input) => game.completeOnboarding(input)}
+            onComplete={(input) => {
+              game.completeOnboarding(input);
+              setShowNinFitId(true);
+            }}
             onDismiss={() => setDismissedOnboarding(true)}
           />
         </main>
@@ -62,9 +67,25 @@ export default function App() {
     // attribute is then absent and the neutral sage accent applies.
     <div className="app" data-path={game.state.pathId}>
       <main className="app__main" ref={mainRef}>
-        <CurrentScreen />
+        {showNinFitId ? (
+          <NinFitIdScreen
+            onContinueWithEmail={() => {
+              window.location.hash = '#/profile';
+              setShowNinFitId(false);
+            }}
+            onSkip={() => {
+              window.location.hash = '#/today';
+              setShowNinFitId(false);
+            }}
+          />
+        ) : (
+          <CurrentScreen />
+        )}
       </main>
-      <TabBar current={tab} onSelect={setTab} />
+
+      {!showNinFitId ? (
+        <TabBar current={tab} onSelect={setTab} />
+      ) : null}
     </div>
   );
 }
