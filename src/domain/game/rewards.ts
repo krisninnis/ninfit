@@ -8,6 +8,7 @@ import { nowTimestamp } from '../dates';
 import { newId, type IdFactory } from '../ids';
 import type { DailyLog, ISODate, ISODateTime, PlannedActivity, WeeklyPlan } from '../types';
 import { isRestDay, resolveSessionForDate, summariseSessionCompletion } from '../weeklyPlan';
+import { qualifyingActiveDays } from './egg';
 import { evaluateMascot } from './mascot';
 import { earnedTrophies, type TrophyFacts } from './trophies';
 import type {
@@ -278,8 +279,11 @@ export function grantRewards(
   }
 
   const level = levelForXp(xpTotal);
+  // Counted from the awarded keys AFTER this pass has added its own, and never from
+  // `facts.distinctActiveDays` - that figure is recomputed from live logs and falls
+  // when an activity is un-ticked, which would let the shell heal.
   const mascot = evaluateMascot(state.mascot, {
-    distinctActiveDays: facts.distinctActiveDays,
+    qualifyingDays: qualifyingActiveDays([...awarded]),
     level,
   });
 

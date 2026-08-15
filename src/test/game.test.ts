@@ -12,13 +12,11 @@ import {
 } from '../app/game';
 import { createTodaySession, type TodaySession } from '../app/todaySession';
 import { acknowledgeRestDay, toggleActivityCompletion } from '../domain/dailyLog';
+import { addDays } from '../domain/dates';
 import { PROGRAMME_START_DATE } from '../domain/defaults';
 import { createDefaultGameSettings } from '../domain/game/defaults';
-import {
-  HATCH_ACTIVE_DAYS_REQUIRED,
-  evolutionStatus,
-  visibleMascotFamily,
-} from '../domain/game/mascot';
+import { HATCH_QUALIFYING_DAYS } from '../domain/game/egg';
+import { evolutionStatus, visibleMascotFamily } from '../domain/game/mascot';
 import { recommendPath } from '../domain/game/onboarding';
 import { highlightedSkillsForPath, mascotFamilyForPath } from '../domain/game/paths';
 import { PLATINUM_AVAILABLE, TROPHIES, findTrophy } from '../domain/game/trophies';
@@ -71,6 +69,26 @@ function tick(date: string, activity: PlannedActivity, completed = true): void {
 
 function activitiesOn(date: string): PlannedActivity[] {
   return resolveToday(plans, PROGRAMME_START_DATE, date).activities;
+}
+
+/**
+ * Complete one activity on each of the first `days` programme days that have any.
+ *
+ * The egg now needs six distinct qualifying days, so the tests need a way to reach
+ * that without listing six dates by hand. Rest days are skipped: they have no
+ * activities to tick and, by design, earn no crack.
+ */
+function tickQualifyingDays(days: number): string[] {
+  const done: string[] = [];
+  for (let offset = 0; done.length < days && offset < 28; offset += 1) {
+    const date = addDays(PROGRAMME_START_DATE, offset);
+    const [first] = activitiesOn(date);
+    if (first === undefined) continue;
+    tick(date, first);
+    done.push(date);
+  }
+  if (done.length < days) throw new Error(`only found ${done.length} qualifying days`);
+  return done;
 }
 
 function sync(store: Repository = repo) {
@@ -240,23 +258,19 @@ describe('the egg', () => {
     expect(onboardingSource).not.toMatch(/Tortoise|Bear|\bFox\b|Otter|Wolf/);
   });
 
-  it('becomes ready only after the required number of active days', () => {
-    tick(DAY_1, yoga);
+  it('becomes ready only after the required number of qualifying days', () => {
+    expect(HATCH_QUALIFYING_DAYS).toBe(6);
+
+    // Five days of real activity is not enough - the shell cracks, it does not open.
+    tickQualifyingDays(HATCH_QUALIFYING_DAYS - 1);
     expect(sync().state.mascot.eggState).toBe('unhatched');
 
-    const [walkTwo] = activitiesOn(DAY_2);
-    if (!walkTwo) throw new Error('expected a walk on day 2');
-    tick(DAY_2, walkTwo);
-
-    expect(HATCH_ACTIVE_DAYS_REQUIRED).toBe(2);
+    tickQualifyingDays(HATCH_QUALIFYING_DAYS);
     expect(sync().state.mascot.eggState).toBe('ready');
   });
 
   it('never hatches on its own', () => {
-    tick(DAY_1, yoga);
-    const [walkTwo] = activitiesOn(DAY_2);
-    if (!walkTwo) throw new Error('expected a walk on day 2');
-    tick(DAY_2, walkTwo);
+    tickQualifyingDays(HATCH_QUALIFYING_DAYS);
 
     sync();
     sync();
@@ -265,10 +279,7 @@ describe('the egg', () => {
   });
 
   it('hatches when asked, and stays hatched after a reload', () => {
-    tick(DAY_1, yoga);
-    const [walkTwo] = activitiesOn(DAY_2);
-    if (!walkTwo) throw new Error('expected a walk on day 2');
-    tick(DAY_2, walkTwo);
+    tickQualifyingDays(HATCH_QUALIFYING_DAYS);
     sync();
 
     const hatched = hatchEggNow(repo, NOW);
@@ -285,10 +296,7 @@ describe('the egg', () => {
   });
 
   it('reveals the animal only after hatching', () => {
-    tick(DAY_1, yoga);
-    const [walkTwo] = activitiesOn(DAY_2);
-    if (!walkTwo) throw new Error('expected a walk on day 2');
-    tick(DAY_2, walkTwo);
+    tickQualifyingDays(HATCH_QUALIFYING_DAYS);
     sync();
     const state = hatchEggNow(repo, NOW);
 

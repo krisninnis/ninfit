@@ -1,4 +1,5 @@
 import type { ISODateTime } from '../types';
+import { isHatchEligibleFromDays } from './egg';
 import { findMascotFamily } from './paths';
 import {
   MASCOT_STAGES,
@@ -21,8 +22,18 @@ import {
  *     overall XP bar is allowed to be precise; this deliberately is not.
  */
 
-/** Distinct programme days with activity before the egg is ready. */
-export const HATCH_ACTIVE_DAYS_REQUIRED = 2;
+/**
+ * Hatch eligibility now reads the MONOTONIC count.
+ *
+ * It used to take `distinctActiveDays`, which `deriveRewards` recomputes from the
+ * live logs and which therefore falls when somebody un-ticks a completed activity.
+ * `eggState` survived that only by accident: `evaluateMascot` promotes solely from
+ * `unhatched`, so a ready egg could not be un-readied. That was a latch nobody
+ * designed, protecting a rule that was quietly reversible underneath.
+ *
+ * The threshold and the counting now live in `egg.ts` and come from `awardedKeys`,
+ * which only ever grows. One definition of qualifying progress, not two.
+ */
 
 /**
  * LEGACY SCAFFOLDING - scheduled for replacement in the evolution milestone.
@@ -62,9 +73,9 @@ export function isHatched(mascot: MascotState): boolean {
   return mascot.eggState === 'hatched';
 }
 
-/** Enough distinct active days to make the egg ready. */
-export function isHatchEligible(distinctActiveDays: number): boolean {
-  return distinctActiveDays >= HATCH_ACTIVE_DAYS_REQUIRED;
+/** Enough distinct qualifying days to make the egg ready. */
+export function isHatchEligible(qualifyingDays: number): boolean {
+  return isHatchEligibleFromDays(qualifyingDays);
 }
 
 /**
@@ -73,11 +84,14 @@ export function isHatchEligible(distinctActiveDays: number): boolean {
  */
 export function evaluateMascot(
   mascot: MascotState,
-  facts: { distinctActiveDays: number; level: number },
+  facts: { qualifyingDays: number; level: number },
 ): MascotState {
   let next = mascot;
 
-  if (next.eggState === 'unhatched' && isHatchEligible(facts.distinctActiveDays)) {
+  // Promotes only from `unhatched`, so a ready or hatched egg can never be pushed
+  // backwards - including by the threshold itself changing underneath an existing
+  // save. Someone already holding a ready egg keeps it.
+  if (next.eggState === 'unhatched' && isHatchEligible(facts.qualifyingDays)) {
     next = { ...next, eggState: 'ready' };
   }
 
