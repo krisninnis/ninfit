@@ -25,11 +25,15 @@ import {
 export const HATCH_ACTIVE_DAYS_REQUIRED = 2;
 
 /**
- * Placeholder evolution gates.
+ * LEGACY SCAFFOLDING - scheduled for replacement in the evolution milestone.
  *
  * Overall level is a stand-in for a richer rule that will eventually weigh
- * consistency, programme progression, milestones and recovery behaviour together.
- * Kept crude on purpose so it is obvious this is scaffolding.
+ * programme adherence, activity history, the chosen path and a user choice between
+ * eligible branches. Kept crude on purpose so it is obvious this is scaffolding.
+ *
+ * M1 deliberately does NOT change it. Evolution timing must be identical before and
+ * after this milestone, because a user part-way to a stage should not find the
+ * goalposts moved by a refactor they never asked for.
  */
 export const EVOLUTION_LEVEL_GATES: Readonly<Record<MascotStageId, number | undefined>> = {
   starter: 5,
@@ -142,10 +146,22 @@ export const EVOLUTION_STATUS_LABELS: Readonly<Record<EvolutionStatus, string>> 
   evolution_close: 'Something is about to change',
 };
 
+/**
+ * The five growth stages, as the product names them.
+ *
+ * THE STORED IDS ARE NOT THE PRODUCT NAMES, AND THAT IS DELIBERATE. `capable`,
+ * `advanced` and `elite` are already written into every existing save; renaming
+ * them would be a data migration bought with real risk in exchange for nothing a
+ * user could see. Ids are internal, labels are product, and this table is the one
+ * place the two meet.
+ *
+ *   starter  -> Starter     growing  -> Growing     capable -> Active
+ *   advanced -> Athletic    elite    -> Champion
+ */
 export const MASCOT_STAGE_LABELS: Readonly<Record<MascotStageId, string>> = {
-  starter: 'Newly hatched',
+  starter: 'Starter',
   growing: 'Growing',
-  capable: 'Capable',
-  advanced: 'Advanced',
-  elite: 'Elite',
+  capable: 'Active',
+  advanced: 'Athletic',
+  elite: 'Champion',
 };

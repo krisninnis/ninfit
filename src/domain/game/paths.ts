@@ -94,7 +94,19 @@ export function findMascotFamily(id: MascotFamilyId): MascotFamily {
   return found;
 }
 
-/** The mascot family a path hatches. The single place that mapping is expressed. */
+/**
+ * The mascot family a path hatches. The single place that mapping is expressed.
+ *
+ * LEGACY BEHAVIOUR, PRESERVED ON PURPOSE. This is a deterministic 1:1 map, so today
+ * the path decides the species outright and it is settled before the egg even
+ * exists. The approved direction replaces it with curated-random selection from a
+ * weighted shortlist, seeded and recorded on the mascot's passport.
+ *
+ * That replacement belongs to the hatch milestone, not here. M1 changes nothing
+ * about which mascot anyone receives - `src/test/game.test.ts` pins the five
+ * mappings, and those assertions must keep passing until selection is genuinely
+ * replaced.
+ */
 export function mascotFamilyForPath(id: FitnessPathId): MascotFamilyId {
   return findPath(id).mascotFamilyId;
 }
