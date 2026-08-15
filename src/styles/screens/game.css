@@ -7,14 +7,27 @@
 @layer screens {
 /* ---------- Game layer ---------- */
 
-/* Composes with .card .card--reward. Layout only. */
+/**
+ * The companion strip.
+ *
+ * PHASE 6 SHRANK THIS. It was a full reward card and the tallest thing on Today.
+ * It is now a low strip on the page surface: a reward surface should mark a reward,
+ * not sit there permanently claiming to be one.
+ *
+ * The art column is sized so the egg lands around 44px, roughly a third of its old
+ * height, which is what buys the plan card its dominance.
+ */
 .game {
   position: relative;
   display: grid;
-  grid-template-columns: 84px 1fr;
-  gap: var(--ft-space-4);
+  grid-template-columns: 52px 1fr auto;
+  gap: var(--ft-space-3);
   align-items: center;
-  margin-top: calc(var(--ft-space-4) * -1);
+  padding: var(--ft-space-3);
+  border: 1px solid var(--ft-border-subtle);
+  border-radius: var(--ft-radius-lg);
+  background: var(--ft-surface-raised);
+  margin-bottom: var(--ft-space-4);
 }
 
 .game__art {
@@ -22,40 +35,39 @@
   place-items: center;
 }
 
-.egg {
-  width: 68px;
-  height: 84px;
+.game__art .egg {
+  width: 36px;
+  height: 44px;
 }
 
-.egg__shell {
-  fill: var(--ft-surface-raised);
-  stroke: var(--ft-border-strong);
-  stroke-width: 2;
+/* One line for the XP count and the companion's message, so neither becomes a
+   paragraph. Truncation keeps the strip exactly one line tall on a small phone. */
+.game__line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ft-space-2);
+  min-width: 0;
 }
 
-.egg__speck {
-  fill: var(--ft-accent);
-  opacity: 0.18;
+.game__line .game__message {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
-/* A gentle rock, not a demand for attention. */
-.egg--ready {
-  animation: egg-rock 2.4s ease-in-out infinite;
-  transform-origin: 50% 90%;
+.game__action {
+  grid-column: 3;
+  white-space: nowrap;
 }
 
-@keyframes egg-rock {
-  0%, 70%, 100% { transform: rotate(0deg); }
-  78% { transform: rotate(-5deg); }
-  86% { transform: rotate(5deg); }
-  94% { transform: rotate(-2deg); }
-}
+/* The egg moved to components/egg.css in Phase 5, when onboarding began sharing it. */
 
 .mascot {
   display: grid;
   place-items: center;
-  width: 68px;
-  height: 68px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--ft-radius-circle);
   background: var(--ft-surface-raised);
   border: 2px solid var(--ft-accent);
@@ -83,7 +95,7 @@
 
 .xpbar {
   display: block;
-  height: 8px;
+  height: 6px;
   margin-top: var(--ft-space-2);
   border-radius: var(--ft-radius-pill);
   background: var(--ft-surface-raised);
@@ -104,27 +116,30 @@
  */
 .game__xp,
 .game__stage {
-  display: block;
-  margin-top: var(--ft-space-1);
   color: var(--ft-text-secondary);
   font-size: var(--ft-text-xs);
+  white-space: nowrap;
+}
+
+.game__stage {
+  display: block;
+  margin-top: var(--ft-space-1);
 }
 
 .game__message {
-  margin-top: var(--ft-space-2);
   color: var(--ft-text-secondary);
   font-size: var(--ft-text-sm);
 }
 
+/* Sizing lives in the strip rule above; this only trims the text. */
 .game__action {
-  margin-top: var(--ft-space-3);
-  width: 100%;
+  font-size: var(--ft-text-sm);
 }
 
 .xpfloat {
   position: absolute;
-  top: var(--ft-space-3);
-  right: var(--ft-space-4);
+  top: calc(var(--ft-space-2) * -1);
+  right: var(--ft-space-3);
   padding: 3px 10px;
   border-radius: var(--ft-radius-pill);
   background: var(--ft-accent);

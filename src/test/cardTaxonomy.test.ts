@@ -70,8 +70,11 @@ describe('attention states never rely on colour alone', () => {
 
 describe('card roles', () => {
   it('makes today’s plan the action card', () => {
-    expect(todaySource).toMatch(/className="card card--action plan"/);
-    expect(todaySource).toMatch(/className="card card--action plan plan--rest"/);
+    // Matched on the role rather than the exact class string: Phase 6 added
+    // `plan--hero`, and pinning the literal list would fail on any future modifier
+    // while proving nothing extra. The role is what the taxonomy is about.
+    expect(todaySource).toMatch(/className="card card--action plan\b/);
+    expect(todaySource).toMatch(/className="card card--action plan[^"]*plan--rest"/);
   });
 
   it('keeps tracking sections on the quiet default', () => {
@@ -80,8 +83,21 @@ describe('card roles', () => {
     expect(todaySource).not.toMatch(/<Section[^>]*className="card--reward/);
   });
 
-  it('gives the game header the reward role', () => {
-    expect(gameHeaderSource).toMatch(/className="card card--reward game"/);
+  /**
+   * CHANGED IN PHASE 6, DELIBERATELY.
+   *
+   * The companion header used to wear `card--reward` permanently. That made the
+   * reward surface mean "the game lives here" rather than "something was earned",
+   * and it was the tallest thing on Today - the exact hierarchy Phase 6 set out to
+   * fix. It is now a plain strip.
+   *
+   * The reward role is not retired: it stays reserved in the taxonomy for actual
+   * reward moments, which Phase 8 builds. What this test now protects is that it is
+   * not spent on furniture.
+   */
+  it('keeps the reward role off the permanent companion strip', () => {
+    expect(gameHeaderSource).not.toMatch(/card--reward/);
+    expect(gameHeaderSource).toMatch(/className="game"/);
   });
 
   it('keeps reward styling off the Data screen', () => {

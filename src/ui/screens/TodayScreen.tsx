@@ -12,6 +12,7 @@ import type { SessionCompletion } from '../../domain/weeklyPlan';
 import type { PlannedActivity, SymptomTrend } from '../../domain/types';
 import { Choice, NoteField, NumberField, Scale, Section, Stepper, Toggle } from '../components/Field';
 import { AttentionIcon } from '../components/Icon';
+import { QuickCheckIn } from '../components/QuickCheckIn';
 import { Screen } from '../components/Screen';
 import { capitalise, formatCount, formatLongDate } from '../format';
 import { useToday, type SaveIndicator } from '../hooks/useToday';
@@ -95,6 +96,31 @@ function completionText(completion: SessionCompletion): string {
   }
 }
 
+/**
+ * The one action the plan card offers.
+ *
+ * There is exactly one, and it always points at the FIRST thing still to do. If that
+ * activity has a video it opens it, because that is a real thing the app can do; if
+ * it does not, the button ticks that single activity off.
+ *
+ * Deliberately per-activity, never per-session. A "mark the session complete" button
+ * was proposed once before and rejected: ticking three things at once loses the
+ * information that only one of them happened, and partial completion is supposed to
+ * count for something here.
+ */
+function primaryAction(
+  activities: readonly PlannedActivity[],
+  isDone: (id: string) => boolean,
+): { activity: PlannedActivity } | undefined {
+  const next = activities.find((activity) => !isDone(activity.id));
+  return next === undefined ? undefined : { activity: next };
+}
+
+/** Total planned minutes, shown as one number rather than three hints. */
+function totalMinutes(activities: readonly PlannedActivity[]): number {
+  return activities.reduce((sum, activity) => sum + activity.durationMinutes, 0);
+}
+
 export function TodayScreen() {
   const { date, view, log, completion, saveIndicator, isPersistent, isBlocked, update } = useToday();
   const game = useGame();
@@ -130,17 +156,18 @@ export function TodayScreen() {
     );
   }
 
+  const nextUp = primaryAction(view.activities, (id) => isActivityCompleted(log, id));
+  const plannedMinutes = totalMinutes(view.activities);
+  const activeDays = game.facts.activeDays.length;
+
   return (
     <Screen title="Today" subtitle={formatLongDate(date)}>
-      {/* The hook first, then today's plan. The game never buries the workout. */}
-      <GameHeader
-        state={game.state}
-        settings={game.settings}
-        granted={game.granted}
-        onHatch={game.hatch}
-        onEvolve={game.evolve}
-      />
-
+      {/*
+        PHASE 6 ORDER. Context, then companion, then the plan - and the plan is the
+        hero. This used to open with the game card, which meant the first and largest
+        thing on the screen answered "how am I doing?" before anything answered "what
+        am I doing today?". Those two questions are now in the right order.
+      */}
       <div className="today__meta">
         <span className="today__programme">
           {view.weekNumber !== undefined && view.dayIndex !== undefined
@@ -149,6 +176,14 @@ export function TodayScreen() {
         </span>
         <SaveDot indicator={saveIndicator} />
       </div>
+
+      <GameHeader
+        state={game.state}
+        settings={game.settings}
+        granted={game.granted}
+        onHatch={game.hatch}
+        onEvolve={game.evolve}
+      />
 
       {!isPersistent ? (
         <section className="card card--attention">
@@ -163,14 +198,20 @@ export function TodayScreen() {
       {/* --- The plan ------------------------------------------------------ */}
 
       {view.status === 'planned' ? (
-        <section className="card card--action plan">
-          <h2 className="plan__title">Today&rsquo;s session</h2>
-          {view.targetEffortMin !== undefined && view.targetEffortMax !== undefined ? (
-            <p className="plan__effort">
-              Aim for about {view.targetEffortMin}&ndash;{view.targetEffortMax} out of 10 effort. Gentle
-              is the point.
+        <section className="card card--action plan plan--hero">
+          <div className="plan__head">
+            <h2 className="plan__title">Today&rsquo;s session</h2>
+            {/* Duration and intensity as two glanceable facts, not two sentences. */}
+            <p className="plan__facts">
+              {plannedMinutes > 0 ? <span className="plan__fact">{plannedMinutes} min</span> : null}
+              {view.targetEffortMin !== undefined && view.targetEffortMax !== undefined ? (
+                <span className="plan__fact">
+                  Effort {view.targetEffortMin}&ndash;{view.targetEffortMax}
+                </span>
+              ) : null}
             </p>
-          ) : null}
+          </div>
+
           <ul className="plan__activities">
             {view.activities.map((activity) => (
               <ActivityRow
@@ -181,26 +222,72 @@ export function TodayScreen() {
               />
             ))}
           </ul>
+
+          {/* Exactly one primary action, always pointing at the next undone thing. */}
+          {nextUp !== undefined ? (
+            nextUp.activity.externalUrl !== undefined ? (
+              <a
+                className="btn btn--primary btn--block plan__cta"
+                href={nextUp.activity.externalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Start {nextUp.activity.label}
+              </a>
+            ) : (
+              <button
+                type="button"
+                className="btn btn--primary btn--block plan__cta"
+                onClick={() => update(toggleActivityCompletion(log, nextUp.activity.id, true))}
+              >
+                Mark {nextUp.activity.label} done
+              </button>
+            )
+          ) : null}
+
           <p className="plan__status">{completionText(sessionCompletion)}</p>
+          {view.targetEffortMin !== undefined ? (
+            <p className="plan__hint">Gentle is the point.</p>
+          ) : null}
         </section>
       ) : null}
 
+      {/*
+        Rest is a planned day, so it gets the hero treatment and a real primary action
+        of its own. Every benchmark treats a rest day as an empty state; here it is
+        something you can complete, because the programme asked for it.
+      */}
       {view.status === 'rest' ? (
-        <section className="card card--action plan plan--rest">
-          <h2 className="plan__title">Rest day</h2>
+        <section className="card card--action plan plan--hero plan--rest">
+          <div className="plan__head">
+            <h2 className="plan__title">Rest day</h2>
+            <p className="plan__facts">
+              <span className="plan__fact">Planned</span>
+            </p>
+          </div>
           <p className="plan__rest">Recovery is part of the programme.</p>
-          <p className="plan__hint">
-            Anything below is still worth recording if you feel like it.
-          </p>
+
+          {exercise?.restDayAcknowledged !== true ? (
+            <button
+              type="button"
+              className="btn btn--primary btn--block plan__cta"
+              onClick={() => update(acknowledgeRestDay(true))}
+            >
+              I rested today
+            </button>
+          ) : (
+            <p className="plan__status">Rest day done.</p>
+          )}
+
           <div className="plan__complete">
-            {/* Rest is the planned activity, so this asks whether you followed the
-                plan - not whether you exercised. */}
-            <Toggle
-              label="I followed today&rsquo;s rest day"
-              hint="Resting is the plan today."
-              checked={exercise?.restDayAcknowledged}
-              onChange={(checked) => update(acknowledgeRestDay(checked))}
-            />
+            {exercise?.restDayAcknowledged === true ? (
+              <Toggle
+                label="I followed today&rsquo;s rest day"
+                hint="Resting is the plan today."
+                checked={exercise?.restDayAcknowledged}
+                onChange={(checked) => update(acknowledgeRestDay(checked))}
+              />
+            ) : null}
             <Toggle
               label="I did something active anyway"
               hint="Optional, and entirely separate."
@@ -235,10 +322,21 @@ export function TodayScreen() {
         </section>
       ) : null}
 
+      {/* --- Quick check-in ------------------------------------------------- */}
+
+      <QuickCheckIn log={log} onChange={update} />
+
       {/* --- How it went --------------------------------------------------- */}
 
+      {/*
+        Everything below is closed by default from Phase 6 on. Open sections turned
+        Today into a page of forms, which is the "wall of metrics" the benchmark
+        warned about. Each header now carries its own value, so closed still answers
+        the question - it just stops shouting it.
+      */}
       <Section
         title="How did it go?"
+        defaultOpen={false}
         summary={
           exercise?.durationMinutes !== undefined ? `${exercise.durationMinutes} min` : undefined
         }
@@ -284,7 +382,14 @@ export function TodayScreen() {
 
       <Section
         title="How is your back?"
-        summary={hasSymptomFlag(log) ? 'Change recorded' : undefined}
+        defaultOpen={false}
+        summary={
+          hasSymptomFlag(log)
+            ? 'Change recorded'
+            : symptoms?.backPainAfter !== undefined
+              ? `Pain ${symptoms.backPainAfter}/10`
+              : undefined
+        }
       >
         <Scale
           label="Back pain before"
@@ -330,7 +435,15 @@ export function TodayScreen() {
 
       {/* --- Food ----------------------------------------------------------- */}
 
-      <Section title="Today&rsquo;s food target">
+      <Section
+        title="Today&rsquo;s food target"
+        defaultOpen={false}
+        summary={
+          nutrition?.fruitVegServings !== undefined
+            ? `${nutrition.fruitVegServings} servings`
+            : undefined
+        }
+      >
         <Toggle
           label="Fruit before midday"
           checked={nutrition?.morningFruit}
@@ -365,7 +478,10 @@ export function TodayScreen() {
 
       <Section
         title="Water"
-        summary={hydration?.glasses !== undefined ? `${hydration.glasses}` : undefined}
+        defaultOpen={false}
+        summary={
+          hydration?.glasses !== undefined ? `${hydration.glasses} glasses` : undefined
+        }
       >
         <Stepper
           label="Glasses or cups"
@@ -391,7 +507,11 @@ export function TodayScreen() {
 
       {/* --- Recovery -------------------------------------------------------- */}
 
-      <Section title="Sleep and recovery" defaultOpen={false}>
+      <Section
+        title="Sleep and recovery"
+        defaultOpen={false}
+        summary={recovery?.sleepHours !== undefined ? `${recovery.sleepHours} hours` : undefined}
+      >
         <Stepper
           label="Sleep"
           value={recovery?.sleepHours}
@@ -432,6 +552,17 @@ export function TodayScreen() {
           onChange={(value) => update({ recovery: { notes: value } })}
         />
       </Section>
+
+      {/*
+        One insight, not a dashboard. It counts distinct days with something completed,
+        which is the number this product is actually about - showing up - rather than
+        how much of a form has been filled in.
+      */}
+      <p className="today__insight">
+        {activeDays === 0
+          ? 'Your first active day starts whenever you are ready.'
+          : `${activeDays} active ${activeDays === 1 ? 'day' : 'days'} so far.`}
+      </p>
 
       <p className="today__footer">
         {completion.filled === 0

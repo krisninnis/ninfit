@@ -48,7 +48,59 @@
   font-size: var(--ft-text-xs);
   text-align: center;
 }
-/* ---------- Plan card ---------- */
+/* ---------- Plan card: the hero of Today ---------- */
+
+/**
+ * PHASE 6 MADE THIS DOMINANT.
+ *
+ * The plan used to be one card among six, sitting below a taller game card. It now
+ * opens with its own header row, states duration and intensity as two glanceable
+ * facts rather than two sentences, and carries exactly one primary action.
+ *
+ * Dominance comes from weight and space, not from colour: a heavier border and more
+ * padding than any other surface on the screen. Doing it with the accent instead
+ * would have made the hero mean "accent" rather than "important", and the accent is
+ * already carrying path identity.
+ */
+.plan--hero {
+  padding: var(--ft-space-5) var(--ft-space-4);
+  border-width: 2px;
+  border-color: var(--ft-border-strong);
+}
+
+.plan__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ft-space-3);
+  flex-wrap: wrap;
+}
+
+.plan__facts {
+  display: flex;
+  gap: var(--ft-space-2);
+  flex-wrap: wrap;
+}
+
+/*
+ * Neutral by design. These are facts about the session, not states needing
+ * attention, so they must not borrow the amber or read as a warning.
+ */
+.plan__fact {
+  padding: 2px var(--ft-space-2);
+  border-radius: var(--ft-radius-pill);
+  background: var(--ft-surface-sunken);
+  border: 1px solid var(--ft-border-subtle);
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-xs);
+  font-weight: var(--ft-weight-semibold);
+  white-space: nowrap;
+}
+
+.plan__cta {
+  margin-top: var(--ft-space-4);
+  min-height: var(--ft-control-lg);
+}
 
 .plan__title {
 }
@@ -113,5 +165,101 @@
   margin-top: var(--ft-space-4);
   padding-top: var(--ft-space-3);
   border-top: 1px solid var(--ft-border-subtle);
+}
+
+/* ---------- Quick check-in ---------- */
+
+/**
+ * Three numbers, reachable without opening anything.
+ *
+ * The row is a grid rather than a flex line so the labels, values and controls line
+ * up into columns down the card - the eye reads a small table, not three unrelated
+ * rows. Controls stay at the 44px floor, and water is one tap because it is the one
+ * people record several times a day.
+ */
+.checkin__title {
+  font-size: var(--ft-text-base);
+  font-weight: var(--ft-weight-semibold);
+}
+
+.checkin__list {
+  list-style: none;
+  margin: var(--ft-space-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-2);
+}
+
+.checkin__row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr auto;
+  align-items: center;
+  gap: var(--ft-space-3);
+  min-height: 44px;
+}
+
+.checkin__label {
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-sm);
+}
+
+.checkin__value {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--ft-weight-semibold);
+}
+
+.checkin__unit {
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-sm);
+  font-weight: var(--ft-weight-regular);
+}
+
+/* "Not recorded" is a statement of fact, never a prompt or a shortfall. */
+.checkin__empty {
+  color: var(--ft-text-tertiary);
+  font-size: var(--ft-text-sm);
+}
+
+.checkin__input {
+  width: 5.5rem;
+  min-height: 44px;
+  padding: 0 var(--ft-space-2);
+  border: 1.5px solid var(--ft-border-subtle);
+  border-radius: var(--ft-radius-md);
+  background: var(--ft-surface-raised);
+  color: var(--ft-text-primary);
+  font-size: var(--ft-text-base);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.checkin__pair {
+  display: flex;
+  gap: var(--ft-space-2);
+}
+
+.checkin__step {
+  width: 44px;
+  min-height: 44px;
+  border: 1.5px solid var(--ft-border-subtle);
+  border-radius: var(--ft-radius-md);
+  background: var(--ft-surface-raised);
+  color: var(--ft-accent);
+  font-size: var(--ft-text-lg);
+  font-weight: var(--ft-weight-semibold);
+}
+
+.checkin__step:disabled {
+  color: var(--ft-text-disabled);
+}
+
+/* ---------- Contextual insight ---------- */
+
+.today__insight {
+  margin-top: var(--ft-space-2);
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-sm);
+  text-align: center;
 }
 }
