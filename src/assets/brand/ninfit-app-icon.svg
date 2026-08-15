@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="NinFit">
+  <defs>
+    <linearGradient id="ninfit-opal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00B89A"/>
+      <stop offset="1" stop-color="#00E0B5"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="224" fill="#0A1020"/>
+  <g transform="translate(184.32 290.59) scale(4.43)">
+  <path fill="#FFFFFF" d="M0 6A6 6 0 0 1 6 0H18V100H6A6 6 0 0 1 0 94Z"/>
+  <path fill="#FFFFFF" d="M76 0H94V94A6 6 0 0 1 88 100H82A6 6 0 0 1 76 94Z"/>
+  <path fill="#FFFFFF" d="M17.5 0 41.93 0 94 100 75.5 100Z"/>
+  <path fill="#FFFFFF" d="M94 0H142A6 6 0 0 1 148 6L137 18H94Z"/>
+  <path fill="#FFFFFF" d="M94 44 126 44 115 62 94 62Z"/>
+  <path fill="url(#ninfit-opal)" d="M43.37 43.74 67.3 43.74 84.7 73.74 60.77 73.74Z"/>
+  </g>
+</svg>
