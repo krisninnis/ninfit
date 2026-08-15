@@ -48,6 +48,14 @@
     --ft-attention: var(--palette-amber-52);
     --ft-attention-soft: var(--palette-amber-96);
 
+    /*
+     * The onboarding energy wash. A NEUTRAL tint by construction: it points at the
+     * warm/ink ramps and never at an accent, so the background cannot drift toward
+     * a path hue mid-flow and pre-empt the recommendation. Energy is allowed to
+     * change brightness and presence; it is not allowed to change hue.
+     */
+    --ft-energy-tint: var(--palette-warm-90);
+
     /* Depth. Dark mode replaces these with surface stepping - see below. */
     --ft-shadow-none: none;
     --ft-shadow-card: 0 1px 2px rgb(43 43 40 / 5%), 0 1px 8px rgb(43 43 40 / 4%);
@@ -82,6 +90,8 @@
 
       --ft-attention: var(--palette-amber-76);
       --ft-attention-soft: var(--palette-amber-25);
+
+      --ft-energy-tint: var(--palette-ink-32);
 
       /*
        * Shadow is nearly invisible on a dark surface and only muddies it, so depth
@@ -119,6 +129,8 @@
 
     --ft-attention: var(--palette-amber-76);
     --ft-attention-soft: var(--palette-amber-25);
+
+    --ft-energy-tint: var(--palette-ink-32);
 
     --ft-shadow-card: none;
     --ft-shadow-raised: none;

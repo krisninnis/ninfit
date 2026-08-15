@@ -138,6 +138,68 @@ export function leafBlockBodies(css: string): string[] {
   return bodies;
 }
 
+export interface LeafRule {
+  /** The selector text, whitespace-collapsed. */
+  selector: string;
+  body: string;
+}
+
+/**
+ * Every rule that contains no nested rule of its own, with its selector.
+ *
+ * Needed because looking a rule up by a bare regex conflates `.a { }` with
+ * `.a--modifier { }` and `.parent .a { }`, and silently returns whichever came
+ * first. Matching the selector exactly is the only reliable way to assert on one
+ * specific rule, and a media query simply yields a second entry with the same
+ * selector rather than shadowing the first.
+ */
+export function leafRules(css: string): LeafRule[] {
+  const rules: LeafRule[] = [];
+  const source = stripComments(css);
+
+  for (const match of source.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const selector = (match[1] ?? '').trim().replace(/\s+/g, ' ');
+    const body = match[2] ?? '';
+    // An at-rule preamble such as `@media (...)` is a wrapper, not a rule.
+    if (selector === '' || selector.startsWith('@')) continue;
+    rules.push({ selector, body });
+  }
+  return rules;
+}
+
+/**
+ * All declarations in a block, including ordinary CSS properties.
+ *
+ * `declarationsIn` deliberately sees only custom properties, because that is what
+ * the token guard needs. This sees everything, which is what the layout and state
+ * assertions need.
+ */
+export function propertiesIn(body: string): Map<string, string> {
+  const found = new Map<string, string>();
+  for (const match of body.matchAll(/(^|[;{])\s*([a-zA-Z-][\w-]*)\s*:([^;}]*)/g)) {
+    const property = match[2];
+    const value = match[3];
+    if (property !== undefined && value !== undefined) found.set(property, value.trim());
+  }
+  return found;
+}
+
+/**
+ * The declarations of the FIRST rule with this exact selector.
+ *
+ * "First" rather than merged, because a base rule and its media-query override are
+ * two different questions: this answers "what does it do by default", which is what
+ * a layout or touch-target assertion is usually asking.
+ *
+ * Exact-match, because `.checkin__row` must not silently pick up
+ * `.checkin__row--wide` or `.plan .checkin__row`.
+ */
+export function baseRule(css: string, selector: string): Map<string, string> {
+  const first = leafRules(css).find((rule) => rule.selector === selector);
+  if (first === undefined) throw new Error(`no rule found for "${selector}"`);
+  return propertiesIn(first.body);
+}
+
 /** The custom properties declared directly in a block body. */
 export function tokensDeclaredIn(body: string): Set<string> {
   const tokens = new Set<string>();

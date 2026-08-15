@@ -1,0 +1,63 @@
+@layer components {
+  /**
+   * The Mystery Egg.
+   *
+   * Moved here from screens/game.css in Phase 5, when onboarding started using the
+   * same component. A shared piece belongs in the components layer, and being in an
+   * earlier layer than `screens` means a screen can still position it without
+   * fighting specificity.
+   *
+   * NOTHING IN THIS FILE MAY DEPEND ON THE PATH. No `[data-path]` selector, no path
+   * palette family, no variant class. The egg looks identical on all five paths,
+   * which is what stops it hinting at the animal inside.
+   */
+
+  .egg {
+    /* 0 to 1, set by onboarding. Absent elsewhere, hence the fallback. */
+    --egg-energy: 0;
+    width: 68px;
+    height: 84px;
+  }
+
+  .egg__shell {
+    fill: var(--ft-surface-raised);
+    stroke: var(--ft-border-strong);
+    stroke-width: 2;
+  }
+
+  .egg__speck {
+    fill: var(--ft-accent);
+    opacity: 0.18;
+  }
+
+  /* A gentle rock, not a demand for attention. */
+  .egg--ready {
+    animation: egg-rock 2.4s ease-in-out infinite;
+    transform-origin: 50% 90%;
+  }
+
+  @keyframes egg-rock {
+    0%, 70%, 100% { transform: rotate(0deg); }
+    78% { transform: rotate(-5deg); }
+    86% { transform: rotate(5deg); }
+    94% { transform: rotate(-2deg); }
+  }
+
+  /**
+   * Energy response, used by onboarding.
+   *
+   * A transform and a filter, both computed straight from `--egg-energy`. Because
+   * they are computed rather than animated, the egg still shows the right state
+   * under reduced motion - the transition is neutralised, the value is not. That is
+   * the difference between decoration and meaning, and only the decoration is
+   * allowed to disappear.
+   */
+  .egg--energised {
+    transform: scale(calc(1 + 0.07 * var(--egg-energy)));
+    filter: drop-shadow(0 calc(2px + 6px * var(--egg-energy)) calc(6px + 14px * var(--egg-energy))
+      rgb(43 43 40 / calc(0.05 + 0.07 * var(--egg-energy))));
+    transition:
+      transform var(--ft-motion-standard) ease-out,
+      filter var(--ft-motion-standard) ease-out;
+  }
+}

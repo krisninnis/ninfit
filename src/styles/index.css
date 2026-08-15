@@ -34,6 +34,7 @@
 @import './components/chip.css';
 @import './components/chart.css';
 @import './components/nav.css';
+@import './components/egg.css';
 
 @import './screens/onboarding.css';
 @import './screens/today.css';

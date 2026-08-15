@@ -29,25 +29,70 @@ function sourceFiles(dir: string): string[] {
   return found;
 }
 
-describe('the path is activated in exactly one place', () => {
-  it('sets data-path once, on the app root', () => {
-    const occurrences = [...app.matchAll(/data-path=/g)];
-    expect(occurrences.length, 'path state must not be duplicated in the DOM').toBe(1);
-    expect(app).toMatch(/<div className="app" data-path=\{[^}]+\}>/);
-  });
+/**
+ * Phase 4 allowed `data-path` in exactly one place, App.tsx. Phase 5 needs a second:
+ * the onboarding recommendation panel, which is where the chosen path is finally
+ * named and may finally be coloured.
+ *
+ * "Exactly once" is therefore replaced rather than relaxed. Counting occurrences was
+ * only ever a proxy for the properties that actually matter, and those are now
+ * asserted directly:
+ *
+ *   - only these two files may activate a path at all
+ *   - every value comes from a FitnessPathId, never a hardcoded string
+ *   - nothing before the recommendation stage carries one
+ *
+ * That is a stronger guarantee than the count it replaces, and it survives a third
+ * legitimate activation point appearing later.
+ */
+const ACTIVATION_FILES = ['App.tsx', 'ui/screens/OnboardingScreen.tsx'];
 
-  it('binds it to the stored path, so an absent path omits the attribute', () => {
+describe('the path is activated only where it is meant to be', () => {
+  it('sets data-path once on the app root, bound to the stored path', () => {
+    const occurrences = [...app.matchAll(/data-path=/g)];
+    expect(occurrences.length, 'App.tsx must not duplicate path state').toBe(1);
+    expect(app).toMatch(/<div className="app" data-path=\{[^}]+\}>/);
+
     // React drops an attribute whose value is undefined, which is what makes the
     // neutral theme the natural resting state rather than a special case.
     expect(app).toContain('data-path={game.state.pathId}');
   });
 
-  it('is the only file that activates a path', () => {
+  it('activates a path in no files beyond the two sanctioned ones', () => {
     const offenders = sourceFiles(SRC)
-      .filter((path) => !path.endsWith('App.tsx') && !path.includes('test'))
-      .filter((path) => readFileSync(path, 'utf8').includes('data-path'));
+      .filter((path) => !path.includes('test'))
+      .filter((path) => readFileSync(path, 'utf8').includes('data-path='))
+      .filter((path) => !ACTIVATION_FILES.some((allowed) => path.endsWith(allowed)));
 
-    expect(offenders, `only App.tsx may set data-path:\n  ${offenders.join('\n  ')}`).toEqual([]);
+    expect(
+      offenders,
+      `only ${ACTIVATION_FILES.join(' and ')} may set data-path:\n  ${offenders.join('\n  ')}`,
+    ).toEqual([]);
+  });
+
+  /**
+   * The rule that makes the whole theme engine safe: a path is always read from
+   * state, never typed in. A literal would be a path hardcoded into a component,
+   * which is exactly how per-path styling creeps back into screens.
+   */
+  it('never assigns a hardcoded path id to the attribute', () => {
+    const ids = FITNESS_PATHS.map((path) => path.id);
+
+    for (const file of ACTIVATION_FILES) {
+      const code = readFileSync(join(SRC, file), 'utf8');
+      for (const match of code.matchAll(/data-path=\{?([^}\s>]*)\}?/g)) {
+        const value = match[1] ?? '';
+        expect(
+          ids.some((id) => value.includes(`'${id}'`) || value.includes(`"${id}"`)),
+          `${file} hardcodes a path id: data-path={${value}}`,
+        ).toBe(false);
+      }
+    }
+  });
+
+  it('only ever activates from a value the domain produced', () => {
+    const onboarding = readFileSync(join(SRC, 'ui/screens/OnboardingScreen.tsx'), 'utf8');
+    expect(onboarding).toContain('data-path={recommendation.pathId}');
   });
 
   it('never hardcodes a path id in a component', () => {
@@ -69,7 +114,40 @@ describe('the path is activated in exactly one place', () => {
   });
 });
 
-describe('onboarding stays neutral until a path is chosen', () => {
+describe('nothing before the recommendation carries a path', () => {
+  const onboarding = readFileSync(join(SRC, 'ui/screens/OnboardingScreen.tsx'), 'utf8');
+
+  /**
+   * The single most important property in Phase 5. The path may be revealed on the
+   * recommendation stage and nowhere earlier, so the attribute must live inside the
+   * block that only renders on that stage.
+   */
+  it('scopes data-path to the recommendation stage only', () => {
+    const occurrences = [...onboarding.matchAll(/data-path=/g)];
+    expect(occurrences.length, 'onboarding should activate a path exactly once').toBe(1);
+
+    const index = onboarding.indexOf('data-path=');
+    const guard = onboarding.lastIndexOf("stage.kind === 'recommendation'", index);
+    const opensBefore = guard !== -1 && guard < index;
+
+    expect(opensBefore, 'data-path is not inside a recommendation-stage guard').toBe(true);
+  });
+
+  it('puts the egg and the wash outside the themed panel', () => {
+    // The egg and the background must never sit inside [data-path], or they would
+    // inherit the accent and start hinting at the path before it is named.
+    const eggIndex = onboarding.indexOf('<EggArt');
+    const pathIndex = onboarding.indexOf('data-path=');
+
+    expect(eggIndex).toBeGreaterThan(-1);
+    expect(eggIndex, 'the egg must render before the themed panel').toBeLessThan(pathIndex);
+  });
+
+  it('drives the energy arc from progress, not from the path', () => {
+    expect(onboarding).toContain("style={{ '--energy': energy }");
+    expect(onboarding).toMatch(/const energy = progress\.fraction/);
+  });
+
   /**
    * The chooser must not be tinted in any path's colour. Beyond the Mystery Egg,
    * there is a plainer reason: colouring the screen where the recommendation is

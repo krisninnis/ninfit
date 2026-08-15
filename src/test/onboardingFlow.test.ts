@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import onboardingSource from '../ui/screens/OnboardingScreen.tsx?raw';
 import appSource from '../App.tsx?raw';
+import eggSource from '../ui/components/EggArt.tsx?raw';
 import { finishOnboarding, needsOnboarding, restartOnboarding } from '../app/game';
 import {
   isRequiredQuestion,
@@ -276,8 +277,28 @@ describe('the mascot stays secret', () => {
     expect(onboardingSource).not.toMatch(/mascotFamily|familyId|glyph/);
   });
 
-  it('does not mention hatching or eggs during onboarding', () => {
-    expect(onboardingSource).not.toMatch(/egg|hatch/i);
+  /**
+   * This test used to forbid the word "egg" outright, which was right while
+   * onboarding had no egg in it. Phase 5 puts the Mystery Egg on every stage on
+   * purpose - it is the narrative thread through the flow - so a blanket ban would
+   * now forbid the intended design rather than protect anything.
+   *
+   * What actually has to stay secret is the ANIMAL, and hatching, which is a later
+   * and explicit user action. So the ban narrows to those, and the egg is allowed
+   * only as the shared neutral component that cannot vary by path.
+   */
+  it('never mentions hatching, and shows the egg only as the shared neutral art', () => {
+    expect(onboardingSource).not.toMatch(/hatch/i);
+    expect(onboardingSource).not.toMatch(/egg--|eggState|EggArt ready/);
+
+    // The egg appears exactly once, via the shared component.
+    expect(onboardingSource.match(/<EggArt\b/g)?.length ?? 0).toBe(1);
+  });
+
+  it('gives the egg no label, alt text or title that could hint at the animal', () => {
+    expect(eggSource).not.toMatch(/aria-label|alt=|<title|<desc/);
+    expect(eggSource).toMatch(/aria-hidden="true"/);
+    expect(eggSource).not.toMatch(/Tortoise|Bear|\bFox\b|Otter|Wolf|familyId/);
   });
 });
 

@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { getAppContext } from '../../app/bootstrap';
+import { EggArt } from '../components/EggArt';
 import { FITNESS_PATHS, FITNESS_STAGE_LABELS, findPath } from '../../domain/game/paths';
 import {
   isReadyToRecommend,
@@ -164,8 +165,27 @@ export function OnboardingScreen({ onComplete, onDismiss }: OnboardingScreenProp
   const canContinue =
     stage.kind !== 'question' || !isRequiredQuestion(stage.question.id) || isAnswered(answers, stage.question);
 
+  /**
+   * How far along the journey feels, 0 to 1.
+   *
+   * Reused from the progress model rather than being a second, parallel notion of
+   * "how far in are we" that could drift out of step with the bar. It drives the
+   * background wash and the egg's presence, both of which are decoration computed
+   * from a value that is already tested.
+   */
+  const energy = progress.fraction;
+
   return (
-    <div className="step">
+    <div className="step" style={{ '--energy': energy } as CSSProperties}>
+      {/*
+        The egg sits above the progress bar and stays in the same place for the whole
+        flow, so it reads as one object travelling with the user rather than an
+        illustration that changes per screen. It is identical on every path.
+      */}
+      <div className="step__egg">
+        <EggArt energy={energy} />
+      </div>
+
       {stage.kind !== 'welcome' ? (
         <div className="step__progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress.fraction * 100)} aria-label="Onboarding progress">
           <span className="step__progressFill" style={{ width: `${progress.fraction * 100}%` }} />
@@ -189,14 +209,26 @@ export function OnboardingScreen({ onComplete, onDismiss }: OnboardingScreenProp
         ) : null}
 
         {stage.kind === 'recommendation' && recommendation !== undefined ? (
-          <section className="step__panel">
-            <span className="onboard__label">Your recommended path</span>
+          /*
+           * THE ONE PLACE A PATH BECOMES VISIBLE DURING ONBOARDING.
+           *
+           * `data-path` is scoped to this section and rendered only on this stage, so
+           * the accent cannot appear on any earlier screen: there is no element to
+           * carry it until the recommendation exists. Everything outside this section
+           * - the egg, the background wash, the progress bar, the navigation - stays
+           * on the neutral accent, which is why the reveal reads as a moment.
+           *
+           * It names the PATH, not the animal. The mascot stays sealed until the user
+           * opens the egg later on Today, which is a separate and explicit action.
+           */
+          <section className="step__panel step__reveal" data-path={recommendation.pathId}>
+            <span className="onboard__label">Based on your answers</span>
             <h1 className="onboard__path">{findPath(recommendation.pathId).name}</h1>
             <p className="step__help">{findPath(recommendation.pathId).summary}</p>
             <p className="onboard__why">{recommendation.explanation}</p>
             <p className="footnote">
               Starting stage: {FITNESS_STAGE_LABELS[recommendation.fitnessStage]}. Everyone begins
-              the game at level 1, whatever their starting point.
+              the game at level 1, whatever their starting point. You can change direction later.
             </p>
 
             <button type="button" className="btn btn--primary btn--block" onClick={() => accept(recommendation.pathId)}>

@@ -1,22 +1,66 @@
 /**
- * Onboarding stepper.
+ * Onboarding: the visual journey.
  *
- * The rules for the pre-stepper single-page onboarding were removed in the Phase 1
- * split after verifying that no component references them.
+ * One question per screen, with a persistent egg, a progress bar, and a background
+ * that gains energy as the flow advances. The structure follows DESIGN.md section 12.
+ *
+ * THE RULE THAT SHAPES THIS WHOLE FILE: nothing outside `.step__reveal` may take a
+ * path colour. The egg, the wash, the bar and the navigation all stay on the neutral
+ * accent, so the recommendation is the first and only place a path is seen. That is
+ * not a styling preference - it is what stops the flow pre-empting its own ending.
  */
 
 @layer screens {
 /* ---------- Onboarding stepper ---------- */
 
 .step {
+  /* 0 to 1, set inline from the progress fraction. */
+  --energy: 0;
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--ft-space-5);
-  min-height: 70dvh;
+  gap: var(--ft-space-4);
+  min-height: 74dvh;
+}
+
+/**
+ * The energy wash.
+ *
+ * Two fixed radial gradients whose presence is interpolated from `--energy`: calm
+ * and almost invisible on the welcome screen, clearly there by the recommendation.
+ *
+ * The tint is `--ft-energy-tint`, which resolves to a warm or ink neutral and never
+ * to an accent. So energy changes brightness and presence but NEVER hue, and the
+ * background cannot drift toward the recommended path before it has been named.
+ * `inset: 0` keeps it inside the column, so it can never cause a horizontal scroll.
+ */
+.step::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: var(--ft-radius-xl);
+  background:
+    radial-gradient(58% 40% at 15% 6%, var(--ft-energy-tint) 0%, transparent 70%),
+    radial-gradient(52% 38% at 90% 26%, var(--ft-energy-tint) 0%, transparent 72%);
+  opacity: calc(0.18 + 0.62 * var(--energy));
+  transition: opacity var(--ft-motion-standard) ease-out;
+}
+
+.step__egg {
+  display: grid;
+  place-items: center;
+  padding-top: var(--ft-space-2);
+}
+
+.step__egg .egg {
+  width: 58px;
+  height: 72px;
 }
 
 .step__progress {
-  height: 6px;
+  height: 4px;
   border-radius: var(--ft-radius-pill);
   background: var(--ft-surface-sunken);
   border: 1px solid var(--ft-border-subtle);
@@ -47,12 +91,6 @@
   gap: var(--ft-space-3);
 }
 
-.step__title {
-}
-
-.step__prompt {
-}
-
 .step__help {
   color: var(--ft-text-secondary);
 }
@@ -64,26 +102,46 @@
   margin-top: var(--ft-space-2);
 }
 
+/**
+ * Answer cards.
+ *
+ * A real button with `aria-pressed`, dressed as a card. The selected state carries
+ * FOUR signals - border colour, an inset ring, a background tint and a tick - so it
+ * survives greyscale, colour-vision differences and a stuck stylesheet.
+ *
+ * The border width never changes. The extra weight when selected comes from an inset
+ * box-shadow instead, because growing a border would move every card below it by a
+ * pixel. Nothing here changes the box, so selecting an answer cannot reflow the page
+ * or shift what is under the user's thumb.
+ */
 .step__option {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--ft-space-3);
-  min-height: var(--ft-control-lg);
-  padding: 0 var(--ft-space-4);
+  min-height: 60px;
+  padding: var(--ft-space-3) var(--ft-space-4);
   border: 1.5px solid var(--ft-border-subtle);
-  border-radius: var(--ft-radius-md);
+  border-radius: var(--ft-radius-lg);
   background: var(--ft-surface-raised);
   color: var(--ft-text-primary);
   font-size: var(--ft-text-base);
   text-align: left;
+  transition:
+    background-color var(--ft-motion-instant) ease,
+    border-color var(--ft-motion-instant) ease,
+    box-shadow var(--ft-motion-instant) ease;
+}
+
+.step__option:active {
+  background: var(--ft-surface-sunken);
 }
 
 .step__option--selected {
   background: var(--ft-accent-soft);
   border-color: var(--ft-accent);
   color: var(--ft-accent);
-  font-weight: 600;
+  box-shadow: inset 0 0 0 1px var(--ft-accent);
 }
 
 .step__optionMark {
@@ -99,6 +157,9 @@
   padding-top: var(--ft-space-2);
 }
 
+.step__nav .btn {
+  min-height: var(--ft-control-lg);
+}
 
 .step__next {
   flex: 1 1 auto;
@@ -113,14 +174,23 @@
   gap: var(--ft-space-3);
 }
 
-/* Composes with .surface. */
+/**
+ * The alternative paths.
+ *
+ * Composes with .surface, and deliberately takes NO path accent. Phase 4 established
+ * that adjacent path colours are only about 1.15:1 apart in greyscale, so five
+ * tinted tiles would be five near-identical tiles for anyone not seeing the hues.
+ * Each one is identified by its name and its summary, which work in any vision and
+ * at any zoom. Colour was never going to be able to carry this list.
+ */
 .step__path {
   display: flex;
   flex-direction: column;
   gap: var(--ft-space-2);
   padding: var(--ft-space-4);
 }
-/* ---------- Onboarding ---------- */
+
+/* ---------- Recommendation ---------- */
 
 .onboard__label {
   color: var(--ft-text-tertiary);
@@ -139,6 +209,51 @@
   font-size: var(--ft-text-sm);
 }
 
+/**
+ * The reveal panel. Carries `data-path`, so everything inside it - and only inside
+ * it - resolves to the recommended path's accent.
+ */
+.step__reveal {
+  padding: var(--ft-space-5) var(--ft-space-4);
+  border-radius: var(--ft-radius-xl);
+  border: 1px solid var(--ft-accent);
+  background: var(--ft-accent-soft);
+}
 
+.step__reveal .onboard__path {
+  color: var(--ft-accent);
+}
 
+/* The alternatives sit outside the tint, on the plain page surface. */
+.step__reveal .step__path {
+  background: var(--ft-surface-raised);
+}
+
+/* ---------- Responsive ---------- */
+
+/* Small Android: slightly shorter options so a five-option question still fits. */
+@media (max-width: 374px) {
+  .step__option {
+    min-height: 56px;
+  }
+}
+
+/**
+ * Tablet and desktop: a deliberately framed column rather than a phone layout
+ * stranded in the middle of a wide screen. Never two columns - one question per
+ * screen is the entire idea. Phase 3's app gutters and safe areas are untouched.
+ */
+@media (min-width: 768px) {
+  .step {
+    max-width: 480px;
+    margin-inline: auto;
+    width: 100%;
+    gap: var(--ft-space-5);
+  }
+
+  .step__egg .egg {
+    width: 78px;
+    height: 96px;
+  }
+}
 }
