@@ -8,6 +8,7 @@ import { nowTimestamp } from '../dates';
 import { newId, type IdFactory } from '../ids';
 import type { DailyLog, ISODate, ISODateTime, PlannedActivity, WeeklyPlan } from '../types';
 import { isRestDay, resolveSessionForDate, summariseSessionCompletion } from '../weeklyPlan';
+import { consistencyProgress } from './consistency';
 import { qualifyingActiveDays } from './egg';
 import { evaluateMascot } from './mascot';
 import { earnedTrophies, type TrophyFacts } from './trophies';
@@ -19,7 +20,16 @@ import type {
   SkillKind,
   TrophyUnlock,
 } from './types';
-import { REST_DAY_SKILL_XP, TROPHY_XP, XP_REWARDS, applySkillXp, levelForXp, skillXpForActivity } from './xp';
+import {
+  CONSISTENCY_MILESTONE_SKILL_XP,
+  CONSISTENCY_MILESTONE_XP,
+  REST_DAY_SKILL_XP,
+  TROPHY_XP,
+  XP_REWARDS,
+  applySkillXp,
+  levelForXp,
+  skillXpForActivity,
+} from './xp';
 
 /**
  * Turning recorded fitness into rewards, exactly once.
@@ -38,6 +48,18 @@ import { REST_DAY_SKILL_XP, TROPHY_XP, XP_REWARDS, applySkillXp, levelForXp, ski
  */
 
 const MAX_RECENT_EVENTS = 20;
+
+/**
+ * Milestone wording.
+ *
+ * "Sessions", not "days", because the milestone counts planned occasions and a
+ * low-frequency programme may have taken a month to reach seven of them. No flame,
+ * no "in a row", nothing the user could feel they are about to lose.
+ */
+const CONSISTENCY_MILESTONE_LABELS: Readonly<Record<number, string>> = {
+  3: 'Three sessions of consistency',
+  7: 'Seven sessions of consistency',
+};
 
 export interface FitnessSnapshot {
   programmeStartDate: ISODate;
@@ -151,6 +173,21 @@ export function deriveRewards(snapshot: FitnessSnapshot): DerivedFacts {
         date: log.date,
       });
     }
+  }
+
+  // Consistency milestones read the PROGRAMME as well as the logs, because a planned
+  // rest day has to bridge a run whether or not the user opened the app that day.
+  // That is why this is derived from the snapshot rather than from the loop above,
+  // which only ever sees dates that have a record.
+  for (const award of consistencyProgress(snapshot).awards) {
+    rewards.push({
+      key: award.key,
+      kind: 'consistency_milestone',
+      xp: CONSISTENCY_MILESTONE_XP[award.milestone] ?? 0,
+      skillXp: CONSISTENCY_MILESTONE_SKILL_XP[award.milestone] ?? {},
+      label: CONSISTENCY_MILESTONE_LABELS[award.milestone] ?? 'Consistency milestone',
+      date: award.date,
+    });
   }
 
   if (programmeDaysRecorded > 0) {

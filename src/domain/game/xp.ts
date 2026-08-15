@@ -21,6 +21,8 @@ export const XP_REWARDS: Readonly<Record<RewardKind, number>> = {
   /** Rest is part of the programme, so engaging with a rest day counts. */
   rest_day_observed: 10,
   first_measurement: 30,
+  /** Overridden per milestone by CONSISTENCY_MILESTONE_XP. */
+  consistency_milestone: 0,
   /** Overridden per tier by TROPHY_XP. */
   trophy_unlocked: 0,
 };
@@ -31,6 +33,28 @@ export const TROPHY_XP = {
   gold: 150,
   platinum: 400,
 } as const;
+
+/**
+ * Consistency milestones, sized against the rest of the economy on purpose.
+ *
+ * Three occasions is worth a little more than the session bonus it sits on top of;
+ * seven is worth a shade more than a silver trophy and well under a gold one. Big
+ * enough to feel like an acknowledgement, small enough that missing one costs
+ * nothing that matters - which is what lets the milestone stay a celebration rather
+ * than becoming something to protect.
+ */
+export const CONSISTENCY_MILESTONE_XP: Readonly<Record<number, number>> = {
+  3: 30,
+  7: 80,
+};
+
+/** All of it goes to `consistency`, which is the skill this actually evidences. */
+export const CONSISTENCY_MILESTONE_SKILL_XP: Readonly<
+  Record<number, Partial<Record<SkillKind, number>>>
+> = {
+  3: { consistency: 5 },
+  7: { consistency: 10 },
+};
 
 /**
  * Overall level thresholds, levels 1 to 20.

@@ -147,6 +147,8 @@ export type RewardKind =
   | 'first_programme_day'
   | 'rest_day_observed'
   | 'first_measurement'
+  /** Three or seven planned activity occasions that went well. Never a daily streak. */
+  | 'consistency_milestone'
   | 'trophy_unlocked';
 
 /**
