@@ -137,6 +137,21 @@
     text-align: center;
   }
 
+  /*
+   * A real button, so it is reachable and announced as an action, wearing the
+   * appearance of a link because it sits inside a sentence.
+   */
+  .ninfit-id__link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ft-accent-strong);
+    font: inherit;
+    font-weight: var(--ft-weight-semibold);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
   @media (max-width: 430px) {
     .ninfit-id {
       padding-top: var(--ft-space-4);

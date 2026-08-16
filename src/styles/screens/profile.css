@@ -358,4 +358,27 @@
 .account-journey__requirements-list li.is-met {
   color: var(--ft-text-primary);
 }
+
+/* ---------- NinFit ID states ---------- */
+
+.account-journey__status {
+  margin: 0;
+  color: var(--ft-text-secondary);
+  font-size: var(--ft-text-sm);
+  line-height: var(--ft-leading-normal);
+}
+
+/* Stacked choices on the confirmation state: resend, change email, carry on. */
+.account-journey__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ft-space-2);
+}
+
+/* The masked address, emphasised so it reads as the thing to check. */
+.account-journey__pending-email {
+  color: var(--ft-text-primary);
+  font-weight: var(--ft-weight-semibold);
+  overflow-wrap: anywhere;
+}
 }
