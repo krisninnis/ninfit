@@ -1,0 +1,207 @@
+/**
+ * The world layer: illustration behind the app, veiled so text stays readable.
+ *
+ * Stacking, from back to front:
+ *
+ *   canvas          the root background colour, always present
+ *   .backdrop__art  the illustration, or the placeholder wash
+ *   .backdrop__veil the contrast layer
+ *   .app            cards and content, on opaque surfaces
+ *
+ * The whole thing is `position: fixed` and `z-index: 0` inside its own stacking
+ * context at the document root, with the app shell above it. Fixed rather than
+ * scrolling with the page: a background that scrolls turns into a moving distraction
+ * behind body text, and parallax costs a repaint on every scroll frame on exactly the
+ * phones least able to afford one.
+ *
+ * NO COLOUR IS INVENTED HERE. Every value resolves from existing semantic tokens, so
+ * the backdrop follows light and dark mode and any future palette change for free.
+ */
+
+@layer components {
+  .backdrop {
+    /*
+     * Defaults for everything the primitive passes in as an inline custom property.
+     *
+     * Declared here so the stylesheet is complete on its own: if the component ever
+     * renders without its inline style, the backdrop is a centred, well-veiled wash
+     * rather than a set of invalid declarations the browser silently drops. The
+     * inline values simply override these.
+     *
+     * The veil defaults are the MIN_VEIL floor from registry.ts, not a softer
+     * "looks fine" pair. A fallback that fails AA is worse than no fallback, because
+     * it only appears when something else has already gone wrong.
+     */
+    --backdrop-focal-x: 50%;
+    --backdrop-focal-y: 45%;
+    --backdrop-veil-light: 0.97;
+    --backdrop-veil-dark: 0.95;
+    --backdrop-art-mobile: none;
+    --backdrop-art-desktop: none;
+
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    /* Nothing here is interactive; never intercept a tap meant for the app. */
+    pointer-events: none;
+  }
+
+  .backdrop__art,
+  .backdrop__veil {
+    position: absolute;
+    inset: 0;
+  }
+
+  /*
+   * The placeholder wash.
+   *
+   * Two soft pools of the accent tint over the page surface, positioned at the
+   * region's focal point so the system is visibly wired end to end before any art
+   * exists. Deliberately quiet: it should read as atmosphere, never as a picture,
+   * and never as a region having a colour of its own. Real artwork replaces the
+   * whole of this via --backdrop-art-*.
+   */
+  .backdrop__art {
+    background-color: var(--ft-surface-page);
+    background-image:
+      radial-gradient(
+        ellipse 120% 80% at var(--backdrop-focal-x) var(--backdrop-focal-y),
+        var(--ft-accent-soft) 0%,
+        transparent 62%
+      ),
+      radial-gradient(
+        ellipse 90% 70% at calc(100% - var(--backdrop-focal-x)) 100%,
+        var(--ft-surface-sunken) 0%,
+        transparent 58%
+      );
+    background-repeat: no-repeat;
+    background-size: cover;
+  }
+
+  /*
+   * Production artwork, when the registry supplies it.
+   *
+   * `background-position` uses the registry's focal point rather than `center`, so
+   * the part that matters survives a narrow viewport. `image-set` is not used yet;
+   * the mobile and desktop files are chosen by media query below, which keeps the
+   * decision in one readable place and works everywhere.
+   */
+  .backdrop[data-artwork='production'] .backdrop__art {
+    background-image: var(--backdrop-art-mobile);
+    background-position: var(--backdrop-focal-x) var(--backdrop-focal-y);
+    background-size: cover;
+  }
+
+  /*
+   * The veil. This is the readability contract, and it is FLAT on mobile.
+   *
+   * An earlier version lightened the middle band to let more artwork through behind
+   * the content. Computing it killed the idea: at that strength, secondary text over
+   * worst-case artwork came out at 3.53:1 in light mode and 2.37:1 in dark, against
+   * an AA requirement of 4.5:1. The screen heading and standfirst sit directly on
+   * this layer rather than on a card, so that was a real failure, not a theoretical
+   * one.
+   *
+   * A single opacity, at the registry's floor, is what holds. See MIN_VEIL in
+   * registry.ts for the solved figures; the worst case over solid black or solid
+   * white artwork is then 12.31:1 primary, 6.52:1 secondary, 4.51:1 tertiary in
+   * light, and 12.66 / 6.26 / 4.75 in dark.
+   */
+  .backdrop__veil {
+    background: color-mix(
+      in oklab,
+      var(--ft-surface-page) calc(var(--backdrop-veil-light) * 100%),
+      transparent
+    );
+  }
+
+  /*
+   * Dark mode veils to its own figure rather than reusing the light one. Light
+   * artwork washes text out; dark artwork swallows it. Same layer, different failure.
+   */
+  @media (prefers-color-scheme: dark) {
+    .backdrop__veil {
+      background: color-mix(
+        in oklab,
+        var(--ft-surface-page) calc(var(--backdrop-veil-dark) * 100%),
+        transparent
+      );
+    }
+  }
+
+  [data-theme='dark'] .backdrop__veil {
+    background: color-mix(
+      in oklab,
+      var(--ft-surface-page) calc(var(--backdrop-veil-dark) * 100%),
+      transparent
+    );
+  }
+
+  /* --- Desktop ----------------------------------------------------------- */
+
+  /*
+   * The one place the two shells genuinely differ.
+   *
+   * On a phone the artwork sits behind the whole screen and is held back hard,
+   * because the content occupies all of it and there is nowhere for a picture to be
+   * without being under text.
+   *
+   * On a desktop the app is a 720px column in the middle of a much wider window.
+   * That leaves real estate either side that content never uses, so the artwork is
+   * allowed to breathe there: the veil lifts to roughly 40%, the larger asset loads,
+   * and the world frames the column instead of hiding behind it.
+   *
+   * This is safe precisely BECAUSE of the column. Content sits on `.app`, which
+   * carries its own 92%-opaque surface over the veil (see layout.css), so the text
+   * region is barely affected: worst case over solid black or white artwork works out
+   * at 6.25:1 secondary and 4.33:1 tertiary in light, 7.19 / 5.45 in dark. The lifted
+   * veil applies to the surround, where nothing is ever read.
+   */
+  @media (min-width: 900px) {
+    .backdrop[data-artwork='production'] .backdrop__art {
+      background-image: var(--backdrop-art-desktop);
+    }
+
+    .backdrop__veil {
+      background: color-mix(
+        in oklab,
+        var(--ft-surface-page) calc(var(--backdrop-veil-light) * 40%),
+        transparent
+      );
+    }
+
+    [data-theme='dark'] .backdrop__veil {
+      background: color-mix(
+        in oklab,
+        var(--ft-surface-page) calc(var(--backdrop-veil-dark) * 42%),
+        transparent
+      );
+    }
+  }
+
+  @media (min-width: 900px) and (prefers-color-scheme: dark) {
+    .backdrop__veil {
+      background: color-mix(
+        in oklab,
+        var(--ft-surface-page) calc(var(--backdrop-veil-dark) * 42%),
+        transparent
+      );
+    }
+  }
+
+  /*
+   * Reduced data: skip the illustration entirely and keep the placeholder wash.
+   * Somebody on a metered connection did not ask for a megabyte of scenery.
+   */
+  @media (prefers-reduced-data: reduce) {
+    .backdrop[data-artwork='production'] .backdrop__art {
+      background-image:
+        radial-gradient(
+          ellipse 120% 80% at var(--backdrop-focal-x) var(--backdrop-focal-y),
+          var(--ft-accent-soft) 0%,
+          transparent 62%
+        );
+    }
+  }
+}
