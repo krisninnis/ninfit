@@ -40,6 +40,14 @@
     /* Applied in Phase 3, when width breakpoints arrive. */
     --ft-content-max-wide: 720px;
 
+    /* The desktop side navigation. Wide enough for an icon plus a full label at
+       body size, narrow enough that it never competes with the content column. */
+    --ft-sidenav-width: 232px;
+    /* Sidebar plus the reading column plus its gutters. The reading column itself
+       does not grow: a fitness journal read at arm's length gets worse past roughly
+       75 characters, so desktop buys navigation, not longer lines. */
+    --ft-shell-max: calc(var(--ft-sidenav-width) + var(--ft-content-max-wide) + 96px);
+
     /* --- Motion ------------------------------------------------------------ */
     /* Four tiers. The intensity of a transition is proportional to how rare the
        moment is: pressing a toggle is not rare, hatching an egg is. */
