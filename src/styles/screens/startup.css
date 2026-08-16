@@ -1,0 +1,162 @@
+/**
+ * The startup cinematic.
+ *
+ * Full viewport, dark, and framed rather than stretched. The video is 1366x768, so
+ * on a phone it is cropped to the centre with `object-fit: cover` and on a desktop it
+ * is held to a cinematic maximum instead of being blown across a monitor.
+ *
+ * Every colour here resolves from an existing token. The stage is deliberately dark
+ * in both light and dark mode: this is a cinema, and it is the one surface in NinFit
+ * that does not follow the page.
+ */
+
+@layer screens {
+  .startup {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: grid;
+    place-items: center;
+    background: var(--palette-ink-16);
+    /* Landscape notches sit down the sides; the stage must clear them. */
+    padding: max(0px, env(safe-area-inset-top)) max(0px, env(safe-area-inset-right))
+      max(0px, env(safe-area-inset-bottom)) max(0px, env(safe-area-inset-left));
+  }
+
+  .startup__stage {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+  }
+
+  .startup__video,
+  .startup__still {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    /* Cover, so a 16:9 asset fills a 9:19.5 phone without letterboxing. */
+    object-fit: cover;
+  }
+
+  /* The reduced-motion presentation: the same warm arrival, holding still. */
+  .startup__still {
+    background:
+      radial-gradient(
+        ellipse 90% 60% at 50% 42%,
+        var(--ft-accent-soft) 0%,
+        transparent 62%
+      ),
+      var(--palette-ink-16);
+  }
+
+  /*
+   * No veil over the video any more.
+   *
+   * It existed to keep an overlaid wordmark readable against a moving image. With
+   * that overlay gone the veil had nothing left to protect and was simply dimming
+   * the reveal and the clip's own logo card, so it is gone too and the cinematic
+   * plays at the brightness it was authored at. The Skip control carries its own
+   * background, so it does not depend on this.
+   */
+
+  /* Only ever rendered on the reduced-motion still, where no video supplies a logo. */
+  .startup__brand {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--ft-space-3);
+    padding-inline: var(--ft-space-5);
+    text-align: center;
+  }
+
+  .startup__wordmark {
+    width: min(62vw, 320px);
+    height: auto;
+    /* A soft lift so white artwork reads against a bright frame of the video. */
+    filter: drop-shadow(0 2px 12px color-mix(in oklab, var(--palette-ink-16) 70%, transparent));
+  }
+
+  .startup__strapline {
+    margin: 0;
+    color: var(--palette-warm-100);
+    font-size: var(--ft-text-sm);
+    font-weight: var(--ft-weight-semibold);
+    letter-spacing: var(--ft-tracking-wide);
+    text-transform: uppercase;
+  }
+
+  /*
+   * The spoken line, rendered only when there is speech to caption.
+   *
+   * Positioned along the bottom rather than in the middle of the frame, so it reads
+   * as a caption over the cinematic instead of competing with the mascot reveal. It
+   * carries its own scrim because it is the one piece of text that can sit over
+   * moving image, and the veil that used to do that job has gone.
+   */
+  .startup__line {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    margin: 0;
+    padding: var(--ft-space-6) var(--ft-space-5) var(--ft-space-5);
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      color-mix(in oklab, var(--palette-ink-16) 72%, transparent) 100%
+    );
+    color: var(--palette-warm-100);
+    font-size: var(--ft-text-sm);
+    line-height: var(--ft-leading-normal);
+    text-align: center;
+    text-wrap: balance;
+  }
+
+  .startup__controls {
+    position: absolute;
+    right: var(--ft-space-4);
+    bottom: var(--ft-space-4);
+    display: flex;
+    align-items: center;
+    gap: var(--ft-space-2);
+  }
+
+  /* Quiet, but never invisible: this is the way out and it must be findable. */
+  .startup__skip,
+  .startup__sound {
+    min-height: var(--ft-control-sm);
+    border: 1px solid color-mix(in oklab, var(--palette-warm-100) 34%, transparent);
+    background: color-mix(in oklab, var(--palette-ink-16) 62%, transparent);
+    color: var(--palette-warm-100);
+  }
+
+  /* --- Desktop ----------------------------------------------------------- */
+
+  /*
+   * Framed rather than stretched. A 5.9-second 1366x768 clip blown across a 27-inch
+   * monitor looks like a phone screenshot; held to a cinematic width with the dark
+   * page around it, it looks intended.
+   */
+  @media (min-width: 900px) {
+    .startup__stage {
+      width: min(100%, 1100px);
+      height: min(100%, 62vw);
+      max-height: 100%;
+      border-radius: var(--ft-radius-xl);
+    }
+
+    .startup__wordmark {
+      width: min(38vw, 380px);
+    }
+
+    .startup__line {
+      font-size: var(--ft-text-base);
+      max-width: 28rem;
+    }
+  }
+}
