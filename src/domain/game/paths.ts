@@ -57,8 +57,20 @@ export const FITNESS_PATHS: readonly FitnessPath[] = [
 ] as const;
 
 /**
- * Placeholder art only. Real mascot design happens separately; these glyphs exist so
- * the progression model can be built and tested without blocking on illustration.
+ * The five core path mascot families. This list is closed.
+ *
+ * One family per fitness path, and no more: Opal is the companion and lives in
+ * companion.ts, while Owl and Red Panda are future character possibilities with no
+ * path, no family id and no presence in this table. Adding a sixth entry here means
+ * adding a sixth fitness path, which is a product decision rather than a data one.
+ *
+ * TEMPORARY: `glyph` is a single letter, not mascot artwork.
+ *
+ * It exists so the progression model could be built and tested without blocking on
+ * illustration, and it is the only visual any family currently has. It is a
+ * presentation fallback and nothing more - no domain logic reads it, no reward or
+ * evolution depends on it, and it must be replaced by real artwork rather than
+ * dressed up. See the mascot art pipeline in the roadmap.
  */
 export const MASCOT_FAMILIES: readonly MascotFamily[] = [
   { id: 'tortoise', name: 'Tortoise', glyph: 'T' },
