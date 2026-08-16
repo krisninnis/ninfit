@@ -1,0 +1,106 @@
+/**
+ * Opal, the NinFit companion.
+ *
+ * NEUTRAL BY CONSTRUCTION, AND THAT IS THE LOAD-BEARING RULE HERE.
+ *
+ * Nothing in this file may read `--ft-accent`, `--ft-accent-strong`,
+ * `--ft-accent-soft`, `--ft-accent-ring` or `--ft-text-on-accent`. Those five are
+ * the only tokens a fitness path may change (see tokens/paths.css), so touching any
+ * of them would make Opal shift colour with the user's chosen programme - which
+ * would quietly turn the one companion everybody shares into a path indicator.
+ *
+ * An earlier version of this file did exactly that: `.opal__mark` was
+ * `color: var(--ft-accent)`. Everything below resolves from path-independent
+ * surface, border and text tokens instead.
+ *
+ * A LAYOUT PRIMITIVE, NOT A CARD. `.opal` brings no padding, background or shadow
+ * of its own, so it can sit inside a card, a header or a sheet without fighting the
+ * surface it lands on. The portrait is the only thing with presence.
+ */
+
+@layer components {
+  .opal {
+    /*
+     * The portrait size lives here rather than in tokens/: it is one component's
+     * dimension, not a scale the rest of the app needs. Derived from an existing
+     * control size so it stays in step with the app's rhythm instead of being a
+     * magic number.
+     */
+    --opal-portrait-size: var(--ft-control-md);
+
+    display: flex;
+    align-items: center;
+    gap: var(--ft-space-3);
+    min-width: 0;
+  }
+
+  /*
+   * THE ARTWORK SLOT.
+   *
+   * This is where the real Opal artwork goes when it exists. It is deliberately a
+   * container rather than a styled letter, so dropping in an <img> or an inline SVG
+   * later is a change to its contents and to nothing else - no re-layout, no
+   * re-spacing, no touching the text beside it.
+   *
+   * `overflow: hidden` and the circle radius mean future artwork is masked to the
+   * portrait shape without the asset having to be pre-cropped.
+   */
+  .opal__portrait {
+    flex: 0 0 var(--opal-portrait-size);
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    width: var(--opal-portrait-size);
+    height: var(--opal-portrait-size);
+    border: 1px solid var(--ft-border-subtle);
+    border-radius: var(--ft-radius-circle);
+    background: var(--ft-surface-sunken);
+    box-shadow: var(--ft-shadow-card);
+  }
+
+  /* Future artwork fills the slot edge to edge, whatever it is. */
+  .opal__portrait > img,
+  .opal__portrait > svg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /*
+   * TEMPORARY PRESENTATION FALLBACK - NOT OPAL ARTWORK.
+   *
+   * A single neutral letter standing in until the real character exists. It is not
+   * a drawing of Opal, it is not a mascot, and it must be replaced rather than
+   * refined. It is `aria-hidden` in the component, because the section is already
+   * named and a letter tells a screen-reader user nothing.
+   */
+  .opal__placeholder {
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-lg);
+    font-weight: var(--ft-weight-bold);
+    /* Optical centring: the cap sits slightly high in its line box. */
+    line-height: 1;
+  }
+
+  .opal__body {
+    display: grid;
+    gap: var(--ft-space-1);
+    min-width: 0;
+  }
+
+  /*
+   * Size, weight and line height come from the shared type roles applied in the
+   * component (`.t-body-strong` and `.t-small`). Only colour is decided here, so
+   * the companion cannot drift away from the app's typographic scale.
+   */
+  .opal__name {
+    color: var(--ft-text-primary);
+  }
+
+  .opal__description {
+    overflow: hidden;
+    color: var(--ft-text-secondary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

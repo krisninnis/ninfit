@@ -36,6 +36,7 @@
 @import './components/chart.css';
 @import './components/nav.css';
 @import './components/egg.css';
+@import './components/opal.css';
 
 @import './screens/startup.css';
 @import './screens/onboarding.css';
