@@ -151,6 +151,10 @@ export const BACKDROPS: Readonly<Record<BackdropId, BackdropDefinition>> = {
     brief: 'A signposted trail winding between hills. Your week, your journey.',
     focal: { x: 0.5, y: 0.45 },
     veil: { light: 0.97, dark: 0.95 },
+    art: {
+      mobile: '/backgrounds/week/week-mobile.webp',
+      desktop: '/backgrounds/week/week-desktop.webp',
+    },
   },
   progress: {
     id: 'progress',
