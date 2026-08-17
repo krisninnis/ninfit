@@ -140,6 +140,10 @@ export const BACKDROPS: Readonly<Record<BackdropId, BackdropDefinition>> = {
     brief: 'Sunrise over a path through gentle hills. Focus, plan, achieve.',
     focal: { x: 0.5, y: 0.38 },
     veil: { light: 0.97, dark: 0.95 },
+    art: {
+      mobile: '/backgrounds/today/today-mobile.webp',
+      desktop: '/backgrounds/today/today-desktop.webp',
+    },
   },
   week: {
     id: 'week',
