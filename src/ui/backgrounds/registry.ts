@@ -268,6 +268,10 @@ export const BACKDROPS: Readonly<Record<BackdropId, BackdropDefinition>> = {
     brief: 'A calm, orderly room of screens. Understand, manage, secure.',
     focal: { x: 0.5, y: 0.46 },
     veil: { light: 0.98, dark: 0.96 },
+    art: {
+      mobile: '/backgrounds/data/data-mobile.webp',
+      desktop: '/backgrounds/data/data-desktop.webp',
+    },
   },
 };
 
