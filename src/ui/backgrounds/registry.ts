@@ -217,6 +217,10 @@ export const BACKDROPS: Readonly<Record<BackdropId, BackdropDefinition>> = {
     brief: 'A warm stone chamber with a lit hearth. Build, power, become stronger.',
     focal: { x: 0.5, y: 0.5 },
     veil: { light: 0.98, dark: 0.96 },
+    art: {
+      mobile: '/backgrounds/forge/forge-mobile.webp',
+      desktop: '/backgrounds/forge/forge-desktop.webp',
+    },
   },
   pulse: {
     id: 'pulse',
