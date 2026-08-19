@@ -250,6 +250,10 @@ export const BACKDROPS: Readonly<Record<BackdropId, BackdropDefinition>> = {
     brief: 'A pillared hall around a single lit plinth. Earned with effort.',
     focal: { x: 0.5, y: 0.46 },
     veil: { light: 0.98, dark: 0.96 },
+    art: {
+      mobile: '/backgrounds/trophy-vault/trophy-vault-mobile.webp',
+      desktop: '/backgrounds/trophy-vault/trophy-vault-desktop.webp',
+    },
   },
   shop: {
     id: 'shop',
