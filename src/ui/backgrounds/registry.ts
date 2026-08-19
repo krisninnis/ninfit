@@ -272,6 +272,10 @@ export const BACKDROPS: Readonly<Record<BackdropId, BackdropDefinition>> = {
     brief: 'Pictures strung above soft cloud. Your story, your legacy.',
     focal: { x: 0.5, y: 0.4 },
     veil: { light: 0.97, dark: 0.95 },
+    art: {
+      mobile: '/backgrounds/journey-wall/journey-wall-mobile.webp',
+      desktop: '/backgrounds/journey-wall/journey-wall-desktop.webp',
+    },
   },
   crews: {
     id: 'crews',
