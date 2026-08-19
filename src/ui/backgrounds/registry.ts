@@ -195,6 +195,10 @@ export const BACKDROPS: Readonly<Record<BackdropId, BackdropDefinition>> = {
     brief: 'Sunset over calm water, seen from a mat. Move, stretch, flow.',
     focal: { x: 0.5, y: 0.44 },
     veil: { light: 0.97, dark: 0.95 },
+    art: {
+      mobile: '/backgrounds/flow/flow-mobile.webp',
+      desktop: '/backgrounds/flow/flow-desktop.webp',
+    },
   },
   trail: {
     id: 'trail',
