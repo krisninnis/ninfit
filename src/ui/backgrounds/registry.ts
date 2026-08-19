@@ -261,6 +261,10 @@ export const BACKDROPS: Readonly<Record<BackdropId, BackdropDefinition>> = {
     brief: 'A warm workshop of shelves and lanterns. Customise, unlock, shine.',
     focal: { x: 0.5, y: 0.48 },
     veil: { light: 0.98, dark: 0.96 },
+    art: {
+      mobile: '/backgrounds/shop/shop-mobile.webp',
+      desktop: '/backgrounds/shop/shop-desktop.webp',
+    },
   },
   'journey-wall': {
     id: 'journey-wall',
