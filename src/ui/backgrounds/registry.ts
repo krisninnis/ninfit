@@ -228,6 +228,10 @@ export const BACKDROPS: Readonly<Record<BackdropId, BackdropDefinition>> = {
     brief: 'A luminous track at night with a rhythm line. Raise, pump, energise.',
     focal: { x: 0.5, y: 0.52 },
     veil: { light: 0.98, dark: 0.96 },
+    art: {
+      mobile: '/backgrounds/pulse/pulse-mobile.webp',
+      desktop: '/backgrounds/pulse/pulse-desktop.webp',
+    },
   },
   flex: {
     id: 'flex',
