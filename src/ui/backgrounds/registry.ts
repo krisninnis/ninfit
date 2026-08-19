@@ -239,6 +239,10 @@ export const BACKDROPS: Readonly<Record<BackdropId, BackdropDefinition>> = {
     brief: 'A bright, clean studio with a wide window. Move, stretch, improve.',
     focal: { x: 0.5, y: 0.46 },
     veil: { light: 0.97, dark: 0.95 },
+    art: {
+      mobile: '/backgrounds/flex/flex-mobile.webp',
+      desktop: '/backgrounds/flex/flex-desktop.webp',
+    },
   },
   'trophy-vault': {
     id: 'trophy-vault',
