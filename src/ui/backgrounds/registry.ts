@@ -184,6 +184,10 @@ export const BACKDROPS: Readonly<Record<BackdropId, BackdropDefinition>> = {
     brief: 'A quiet waterfall and torii gate in deep green. Breathe and restore.',
     focal: { x: 0.5, y: 0.5 },
     veil: { light: 0.97, dark: 0.95 },
+    art: {
+      mobile: '/backgrounds/zen/zen-mobile.webp',
+      desktop: '/backgrounds/zen/zen-desktop.webp',
+    },
   },
   flow: {
     id: 'flow',
