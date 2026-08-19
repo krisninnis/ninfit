@@ -162,6 +162,10 @@ export const BACKDROPS: Readonly<Record<BackdropId, BackdropDefinition>> = {
     brief: 'A calm valley at dusk with a rising line of light. Reflect and grow.',
     focal: { x: 0.5, y: 0.42 },
     veil: { light: 0.97, dark: 0.95 },
+    art: {
+      mobile: '/backgrounds/progress/progress-mobile.webp',
+      desktop: '/backgrounds/progress/progress-desktop.webp',
+    },
   },
   adventures: {
     id: 'adventures',
