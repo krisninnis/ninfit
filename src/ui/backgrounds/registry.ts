@@ -283,6 +283,10 @@ export const BACKDROPS: Readonly<Record<BackdropId, BackdropDefinition>> = {
     brief: 'A shared island gathering place. Together, stronger, better.',
     focal: { x: 0.5, y: 0.44 },
     veil: { light: 0.98, dark: 0.96 },
+    art: {
+      mobile: '/backgrounds/crews/crews-mobile.webp',
+      desktop: '/backgrounds/crews/crews-desktop.webp',
+    },
   },
   profile: {
     id: 'profile',
