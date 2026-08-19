@@ -173,6 +173,10 @@ export const BACKDROPS: Readonly<Record<BackdropId, BackdropDefinition>> = {
     brief: 'Floating islands and a distant tower. Explore, discover, earn.',
     focal: { x: 0.55, y: 0.4 },
     veil: { light: 0.98, dark: 0.96 },
+    art: {
+      mobile: '/backgrounds/adventures/adventures-mobile.webp',
+      desktop: '/backgrounds/adventures/adventures-desktop.webp',
+    },
   },
   zen: {
     id: 'zen',
