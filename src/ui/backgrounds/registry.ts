@@ -250,6 +250,10 @@ export const BACKDROPS: Readonly<Record<BackdropId, BackdropDefinition>> = {
     brief: 'A quiet room with a window and a mirror. You, your stats, your journey.',
     focal: { x: 0.5, y: 0.44 },
     veil: { light: 0.97, dark: 0.95 },
+    art: {
+      mobile: '/backgrounds/profile/profile-mobile.webp',
+      desktop: '/backgrounds/profile/profile-desktop.webp',
+    },
   },
   settings: {
     id: 'settings',
