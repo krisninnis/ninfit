@@ -305,6 +305,10 @@ export const BACKDROPS: Readonly<Record<BackdropId, BackdropDefinition>> = {
     brief: 'A still balcony under a clear night sky. Personalise and control.',
     focal: { x: 0.5, y: 0.42 },
     veil: { light: 0.97, dark: 0.95 },
+    art: {
+      mobile: '/backgrounds/settings/settings-mobile.webp',
+      desktop: '/backgrounds/settings/settings-desktop.webp',
+    },
   },
   data: {
     id: 'data',
