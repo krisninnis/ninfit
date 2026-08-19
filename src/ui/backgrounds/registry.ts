@@ -206,6 +206,10 @@ export const BACKDROPS: Readonly<Record<BackdropId, BackdropDefinition>> = {
     brief: 'A woodland path beside a stream. Step, explore, go further.',
     focal: { x: 0.5, y: 0.48 },
     veil: { light: 0.97, dark: 0.95 },
+    art: {
+      mobile: '/backgrounds/trail/trail-mobile.webp',
+      desktop: '/backgrounds/trail/trail-desktop.webp',
+    },
   },
   forge: {
     id: 'forge',
