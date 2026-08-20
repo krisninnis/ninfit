@@ -77,6 +77,17 @@ describe('card roles', () => {
     expect(todaySource).toMatch(/className="card card--action plan[^"]*plan--rest"/);
   });
 
+  it('reserves the action role for Today session and rest heroes', () => {
+    const actionCards = [...todaySource.matchAll(/className="([^"]*\bcard--action\b[^"]*)"/g)];
+
+    expect(actionCards.length).toBeGreaterThan(0);
+    for (const match of actionCards) {
+      expect(match[1], `non-hero Today surface claims the action role: ${match[1]}`).toContain(
+        'plan--hero',
+      );
+    }
+  });
+
   it('keeps tracking sections on the quiet default', () => {
     // The collapsible tracking sections use <Section>, which is a plain .card.
     expect(todaySource).not.toMatch(/<Section[^>]*className="card--action/);

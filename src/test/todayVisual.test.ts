@@ -210,6 +210,19 @@ describe('tracking discloses progressively', () => {
   });
 });
 
+describe('the quick check-in stays secondary to the real fitness action', () => {
+  it('uses a quiet card rather than an action or reward surface', () => {
+    expect(checkInSource).toContain('className="card checkin"');
+    expect(checkInSource).not.toContain('card--action');
+    expect(checkInSource).not.toContain('card--reward');
+  });
+
+  it('keeps non-action Today states informational rather than primary', () => {
+    expect(todaySource).toContain('className="card card--info plan"');
+    expect((todaySource.match(/className="card card--info plan"/g) ?? []).length).toBe(2);
+  });
+});
+
 describe('the quick check-in is genuinely quick', () => {
   it('records water in a single tap, in both directions', () => {
     expect(checkInSource).toContain('One glass more');

@@ -335,14 +335,14 @@ export function TodayScreen() {
       ) : null}
 
       {view.status === 'before_programme' ? (
-        <section className="card card--action plan">
+        <section className="card card--info plan">
           <h2 className="plan__title">Nothing planned yet</h2>
           <p className="plan__hint">Your programme starts a little later. Today is yours.</p>
         </section>
       ) : null}
 
       {view.status === 'no_plan' ? (
-        <section className="card card--action plan">
+        <section className="card card--info plan">
           <h2 className="plan__title">No session planned</h2>
           <p className="plan__hint">
             There is no plan for today yet. You can still record anything below.

@@ -51,7 +51,7 @@ export function QuickCheckIn({ log, onChange }: QuickCheckInProps) {
   };
 
   return (
-    <section className="card card--action checkin" aria-labelledby="checkin-title">
+    <section className="card checkin" aria-labelledby="checkin-title">
       <h2 className="checkin__title" id="checkin-title">
         Quick check-in
       </h2>
