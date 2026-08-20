@@ -22,19 +22,6 @@ import {
  */
 
 /**
- * Hatch eligibility now reads the MONOTONIC count.
- *
- * It used to take `distinctActiveDays`, which `deriveRewards` recomputes from the
- * live logs and which therefore falls when somebody un-ticks a completed activity.
- * `eggState` survived that only by accident: `evaluateMascot` promotes solely from
- * `unhatched`, so a ready egg could not be un-readied. That was a latch nobody
- * designed, protecting a rule that was quietly reversible underneath.
- *
- * The threshold and the counting now live in `egg.ts` and come from `awardedKeys`,
- * which only ever grows. One definition of qualifying progress, not two.
- */
-
-/**
  * LEGACY SCAFFOLDING - scheduled for replacement in the evolution milestone.
  *
  * Overall level is a stand-in for a richer rule that will eventually weigh

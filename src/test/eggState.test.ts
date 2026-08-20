@@ -198,7 +198,9 @@ describe('migration: nobody is left holding an egg that cannot open', () => {
       { now: '2026-09-01T09:00:00.000+01:00' },
     );
 
-    // The path may change. The companion, its growth and its XP may not be reset.
+    // The programme path may change. The established companion and its progression may not.
+    expect(again.pathId).toBe('build_strength');
+    expect(again.mascot.familyId).toBe(hatched.mascot.familyId);
     expect(again.mascot.eggState).toBe('hatched');
     expect(again.mascot.stage).toBe('capable');
     expect(again.mascot.hatchedAt).toBe(NOW);

@@ -654,14 +654,38 @@ describe('mascot', () => {
     expect(repo.getGameState()?.mascot.familyId).toBe('bear');
   });
 
-  it('follows a later path switch', () => {
+  it('follows a later path switch while the companion is still hidden', () => {
     finishOnboarding(
       repo,
       { answers: BEGINNER_ANSWERS, recommendedPathId: 'start_moving', chosenPathId: 'start_moving' },
       NOW,
     );
     switchPath(repo, 'balanced_fitness');
-    expect(reload().getGameState()?.mascot.familyId).toBe('otter');
+
+    const state = reload().getGameState();
+    expect(state?.pathId).toBe('balanced_fitness');
+    expect(state?.mascot.eggState).toBe('ready');
+    expect(state?.mascot.familyId).toBe('otter');
+  });
+
+  it('keeps an established companion when the fitness path changes after hatch', () => {
+    finishOnboarding(
+      repo,
+      { answers: BEGINNER_ANSWERS, recommendedPathId: 'start_moving', chosenPathId: 'start_moving' },
+      NOW,
+    );
+    hatchEggNow(repo, NOW);
+
+    const before = reload().getGameState();
+    expect(before?.mascot.familyId).toBe('tortoise');
+    expect(before?.mascot.eggState).toBe('hatched');
+
+    switchPath(repo, 'balanced_fitness');
+
+    const after = reload().getGameState();
+    expect(after?.pathId).toBe('balanced_fitness');
+    expect(after?.mascot.familyId).toBe('tortoise');
+    expect(after?.mascot.eggState).toBe('hatched');
   });
 
   it('persists its stage across a reload', () => {

@@ -206,12 +206,12 @@ Before progressing significantly beyond the current Phase 6 slice:
 4. Verify the branch cleanly.
 5. Commit only scoped semantic changes.
 
-Known deployment issues requiring resolution:
+Deployment-health issues identified during the Phase 6 maintenance pass were resolved and browser-verified on 20 August 2026:
 
-- Missing VITE_SUPABASE_URL in deployed build
-- verify VITE_SUPABASE_ANON_KEY deployment configuration
-- add modern mobile-web-app-capable meta
-- investigate/verify hashed CSS 404 after fresh deployment
+- Supabase public frontend environment configuration present
+- modern mobile-web-app-capable metadata present
+- missing favicon/background requests resolved
+- fresh production deployment loaded with a clean browser console
 
 Do not expose privileged Supabase credentials.
 
@@ -583,7 +583,7 @@ Mobile-first.
 
 ==================================================
 PHASE 5A — NINFIT ID / ACCOUNT ENTRY
-STATUS: IMPLEMENTED — DEPLOYMENT HEALTH OPEN
+STATUS: IMPLEMENTED — DEPLOYMENT HEALTH VERIFIED
 ==================================================
 
 NinFit works without an account.
@@ -633,10 +633,10 @@ Account may later enable:
 Never imply fitness data is cloud-synchronised before explicit
 sync exists.
 
-CURRENT PRIORITY:
+DEPLOYMENT STATUS:
 
-Fix Vercel build-time environment configuration before treating
-the deployed account journey as healthy.
+The deployed account journey passed the Phase 6 browser-health check
+after the Vercel/public environment configuration fixes.
 
 
 ==================================================
