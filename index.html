@@ -8,10 +8,26 @@
     <meta name="theme-color" content="#f7f6f3" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#16181a" media="(prefers-color-scheme: dark)" />
     <meta name="description" content="A quiet personal fitness journal. Your data stays on your device." />
+
+    <!-- Icons. Declared explicitly so the browser stops falling back to a request
+         for /favicon.ico, which this app does not serve. All three files already
+         exist in public/icons/ as canonical NinFit brand assets; nothing new was
+         drawn for this. The SVG is the one browsers should prefer - it is the mark
+         itself rather than a rendering of it - and the 32px PNG covers the few that
+         still cannot use an SVG favicon. -->
+    <link rel="icon" href="/icons/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+
+    <!-- The standard capability declaration. `apple-mobile-web-app-capable` is
+         deprecated on its own, but stays because iOS still reads it - the modern
+         tag does not replace it there, it just stops the deprecation warning and
+         covers every other engine. -->
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Tracker" />
-    <title>Tracker</title>
+    <meta name="apple-mobile-web-app-title" content="NinFit" />
+    <title>NinFit</title>
   </head>
   <body>
     <div id="root"></div>
