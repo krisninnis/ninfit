@@ -27,28 +27,45 @@ import { EggArt } from './EggArt';
  * Before the egg hatches this component cannot name or draw the animal: it asks the
  * domain for the visible family and gets `undefined`, so there is nothing to leak
  * through a label, an alt attribute or a glyph.
+ *
+ * IT NO LONGER DECIDES WHAT THE COMPANION HAS NOTICED.
+ *
+ * This component used to hold a private `contextFor(state)` that looked only at the
+ * egg and the evolution flag, so the message could never acknowledge a finished
+ * session, a planned rest day, a trophy or a return after time away - even though
+ * the copy for all four already existed. Worse, it was a screen deciding for itself
+ * what was true about the day, which is the one thing the architecture rule forbids:
+ * domain, then game state, then presentation.
+ *
+ * The choice now belongs to `todayCompanionContext` in the domain, and arrives as a
+ * prop. This component's whole job with it is to look up the wording and render it.
  */
 
 interface GameHeaderProps {
   state: GameState;
   settings: GameSettings;
   granted: readonly RewardEvent[];
+  /**
+   * What the companion has noticed, decided by the domain. Passed in rather than
+   * computed here so the message can reflect the day, and so there is exactly one
+   * place the precedence between "you finished" and "welcome back" is written down.
+   */
+  context: MascotContext;
   onHatch: () => void;
   onEvolve: () => void;
 }
 
-/** Placeholder art. Real mascot design is a separate piece of work. */
-function contextFor(state: GameState): MascotContext {
-  if (state.mascot.eggState === 'ready') return 'hatch_ready';
-  if (state.mascot.eggState === 'unhatched') return 'egg_waiting';
-  if (state.mascot.evolutionReady) return 'evolution_ready';
-  return 'idle';
-}
-
-export function GameHeader({ state, settings, granted, onHatch, onEvolve }: GameHeaderProps) {
+export function GameHeader({
+  state,
+  settings,
+  granted,
+  context,
+  onHatch,
+  onEvolve,
+}: GameHeaderProps) {
   const family = visibleMascotFamily(state.mascot);
   const progress = levelProgress(state.xp.total);
-  const message = mascotMessage(contextFor(state), settings.mascotPersonality);
+  const message = mascotMessage(context, settings.mascotPersonality);
   const latest = granted[granted.length - 1];
 
   const action =

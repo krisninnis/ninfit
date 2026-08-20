@@ -60,6 +60,88 @@ describe("today's plan comes before everything it must outrank", () => {
   });
 });
 
+/**
+ * The screen with its comments removed.
+ *
+ * Every assertion below searches for wording that must NOT be on Today, and the
+ * comments that explain those rules necessarily quote the wording. Searching the raw
+ * source would match the explanation and report the exact opposite of the truth -
+ * the same trap the quick check-in test documents.
+ */
+const todayCode = todaySource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+
+describe('Today keeps no daily completion score', () => {
+  /**
+   * A LOCKED PRODUCT RULE, NOT A LAYOUT PREFERENCE.
+   *
+   * Today used to end with "N of M sections recorded". It scored how much of a form
+   * had been filled in, so the only way to raise it was to type more - a person who
+   * did their whole session and wrote nothing down scored 1 of 5. Rewarding showing
+   * up and scoring the day are different products, and this one rewards showing up.
+   *
+   * These assertions are about the score coming back in ANOTHER shape, which is the
+   * likely way it returns: a ring, a percentage, a "complete your day".
+   */
+  it('renders no section-completion ratio', () => {
+    expect(todayCode).not.toContain('today__footer');
+    expect(todayCode).not.toMatch(/sections recorded/);
+    expect(todayCode).not.toMatch(/completion\.(filled|total)/);
+  });
+
+  it('does not even take the tally from the hook', () => {
+    // Reading it is how it grows back. `useToday` still offers it; Today declines.
+    const destructure = todayCode.slice(
+      todayCode.indexOf('= useToday()') - 200,
+      todayCode.indexOf('= useToday()'),
+    );
+    expect(destructure).not.toMatch(/\bcompletion\b/);
+  });
+
+  it('leaves no styling behind for one to be hung on', () => {
+    expect(today).not.toContain('.today__footer {');
+  });
+
+  it('scores the day in no other shape either', () => {
+    expect(todayCode).not.toMatch(/completionRing|dailyScore|percentComplete|__ring\b/i);
+    expect(todayCode).not.toMatch(/complete your day|finish your day|\d+% (complete|done)/i);
+  });
+
+  /**
+   * The one count Today does keep, and why it is not the same thing.
+   *
+   * `today__insight` counts distinct days with something completed. It measures
+   * turning up, it has no denominator, and there is no state in which it reads as a
+   * shortfall - a new user gets an invitation rather than a zero.
+   */
+  it('still counts showing up, which is the number that is allowed', () => {
+    expect(todaySource).toContain('today__insight');
+    expect(todaySource).toContain('activeDays');
+    expect(todaySource).toContain('Your first active day starts whenever you are ready.');
+  });
+});
+
+describe('the path mascot is the permanent companion on Today', () => {
+  /**
+   * LOCKED. The path mascot strip is attached to the user's own fitness journey and
+   * is the single permanent character on this screen.
+   *
+   * Opal is the NinFit guide, not a second resident. This does not forbid a future
+   * contextual Opal - Opal speaking when there is a reason to is the agreed
+   * direction - it forbids Opal being rendered unconditionally beside the path
+   * mascot, which is how a guide turns into furniture and pushes the session down.
+   */
+  it('renders the path mascot strip unconditionally', () => {
+    expect(todayCode).toContain('<GameHeader');
+    expect((todayCode.match(/<GameHeader/g) ?? []).length).toBe(1);
+  });
+
+  it('gives Opal no permanent card of its own here', () => {
+    expect(todayCode, 'Opal must not be a second permanent character on Today').not.toMatch(
+      /<Opal\b/,
+    );
+  });
+});
+
 describe('the plan card offers exactly one primary action', () => {
   /**
    * More than one `btn--primary` in the plan area would mean two things claiming to
@@ -184,6 +266,42 @@ describe('the companion stays a strip', () => {
   it('still names the level and exposes XP to assistive technology', () => {
     expect(gameHeaderSource).toContain('Level {progress.level}');
     expect(gameHeaderSource).toMatch(/aria-label=\{[\s\S]*XP/);
+  });
+
+  /**
+   * The companion should feel alive without the screen deciding what is true.
+   *
+   * The header used to hold its own `contextFor(state)`, which could see the egg and
+   * nothing else - so the message never changed when the user finished a session,
+   * rested, earned a trophy or came back after a fortnight. That was a presentation
+   * component deriving product truth, which the architecture rule puts in the domain.
+   */
+  it('is told what the companion has noticed rather than working it out', () => {
+    expect(gameHeaderSource).not.toMatch(/function contextFor/);
+    expect(gameHeaderSource).toContain('context: MascotContext');
+    expect(gameHeaderSource).toContain('mascotMessage(context,');
+  });
+
+  it('reads the mascot state for artwork only, never to choose the message', () => {
+    // The one remaining `state.mascot` reads decide what to draw and which action to
+    // offer. None of them may decide what is said.
+    const messageLine = gameHeaderSource.slice(
+      gameHeaderSource.indexOf('const message ='),
+      gameHeaderSource.indexOf('const latest ='),
+    );
+    expect(messageLine).not.toContain('state.mascot');
+  });
+
+  it('sources the context from the domain, on the screen that owns the day', () => {
+    expect(todaySource).toContain("from '../../domain/game/todayContext'");
+    expect(todaySource).toContain('todayCompanionContext({');
+    expect(todaySource).toContain('context={companionContext}');
+  });
+
+  it('feeds it the session completion already computed for the plan card', () => {
+    // Not a second reading of the day. The plan card and the companion must agree,
+    // which they can only do by sharing one answer.
+    expect(todaySource).toContain('completion: sessionCompletion.status');
   });
 });
 

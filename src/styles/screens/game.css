@@ -35,6 +35,24 @@
   place-items: center;
 }
 
+/*
+ * THE TRACK MUST BE ALLOWED TO SHRINK.
+ *
+ * The strip's middle column is `1fr`, and a grid track's implicit minimum is
+ * `min-content` - so without this the column grew to fit the longest unbroken run of
+ * text rather than the space available. Measured on a 360px phone: a 328px strip
+ * containing a 567px body and a 498px message. The `text-overflow: ellipsis` below
+ * never fired, because nothing was ever too narrow to fit; the text simply ran past
+ * the strip and was clipped by `.app__main`'s scroll container, with no ellipsis to
+ * show it had been cut.
+ *
+ * `min-width: 0` restores the truncation the strip was always documented as doing.
+ * It is one property, and it is the whole reason the ellipsis rule works at all.
+ */
+.game__body {
+  min-width: 0;
+}
+
 .game__art .egg {
   width: 36px;
   height: 44px;
