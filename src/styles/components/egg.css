@@ -65,9 +65,13 @@
 
   /*
    * The hatch cinematic is deliberately presentation-only. The real state change
-   * still happens through the existing domain hatch action at the flash boundary.
+   * still happens through the existing domain hatch action at the end of it.
+   *
+   * The modifier is deliberately NOT named after the Today strip: the same cinematic
+   * plays in onboarding, where almost everybody actually meets their companion, and
+   * a class called `game__art--cracking` on an onboarding element would be a lie.
    */
-  .game__art--cracking .egg {
+  .egg-hatch--cracking .egg {
     animation: egg-hatch-build 650ms ease-in forwards;
     transform-origin: 50% 90%;
   }
@@ -82,7 +86,7 @@
     100% { transform: rotate(0deg) scale(1.1); }
   }
 
-  .game__art--flash {
+  .egg-hatch--flash {
     position: relative;
   }
 
@@ -120,7 +124,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .game__art--cracking .egg,
+    .egg-hatch--cracking .egg,
     .egg__hatchFlash {
       animation: none;
     }

@@ -110,8 +110,19 @@ export function completeOnboarding(
     },
     mascot: {
       ...state.mascot,
-      // Only meaningful once hatched; held privately until then.
+      // Set from the FINAL chosen path, not the recommendation. Only meaningful
+      // once hatched: `visibleMascotFamily` refuses to reveal it until then, so
+      // recording it here leaks nothing.
       familyId: mascotFamilyForPath(input.pathId),
+      /*
+       * Finishing onboarding is what makes the egg ready. The explicit
+       * "Start my journey" action then runs the presentation and calls `hatchEgg`,
+       * which stays the one and only place the egg actually opens.
+       *
+       * Guarded to `unhatched` so re-running onboarding later can never reset a
+       * mascot that already exists, nor its stage, XP or evolution.
+       */
+      eggState: state.mascot.eggState === 'unhatched' ? 'ready' : state.mascot.eggState,
     },
     // Level is untouched on purpose. Onboarding never grants progression.
     xp: state.xp,

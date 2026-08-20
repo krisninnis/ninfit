@@ -1,6 +1,8 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 import { getAppContext } from '../../app/bootstrap';
 import { EggArt } from '../components/EggArt';
+import { useHatchCinematic } from '../hooks/useHatchCinematic';
+import { crackStageForProgress } from '../../domain/game/egg';
 import { FITNESS_PATHS, FITNESS_STAGE_LABELS, findPath } from '../../domain/game/paths';
 import {
   isReadyToRecommend,
@@ -26,12 +28,33 @@ import type { FinishOnboardingInput } from '../../app/game';
  * Nothing is written until the user accepts a path, so a half-finished flow is never
  * stored as a completed classification.
  *
- * The mascot stays secret throughout. No animal, family or silhouette appears here.
+ * The mascot stays secret throughout. No animal, family or silhouette appears here
+ * until the egg has actually hatched - `visibleMascotFamily` in the domain is what
+ * enforces that, and this screen is only ever handed a name once it has.
+ *
+ * ONBOARDING NOW ENDS WITH THE HATCH.
+ *
+ * The egg cracks as the questionnaire progresses, and finishing it - choosing a path
+ * and pressing "Start my journey" - is what opens it. Hatching used to be earned
+ * with six qualifying activity days on Today, which meant nobody met their companion
+ * in their first week. Real fitness now begins the mascot's GROWTH instead, which is
+ * the thing activity should be buying.
  */
 
 interface OnboardingScreenProps {
-  onComplete: (input: FinishOnboardingInput) => void;
+  /**
+   * Record the finished onboarding and perform the real hatch. Called once, at the
+   * end of the cinematic, never before it.
+   */
+  onStartJourney: (input: FinishOnboardingInput) => void;
+  /** Leave the first-run journey, after the companion has been introduced. */
+  onFinished: () => void;
   onDismiss: () => void;
+  /**
+   * The hatched companion's name. Undefined until the real hatch has happened, so
+   * this screen cannot show a species early even if it wanted to.
+   */
+  companionName?: string;
 }
 
 type AnswerValue = string | string[] | undefined;
@@ -126,7 +149,12 @@ function QuestionStage({
   );
 }
 
-export function OnboardingScreen({ onComplete, onDismiss }: OnboardingScreenProps) {
+export function OnboardingScreen({
+  onStartJourney,
+  onFinished,
+  onDismiss,
+  companionName,
+}: OnboardingScreenProps) {
   const context = useMemo(() => getAppContext(), []);
 
   // Prefilled from what the tracker already knows. Private health notes are never
@@ -136,6 +164,14 @@ export function OnboardingScreen({ onComplete, onDismiss }: OnboardingScreenProp
   );
   const [index, setIndex] = useState(0);
   const [showAllPaths, setShowAllPaths] = useState(false);
+  /*
+   * The path the user has settled on. Undefined means "still the recommendation",
+   * which keeps the common case a single press rather than an accept-then-confirm.
+   * Choosing another path only CHANGES this - it never starts the journey, so the
+   * final action stays explicit either way.
+   */
+  const [chosenPathId, setChosenPathId] = useState<FitnessPathId | undefined>(undefined);
+  const [journeyStarted, setJourneyStarted] = useState(false);
 
   const stages = useMemo(() => onboardingStages(answers), [answers]);
   const safeIndex = Math.min(index, stages.length - 1);
@@ -157,10 +193,28 @@ export function OnboardingScreen({ onComplete, onDismiss }: OnboardingScreenProp
   const goBack = () => setIndex((value) => Math.max(0, value - 1));
   const goNext = () => setIndex((value) => Math.min(stages.length - 1, value + 1));
 
-  const accept = (pathId: FitnessPathId) => {
-    if (recommendation === undefined) return;
-    onComplete({ answers, recommendedPathId: recommendation.pathId, chosenPathId: pathId });
-  };
+  const finalPathId = chosenPathId ?? recommendation?.pathId;
+
+  /*
+   * The same cinematic Today uses for the recovery hatch. It decides WHEN, never
+   * whether: the domain still refuses to open an egg that is not ready, and the real
+   * mutation happens once, in `hatchEgg`, at the end of this.
+   *
+   * Nothing is written before the cinematic runs. Recording onboarding early would
+   * flip `needsOnboarding` and unmount this screen mid-animation.
+   */
+  const hatch = useHatchCinematic({
+    canHatch: recommendation !== undefined && finalPathId !== undefined && !journeyStarted,
+    onHatch: () => {
+      if (recommendation === undefined || finalPathId === undefined) return;
+      setJourneyStarted(true);
+      onStartJourney({
+        answers,
+        recommendedPathId: recommendation.pathId,
+        chosenPathId: finalPathId,
+      });
+    },
+  });
 
   const canContinue =
     stage.kind !== 'question' || !isRequiredQuestion(stage.question.id) || isAnswered(answers, stage.question);
@@ -182,8 +236,21 @@ export function OnboardingScreen({ onComplete, onDismiss }: OnboardingScreenProp
         flow, so it reads as one object travelling with the user rather than an
         illustration that changes per screen. It is identical on every path.
       */}
-      <div className="step__egg">
-        <EggArt energy={energy} />
+      <div className={`step__egg${hatch.isRunning ? ` egg-hatch--${hatch.phase}` : ''}`}>
+        {/*
+          The shell cracks as the questionnaire progresses. The stage is derived from
+          the SAME progress fraction that drives the bar, so the two can never
+          disagree, and it is never stored: it is a picture of where the user is in a
+          form they are still filling in, not a fact about them.
+
+          It reads no activity and no reward keys. Cracking is onboarding's, growth
+          is fitness's.
+        */}
+        <EggArt
+          energy={energy}
+          crackStage={crackStageForProgress(progress.fraction)}
+        />
+        {hatch.phase === 'flash' ? <span className="egg__hatchFlash" aria-hidden="true" /> : null}
       </div>
 
       {stage.kind !== 'welcome' ? (
@@ -192,8 +259,35 @@ export function OnboardingScreen({ onComplete, onDismiss }: OnboardingScreenProp
         </div>
       ) : null}
 
-      <div className="step__body" key={safeIndex}>
-        {stage.kind === 'welcome' ? (
+      <div className="step__body" key={journeyStarted ? 'reveal' : safeIndex}>
+        {/*
+          THE REVEAL. Only reachable after the real hatch: `companionName` comes from
+          `visibleMascotFamily`, which returns undefined until `eggState` is
+          'hatched'. There is no presentation-only version of this state, so what is
+          on screen and what is stored cannot disagree.
+        */}
+        {journeyStarted && companionName !== undefined ? (
+          <section className="step__panel">
+            <span className="onboard__label">Your companion</span>
+            <h1 className="step__title">{companionName}</h1>
+            <p className="step__help">
+              Say hello. They will grow as you move - real sessions, real progress, at
+              whatever pace suits you.
+            </p>
+            <button type="button" className="btn btn--primary btn--block" onClick={onFinished}>
+              Continue
+            </button>
+          </section>
+        ) : null}
+
+        {journeyStarted && companionName === undefined ? (
+          <section className="step__panel">
+            <h1 className="step__title">Almost there</h1>
+            <p className="step__help">Getting your companion ready.</p>
+          </section>
+        ) : null}
+
+        {!journeyStarted && stage.kind === 'welcome' ? (
           <section className="step__panel">
             <h1 className="step__title">Let&rsquo;s find your starting point</h1>
             <p className="step__help">
@@ -204,11 +298,11 @@ export function OnboardingScreen({ onComplete, onDismiss }: OnboardingScreenProp
           </section>
         ) : null}
 
-        {stage.kind === 'question' ? (
+        {!journeyStarted && stage.kind === 'question' ? (
           <QuestionStage question={stage.question} answers={answers} onAnswer={setAnswer} />
         ) : null}
 
-        {stage.kind === 'recommendation' && recommendation !== undefined ? (
+        {!journeyStarted && stage.kind === 'recommendation' && recommendation !== undefined ? (
           /*
            * THE ONE PLACE A PATH BECOMES VISIBLE DURING ONBOARDING.
            *
@@ -221,18 +315,36 @@ export function OnboardingScreen({ onComplete, onDismiss }: OnboardingScreenProp
            * It names the PATH, not the animal. The mascot stays sealed until the user
            * opens the egg later on Today, which is a separate and explicit action.
            */
-          <section className="step__panel step__reveal" data-path={recommendation.pathId}>
-            <span className="onboard__label">Based on your answers</span>
-            <h1 className="onboard__path">{findPath(recommendation.pathId).name}</h1>
-            <p className="step__help">{findPath(recommendation.pathId).summary}</p>
-            <p className="onboard__why">{recommendation.explanation}</p>
+          <section className="step__panel step__reveal" data-path={finalPathId}>
+            <span className="onboard__label">
+              {chosenPathId === undefined ? 'Based on your answers' : 'Your choice'}
+            </span>
+            <h1 className="onboard__path">{findPath(finalPathId ?? recommendation.pathId).name}</h1>
+            <p className="step__help">{findPath(finalPathId ?? recommendation.pathId).summary}</p>
+            {chosenPathId === undefined ? (
+              <p className="onboard__why">{recommendation.explanation}</p>
+            ) : (
+              <p className="onboard__why">
+                You picked this one. Nothing about the recommendation is lost - you can change
+                direction whenever you like.
+              </p>
+            )}
             <p className="footnote">
               Starting stage: {FITNESS_STAGE_LABELS[recommendation.fitnessStage]}. Everyone begins
               the game at level 1, whatever their starting point. You can change direction later.
             </p>
 
-            <button type="button" className="btn btn--primary btn--block" onClick={() => accept(recommendation.pathId)}>
-              Start this path
+            {/*
+              THE EXPLICIT ACTION. Choosing a path above only selects it; this is the
+              only control that starts anything, and it is what opens the egg.
+            */}
+            <button
+              type="button"
+              className="btn btn--primary btn--block"
+              onClick={hatch.request}
+              disabled={hatch.isRunning}
+            >
+              {hatch.isRunning ? 'Hatching…' : 'Start my journey'}
             </button>
             <button
               type="button"
@@ -245,14 +357,14 @@ export function OnboardingScreen({ onComplete, onDismiss }: OnboardingScreenProp
 
             {showAllPaths ? (
               <ul className="step__paths">
-                {FITNESS_PATHS.filter((path) => path.id !== recommendation.pathId).map((path) => (
+                {FITNESS_PATHS.filter((path) => path.id !== finalPathId).map((path) => (
                   <li className="surface step__path" key={path.id}>
                     <h2 className="onboard__path">{path.name}</h2>
                     <p className="footnote">{path.summary}</p>
                     <button
                       type="button"
                       className="btn btn--secondary btn--block"
-                      onClick={() => accept(path.id)}
+                      onClick={() => setChosenPathId(path.id)}
                     >
                       Choose {path.name}
                     </button>
@@ -263,7 +375,7 @@ export function OnboardingScreen({ onComplete, onDismiss }: OnboardingScreenProp
           </section>
         ) : null}
 
-        {stage.kind === 'recommendation' && recommendation === undefined ? (
+        {!journeyStarted && stage.kind === 'recommendation' && recommendation === undefined ? (
           <section className="step__panel">
             <h1 className="step__title">Almost there</h1>
             <p className="step__help">
@@ -274,7 +386,7 @@ export function OnboardingScreen({ onComplete, onDismiss }: OnboardingScreenProp
       </div>
 
       <nav className="step__nav" aria-label="Onboarding navigation">
-        {safeIndex > 0 ? (
+        {journeyStarted ? null : safeIndex > 0 ? (
           <button type="button" className="btn btn--secondary" onClick={goBack}>
             Back
           </button>
@@ -284,7 +396,7 @@ export function OnboardingScreen({ onComplete, onDismiss }: OnboardingScreenProp
           </button>
         )}
 
-        {stage.kind !== 'recommendation' ? (
+        {!journeyStarted && stage.kind !== 'recommendation' ? (
           <button type="button" className="btn btn--primary step__next" disabled={!canContinue} onClick={goNext}>
             {stage.kind === 'welcome' ? 'Start' : 'Continue'}
           </button>

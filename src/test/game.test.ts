@@ -15,7 +15,6 @@ import { acknowledgeRestDay, toggleActivityCompletion } from '../domain/dailyLog
 import { addDays } from '../domain/dates';
 import { PROGRAMME_START_DATE } from '../domain/defaults';
 import { createDefaultGameSettings } from '../domain/game/defaults';
-import { HATCH_QUALIFYING_DAYS } from '../domain/game/egg';
 import { evolutionStatus, visibleMascotFamily } from '../domain/game/mascot';
 import { recommendPath } from '../domain/game/onboarding';
 import {
@@ -47,6 +46,13 @@ let walk: PlannedActivity;
 
 function newRepo(store: StorageAdapter, prefix = 'seed'): Repository {
   return createRepository(store, { now: () => NOW, makeId: sequentialIdFactory(prefix) });
+}
+
+/** A repository that has never been through onboarding. */
+function freshRepo(): Repository {
+  const next = newRepo(createMemoryStorageAdapter(), 'fresh');
+  next.initialise();
+  return next;
 }
 
 function reload(): Repository {
@@ -249,8 +255,15 @@ describe('the egg', () => {
     );
   });
 
-  it('starts unhatched', () => {
-    expect(sync().state.mascot.eggState).toBe('unhatched');
+  it('is ready the moment onboarding is finished', () => {
+    // Hatching is the payoff for completing onboarding, not for a week of exercise.
+    expect(sync().state.mascot.eggState).toBe('ready');
+  });
+
+  it('stays shut for someone who has not finished onboarding', () => {
+    const fresh = freshRepo();
+    expect(sync(fresh).state.mascot.eggState).toBe('unhatched');
+    expect(hatchEggNow(fresh, NOW).mascot.eggState).toBe('unhatched');
   });
 
   it('does not expose the animal before hatching', () => {
@@ -262,20 +275,16 @@ describe('the egg', () => {
     expect(onboardingSource).not.toMatch(/Tortoise|Bear|\bFox\b|Otter|Wolf/);
   });
 
-  it('becomes ready only after the required number of qualifying days', () => {
-    expect(HATCH_QUALIFYING_DAYS).toBe(6);
+  it('does not wait for any amount of activity', () => {
+    // The old rule needed six qualifying days. Activity now feeds growth instead,
+    // and cannot advance or delay the introduction in either direction.
+    expect(sync().state.mascot.eggState).toBe('ready');
 
-    // Five days of real activity is not enough - the shell cracks, it does not open.
-    tickQualifyingDays(HATCH_QUALIFYING_DAYS - 1);
-    expect(sync().state.mascot.eggState).toBe('unhatched');
-
-    tickQualifyingDays(HATCH_QUALIFYING_DAYS);
+    tickQualifyingDays(6);
     expect(sync().state.mascot.eggState).toBe('ready');
   });
 
   it('never hatches on its own', () => {
-    tickQualifyingDays(HATCH_QUALIFYING_DAYS);
-
     sync();
     sync();
     sync();
@@ -283,7 +292,6 @@ describe('the egg', () => {
   });
 
   it('hatches when asked, and stays hatched after a reload', () => {
-    tickQualifyingDays(HATCH_QUALIFYING_DAYS);
     sync();
 
     const hatched = hatchEggNow(repo, NOW);
@@ -295,13 +303,25 @@ describe('the egg', () => {
     expect(sync(after).state.mascot.eggState).toBe('hatched');
   });
 
-  it('ignores a hatch request before the egg is ready', () => {
-    expect(hatchEggNow(repo, NOW).mascot.eggState).toBe('unhatched');
+  it('ignores a hatch request from a save that never finished onboarding', () => {
+    expect(hatchEggNow(freshRepo(), NOW).mascot.eggState).toBe('unhatched');
+  });
+
+  it('grants no XP or trophies for hatching', () => {
+    sync();
+    const before = repo.getGameState();
+    const after = hatchEggNow(repo, NOW);
+
+    expect(after.mascot.eggState).toBe('hatched');
+    expect(after.xp).toEqual(before?.xp);
+    expect(after.xp.total).toBe(0);
+    expect(after.trophies).toEqual(before?.trophies);
+    expect(after.awardedKeys).toEqual(before?.awardedKeys);
   });
 
   it('reveals the animal only after hatching', () => {
-    tickQualifyingDays(HATCH_QUALIFYING_DAYS);
     sync();
+    expect(visibleMascotFamily(repo.getGameState()!.mascot)).toBeUndefined();
     const state = hatchEggNow(repo, NOW);
 
     expect(visibleMascotFamily(state.mascot)?.id).toBe('tortoise');

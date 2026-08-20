@@ -359,6 +359,66 @@ The egg may use premium iridescent/opalescent visual treatment,
 but it is not Opal the companion.
 
 
+--------------------------------------------------
+HATCH TRIGGER — LOCKED (SUPERSEDES THE EARLIER RULE)
+--------------------------------------------------
+
+Hatching is the emotional payoff for COMPLETING ONBOARDING
+and choosing a path.
+
+It is NOT earned with activity.
+
+There is no six-qualifying-day requirement, and no waiting
+period before a user meets their companion.
+
+First-run journey:
+
+START NINFIT
+-> MYSTERY EGG
+-> ONBOARDING QUESTIONS
+-> CRACK 1
+-> CRACK 2
+-> CRACK 3
+-> PATH RECOMMENDATION
+-> USER ACCEPTS OR CHOOSES ANOTHER PATH
+-> START MY JOURNEY
+-> HATCH CINEMATIC
+-> STARTER MASCOT REVEAL
+-> OPTIONAL NINFIT ID
+-> TODAY
+-> REAL FITNESS EARNS GROWTH / XP / EVOLUTION
+
+Rules:
+
+- onboarding progress drives the presentation cracking
+- crack progress is derived from questionnaire progress only,
+  never from awarded reward keys or activity
+- crack progress is presentation and is never persisted
+- the FINAL chosen path determines the hidden mascot family
+- the recommendation may be overridden, and overriding is
+  a first-class outcome
+- the species stays hidden until the real hatch transition
+- one explicit action, "Start my journey", begins the hatch
+- exactly one real hatch mutation performs the transition
+- hatching grants no XP, no PB, no trophy, no consistency
+  and no fabricated activity
+
+After hatch:
+
+REAL FITNESS drives XP, growth, evolution, Champion and Legacy.
+
+Migration and recovery:
+
+Onboarding complete plus an unhatched egg means the egg is ready.
+
+One deterministic rule serves the new flow and rescues any
+save that completed onboarding under the old activity-earned
+rule, so nobody is left holding an egg that can never open.
+
+Re-running onboarding never resets an existing mascot, its
+stage, its XP or its evolution.
+
+
 ==================================================
 PHASE 3 — TYPOGRAPHY + RESPONSIVE LAYOUT
 STATUS: COMPLETE / FOUNDATION SHIPPED

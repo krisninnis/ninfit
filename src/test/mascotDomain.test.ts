@@ -239,8 +239,8 @@ describe('decoration cannot reach progression', () => {
 
     expect(decked.mascot.stage).toBe(plain.mascot.stage);
     expect(isEvolutionEligible(hatched, 15)).toBe(isEvolutionEligible({ ...hatched }, 15));
-    expect(evaluateMascot(hatched, { qualifyingDays: 9, level: 15 })).toEqual(
-      evaluateMascot({ ...hatched }, { qualifyingDays: 9, level: 15 }),
+    expect(evaluateMascot(hatched, { onboardingCompleted: true, level: 15 })).toEqual(
+      evaluateMascot({ ...hatched }, { onboardingCompleted: true, level: 15 }),
     );
   });
 

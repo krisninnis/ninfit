@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from 'react';
 import {
   EVOLUTION_STATUS_LABELS,
   MASCOT_STAGE_LABELS,
@@ -9,6 +8,7 @@ import { mascotMessage, type MascotContext } from '../../domain/game/messages';
 import type { GameSettings, GameState, RewardEvent } from '../../domain/game/types';
 import { levelProgress } from '../../domain/game/xp';
 import { EggArt } from './EggArt';
+import { useHatchCinematic } from '../hooks/useHatchCinematic';
 
 /**
  * The companion strip: "I'm progressing", not "this is what you came here to manage".
@@ -69,56 +69,25 @@ export function GameHeader({
   const family = visibleMascotFamily(state.mascot);
   const progress = levelProgress(state.xp.total);
 
-  // Presentation only. The domain remains the sole authority on whether the egg
-  // may hatch and on the actual transition to `hatched`.
-  const [hatchPhase, setHatchPhase] = useState<'idle' | 'cracking' | 'flash'>('idle');
-  const hatchTimers = useRef<number[]>([]);
+  /*
+   * The same cinematic onboarding uses. Today is the RECOVERY route into it - for a
+   * save that arrived here still holding an egg - so it must behave identically, and
+   * sharing the hook is what guarantees that rather than hoping two copies match.
+   */
+  const hatch = useHatchCinematic({
+    canHatch: state.mascot.eggState === 'ready',
+    onHatch,
+  });
 
-  const clearHatchTimers = () => {
-    for (const timer of hatchTimers.current) window.clearTimeout(timer);
-    hatchTimers.current = [];
-  };
-
-  useEffect(() => clearHatchTimers, []);
-
-  const requestHatch = () => {
-    if (state.mascot.eggState !== 'ready' || hatchPhase !== 'idle') return;
-
-    const reduceMotion =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    if (reduceMotion) {
-      onHatch();
-      return;
-    }
-
-    clearHatchTimers();
-    setHatchPhase('cracking');
-
-    hatchTimers.current.push(
-      window.setTimeout(() => {
-        setHatchPhase('flash');
-      }, 650),
-    );
-
-    hatchTimers.current.push(
-      window.setTimeout(() => {
-        onHatch();
-        setHatchPhase('idle');
-        hatchTimers.current = [];
-      }, 950),
-    );
-  };
   const message = mascotMessage(context, settings.mascotPersonality);
   const latest = granted[granted.length - 1];
 
   const action =
     state.mascot.eggState === 'ready'
       ? {
-          label: hatchPhase === 'idle' ? 'Hatch egg' : 'Hatching…',
-          onClick: requestHatch,
-          disabled: hatchPhase !== 'idle',
+          label: hatch.isRunning ? 'Hatching…' : 'Hatch egg',
+          onClick: hatch.request,
+          disabled: hatch.isRunning,
         }
       : state.mascot.evolutionReady
         ? { label: 'See what changed', onClick: onEvolve }
@@ -127,7 +96,7 @@ export function GameHeader({
   return (
     <section className="game" aria-label="Your companion">
       <div
-        className={`game__art${hatchPhase !== 'idle' ? ` game__art--${hatchPhase}` : ''}`}
+        className={`game__art${hatch.isRunning ? ` egg-hatch--${hatch.phase}` : ''}`}
       >
         {/*
           TEMPORARY PRESENTATION FALLBACK.
@@ -141,10 +110,10 @@ export function GameHeader({
         {family === undefined ? (
           <>
             <EggArt
-              ready={state.mascot.eggState === 'ready' && hatchPhase === 'idle'}
+              ready={state.mascot.eggState === 'ready' && !hatch.isRunning}
               crackStage={crackStage}
             />
-            {hatchPhase === 'flash' ? (
+            {hatch.phase === 'flash' ? (
               <span className="egg__hatchFlash" aria-hidden="true" />
             ) : null}
           </>

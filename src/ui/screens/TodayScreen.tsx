@@ -8,7 +8,7 @@ import {
 import { GameHeader } from '../components/GameHeader';
 import { useGame } from '../hooks/useGame';
 import { todayCompanionContext } from '../../domain/game/todayContext';
-import { eggProgress } from '../../domain/game/egg';
+import { MAX_CRACK_STAGE } from '../../domain/game/egg';
 import { todaySessionCompletion } from '../../domain/today';
 import type { SessionCompletion } from '../../domain/weeklyPlan';
 import type { PlannedActivity, SymptomTrend } from '../../domain/types';
@@ -173,7 +173,17 @@ export function TodayScreen() {
     stored: the header is handed an answer rather than left to guess at one from the
     egg alone, which is all it could see before.
   */
-  const egg = eggProgress(game.state.awardedKeys);
+  /*
+    The Mystery Egg on Today is now a RECOVERY state, not the normal one.
+
+    First-run hatching happens in onboarding, so an ordinary user reaches Today with
+    a starter mascot already. An egg here means a legitimately unfinished or migrated
+    save - someone who completed onboarding before the rule changed, or who chose
+    "Not now" at first run. They keep a working Hatch control rather than being
+    stranded, and the shell is drawn at its final stage because readiness no longer
+    has intermediate steps to show once onboarding is behind them.
+  */
+  const crackStage = game.state.mascot.eggState === 'unhatched' ? 0 : MAX_CRACK_STAGE;
 
   const companionContext = todayCompanionContext({
     eggState: game.state.mascot.eggState,
@@ -220,7 +230,7 @@ export function TodayScreen() {
         settings={game.settings}
         granted={game.granted}
         context={companionContext}
-        crackStage={egg.crackStage}
+        crackStage={crackStage}
         onHatch={game.hatch}
         onEvolve={game.evolve}
       />

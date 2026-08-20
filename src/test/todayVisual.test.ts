@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import todaySource from '../ui/screens/TodayScreen.tsx?raw';
 import gameHeaderSource from '../ui/components/GameHeader.tsx?raw';
 import checkInSource from '../ui/components/QuickCheckIn.tsx?raw';
+import hatchHookSource from '../ui/hooks/useHatchCinematic.ts?raw';
 import { baseRule, leafRules, propertiesIn, readStyleFiles } from './cssSource';
 
 /**
@@ -276,21 +277,35 @@ describe('the companion stays a strip', () => {
     expect(gameHeaderSource).toContain('btn--secondary');
   });
 
+  /**
+   * THE CINEMATIC MOVED, AND THAT IS THE POINT.
+   *
+   * Hatching now happens in onboarding for almost everybody; Today is the recovery
+   * route for a save that arrived here still holding an egg. Both share one hook, so
+   * the guarantees are asserted once, where they live, rather than twice in two
+   * copies that could drift.
+   */
   it('keeps the real hatch action behind a short presentation-only reveal', () => {
-    expect(gameHeaderSource).toContain("hatchPhase");
-    expect(gameHeaderSource).toContain("setHatchPhase('cracking')");
-    expect(gameHeaderSource).toContain("setHatchPhase('flash')");
-    expect(gameHeaderSource).toContain('onHatch();');
+    expect(gameHeaderSource).toContain('useHatchCinematic');
+    expect(hatchHookSource).toContain("setPhase('cracking')");
+    expect(hatchHookSource).toContain("setPhase('flash')");
+    expect(hatchHookSource).toContain('onHatch();');
   });
 
   it('prevents repeated hatch requests while the reveal is running', () => {
-    expect(gameHeaderSource).toContain("hatchPhase !== 'idle'");
-    expect(gameHeaderSource).toContain("disabled={'disabled' in action ? action.disabled : false}");
+    expect(hatchHookSource).toContain("if (!canHatch || phase !== 'idle') return;");
+    expect(gameHeaderSource).toContain('disabled: hatch.isRunning');
   });
 
   it('lets reduced-motion users hatch without waiting through the cinematic', () => {
-    expect(gameHeaderSource).toContain("prefers-reduced-motion: reduce");
-    expect(gameHeaderSource).toMatch(/if \(reduceMotion\)[\s\S]*onHatch\(\)/);
+    expect(hatchHookSource).toContain('prefers-reduced-motion: reduce');
+    expect(hatchHookSource).toMatch(/if \(reduceMotion\) \{[\s\S]*?onHatch\(\);[\s\S]*?return;/);
+  });
+
+  it('asks the domain whether the egg may open, and never decides for itself', () => {
+    expect(gameHeaderSource).toContain("canHatch: state.mascot.eggState === 'ready'");
+    const code = hatchHookSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+    expect(code).not.toMatch(/eggState|hatchEgg|familyId/);
   });
 
   it('still names the level and exposes XP to assistive technology', () => {
@@ -329,13 +344,20 @@ describe('the companion stays a strip', () => {
   });
 
 
-  it('derives the Mystery Egg crack stage from monotonic earned reward keys', () => {
-    expect(todaySource).toContain("from '../../domain/game/egg'");
-    expect(todaySource).toContain('eggProgress(game.state.awardedKeys)');
-    expect(todaySource).toContain('crackStage={egg.crackStage}');
+  /**
+   * The Mystery Egg on Today is now a RECOVERY state, not the normal one: first-run
+   * hatching happens in onboarding, so an ordinary user arrives here with a starter
+   * mascot. Crucially, Today no longer reads reward keys to draw the shell - cracking
+   * belongs to onboarding, and activity buys growth instead.
+   */
+  it('no longer derives the shell from activity or reward keys', () => {
+    const code = todaySource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+    expect(code).not.toContain('eggProgress');
+    expect(code).not.toMatch(/awardedKeys/);
+    expect(code).toContain('MAX_CRACK_STAGE');
   });
 
-  it('passes the earned crack stage through the companion strip to EggArt', () => {
+  it('passes the crack stage through the companion strip to EggArt', () => {
     expect(gameHeaderSource).toContain('crackStage: number');
     expect(gameHeaderSource).toContain('crackStage={crackStage}');
   });

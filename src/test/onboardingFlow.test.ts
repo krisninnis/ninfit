@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import onboardingSource from '../ui/screens/OnboardingScreen.tsx?raw';
 import appSource from '../App.tsx?raw';
 import eggSource from '../ui/components/EggArt.tsx?raw';
-import { finishOnboarding, needsOnboarding, restartOnboarding } from '../app/game';
+import { finishOnboarding, hatchEggNow, needsOnboarding, restartOnboarding } from '../app/game';
+import { visibleMascotFamily } from '../domain/game/mascot';
+import { mascotFamilyForPath } from '../domain/game/paths';
 import {
   isRequiredQuestion,
   onboardingStages,
@@ -170,9 +172,17 @@ describe('the recommendation stage', () => {
   });
 
   it('offers accepting, browsing and overriding', () => {
-    expect(onboardingSource).toMatch(/Start this path/);
+    // Choosing another path only SELECTS it. One explicit action starts anything.
+    expect(onboardingSource).toMatch(/Start my journey/);
     expect(onboardingSource).toMatch(/See other paths/);
     expect(onboardingSource).toMatch(/Choose \{path\.name\}/);
+    expect(onboardingSource).toContain('onClick={() => setChosenPathId(path.id)}');
+  });
+
+  it('starts the journey only from the one explicit control', () => {
+    // Exactly one call site for the cinematic, and it is the primary button.
+    expect(onboardingSource.match(/hatch\.request/g)?.length ?? 0).toBe(1);
+    expect(onboardingSource).toContain('onClick={hatch.request}');
   });
 
   it('records an override and keeps the level at 1', () => {
@@ -287,12 +297,30 @@ describe('the mascot stays secret', () => {
    * and explicit user action. So the ban narrows to those, and the egg is allowed
    * only as the shared neutral component that cannot vary by path.
    */
-  it('never mentions hatching, and shows the egg only as the shared neutral art', () => {
-    expect(onboardingSource).not.toMatch(/hatch/i);
-    expect(onboardingSource).not.toMatch(/egg--|eggState|EggArt ready/);
+  /**
+   * CHANGED WITH THE PRODUCT RULE.
+   *
+   * Onboarding now OWNS the hatch - it is the emotional payoff for finishing the
+   * questionnaire and choosing a path - so it necessarily mentions hatching. What it
+   * must still never do is name or draw a species before the real transition.
+   */
+  it('hatches without ever naming a species, and shows the egg only as shared art', () => {
+    // Comments stripped: the screen's docstring explains that the domain hides the
+    // family, and a naive search would match that explanation.
+    const code = onboardingSource
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/[^\n]*/g, '');
+
+    expect(code).not.toMatch(/Tortoise|Bear|\bFox\b|Otter|Wolf/);
+    // It never reads the family itself; it is handed a name only once hatched.
+    expect(code).not.toMatch(/familyId|visibleMascotFamily|MascotFamily/);
+    expect(onboardingSource).toContain('companionName');
+    // No presentation-only hatched state: the reveal waits on the domain's answer.
+    expect(onboardingSource).toContain('journeyStarted && companionName !== undefined');
 
     // The egg appears exactly once, via the shared component.
     expect(onboardingSource.match(/<EggArt\b/g)?.length ?? 0).toBe(1);
+    expect(onboardingSource).not.toMatch(/EggArt ready/);
   });
 
   it('gives the egg no label, alt text or title that could hint at the animal', () => {
@@ -334,5 +362,66 @@ describe('accessibility and motion', () => {
     expect(onboardingSource).toMatch(/className="step__body"/);
     expect(onboardingSource).not.toMatch(/framer-motion|lottie|gsap|<video/i);
     expect(onboardingSource).not.toMatch(/requestAnimationFrame|\.animate\(|setInterval/);
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+
+describe('the first run ends with the hatch, then the account decision', () => {
+  const code = appSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+
+  it('performs exactly one real hatch mutation', () => {
+    // One call site in the app, one control in the screen. Two would be two
+    // companions, or one hatched twice.
+    expect((code.match(/game\.hatch\(\)/g) ?? []).length).toBe(1);
+    expect((onboardingSource.match(/hatch\.request/g) ?? []).length).toBe(1);
+  });
+
+  it('records the path before hatching, because the egg must be ready first', () => {
+    const start = code.indexOf('onStartJourney={');
+    const complete = code.indexOf('game.completeOnboarding(input)', start);
+    const hatch = code.indexOf('game.hatch()', start);
+
+    expect(complete).toBeGreaterThan(-1);
+    expect(hatch).toBeGreaterThan(complete);
+  });
+
+  it('keeps the account decision AFTER the companion has been revealed', () => {
+    // Onboarding -> hatch -> reveal -> optional NinFit ID -> Today. Moving the
+    // account step earlier would put a sign-up between a person and their companion.
+    const start = code.indexOf('onStartJourney={');
+    const finished = code.indexOf('onFinished={', start);
+    const account = code.indexOf('ACCOUNT_HASH', finished);
+
+    expect(finished).toBeGreaterThan(start);
+    expect(account).toBeGreaterThan(finished);
+    expect(code.indexOf('game.hatch()')).toBeLessThan(finished);
+  });
+
+  it('works with no account at all', () => {
+    expect(appSource).toContain('onSkip');
+    expect(appSource).not.toMatch(/requireAccount|mustSignIn|cloud sync/i);
+  });
+
+  it('lands on Today with a hatched starter companion, with no XP granted', () => {
+    finishOnboarding(
+      repo,
+      { answers: SEDENTARY, recommendedPathId: 'start_moving', chosenPathId: 'build_stamina' },
+      NOW,
+    );
+
+    const before = repo.getGameState();
+    expect(before?.mascot.eggState).toBe('ready');
+    expect(visibleMascotFamily(before!.mascot)).toBeUndefined();
+
+    const after = hatchEggNow(repo, NOW).mascot;
+
+    expect(after.eggState).toBe('hatched');
+    expect(after.stage).toBe('starter');
+    expect(after.evolutionReady).toBe(false);
+    expect(visibleMascotFamily(after)?.id).toBe(mascotFamilyForPath('build_stamina'));
+    expect(repo.getGameState()?.xp).toEqual({ total: 0, level: 1 });
+    expect(repo.getGameState()?.awardedKeys).toEqual([]);
   });
 });

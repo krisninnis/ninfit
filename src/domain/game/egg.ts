@@ -1,120 +1,68 @@
-import { isValidISODate } from '../dates';
-
 /**
- * The opal egg's progress, derived rather than stored.
+ * The Mystery Egg's visible progress through onboarding.
  *
- * WHY THIS READS REWARD KEYS AND NOT THE ACTIVITY LOGS.
+ * WHAT CHANGED, AND WHY IT MATTERS.
  *
- * `deriveRewards()` recomputes `distinctActiveDays` from the live logs every sync.
- * That number can go DOWN: un-tick a completed activity and the day stops counting.
- * A crack stage built on it would heal the shell whenever somebody corrected a
- * mistake in yesterday's record, which is precisely what cracking must never do.
+ * This module used to derive the egg's cracks - and its readiness to hatch - from
+ * `awardedKeys`, so the shell advanced one stage per qualifying activity day and the
+ * egg became hatchable after six of them. That is no longer the product rule.
  *
- * `awardedKeys` has the opposite property. It is append-only by construction -
- * `grantRewards` only ever adds to it and `sealRewardKeys` only ever unions into it,
- * and nothing anywhere removes a key. Counting distinct dates in it therefore gives
- * a number that can only rise. Monotonicity is not enforced here by a `Math.max`
- * against some stored high-water mark; it falls out of the data source, which is why
- * there is no second progression counter to keep in step.
+ * Hatching is now the emotional payoff for FINISHING ONBOARDING and choosing a path.
+ * Real fitness begins the moment the mascot exists, and from then on it drives XP,
+ * growth, evolution, Champion and Legacy. Nobody waits six days to meet their
+ * companion, and no fitness record is spent buying the introduction.
  *
- * Two further properties come free:
+ * So this file is now pure presentation arithmetic. It reads no reward keys, knows
+ * nothing about activity, and grants nothing. The reward layer is untouched by it,
+ * which is precisely the separation the old design lacked.
  *
- *   - No timezone handling. Keys already carry local `YYYY-MM-DD` day strings, so
- *     this counts distinct substrings and never constructs a `Date`.
- *   - No schema change. Nothing new is persisted; the egg's progress is a pure
- *     function of state that is already on disk.
+ * WHY THE CRACK STAGE IS NOT PERSISTED.
  *
- * SPECIES SECRECY. Nothing in this module knows or can learn which animal is inside.
- * `EggProgress` carries three numbers and a boolean; there is no species field, no
- * path input, and no branch anywhere below that varies by family.
+ * It is a picture of where the user is in a questionnaire they are currently filling
+ * in. Writing it down would create a second, staler copy of a number the flow
+ * already holds, and would invite some future feature to read it as a fact about the
+ * person. It is computed on render from the same progress fraction that drives the
+ * progress bar, so the two can never disagree.
+ *
+ * SPECIES SECRECY. Nothing here knows or can learn which animal is inside. The
+ * signature takes a number and returns a number; there is no path input, no family,
+ * and no branch anywhere below that varies by anything about the user.
  */
 
-/** The heaviest crack the shell shows before it is offered for hatching. */
+/** The heaviest crack the shell shows. Reached as the questionnaire completes. */
 export const MAX_CRACK_STAGE = 5;
 
 /**
- * Distinct qualifying days needed before the egg is offered.
+ * How cracked the shell looks at a given point in onboarding.
  *
- * Six, so the five crack stages each land on their own day and the shell visibly
- * travels somewhere before it opens. Reaching this makes the egg READY. It never
- * hatches it - see `hatchEgg`, which only a user action reaches.
- */
-export const HATCH_QUALIFYING_DAYS = 6;
-
-/**
- * Only completed activity earns a crack.
+ * The input is the flow's own `stageProgress().fraction`, so cracking is a view of
+ * the progress bar rather than a parallel notion of "how far in are we" that could
+ * drift away from it. Deliberately linear: the shell should travel visibly and
+ * evenly, and any curve would make some answers feel worth more than others.
  *
- * Acknowledged rest (`rest:<date>`) is genuine programme adherence and is rewarded
- * as such elsewhere, but it does not advance the egg. That keeps the egg a record of
- * activity rather than of attendance, and it means nobody has to choose between
- * resting properly and moving the shell along - rest simply does nothing here, and
- * can never take anything away.
+ * Monotonic in the fraction, which is what "monotonic while moving forward" reduces
+ * to once the crack is a pure function of progress. Stepping back through the
+ * questionnaire steps the picture back with it - that is honest, because the user
+ * really has moved back, and nothing permanent is being un-earned.
+ *
+ * Guards mirror the old implementation's: `Number.isFinite` rather than a bare
+ * comparison, because `NaN <= 0` is false and `Math.min(NaN, 5)` is NaN, which would
+ * eventually paint a shell with NaN cracks on it.
  */
-const ACTIVITY_KEY_PREFIX = 'activity:';
-
-/** What the egg looks like right now. Generic by design: no species, ever. */
-export interface EggProgress {
-  /** Distinct local dates on which at least one activity was completed. */
-  qualifyingDays: number;
-  /** 0 (pristine) to MAX_CRACK_STAGE (heavily cracked). Never decreases. */
-  crackStage: number;
-  /** True once the egg may be offered. Never hatches anything by itself. */
-  hatchEligible: boolean;
+export function crackStageForProgress(fraction: number): number {
+  if (!Number.isFinite(fraction) || fraction <= 0) return 0;
+  if (fraction >= 1) return MAX_CRACK_STAGE;
+  return Math.min(MAX_CRACK_STAGE, Math.floor(fraction * MAX_CRACK_STAGE));
 }
 
 /**
- * Distinct dates represented by activity reward keys.
+ * Whether the shell should be drawn as ready to open.
  *
- * Keys look like `activity:2026-08-15:<activityId>`. Collapsing to a set of dates is
- * what makes five workouts in one day count once: the date is the unit, not the
- * activity. An id containing a colon is harmless, because only the second segment is
- * read.
- *
- * Anything that is not a well-formed date in the second position is ignored rather
- * than trusted - a malformed key from a hand-edited backup should be inert, not a
- * free crack.
+ * Presentation only, and deliberately NOT the thing that authorises hatching. The
+ * domain decides that (`MascotState.eggState`), and the real transition happens in
+ * `hatchEgg`. This exists so a screen can draw the final stage without asking the
+ * game layer a question it should not need to ask.
  */
-export function qualifyingActiveDays(awardedKeys: readonly string[]): number {
-  const days = new Set<string>();
-
-  for (const key of awardedKeys) {
-    if (!key.startsWith(ACTIVITY_KEY_PREFIX)) continue;
-    const date = key.slice(ACTIVITY_KEY_PREFIX.length).split(':')[0];
-    if (date !== undefined && isValidISODate(date)) days.add(date);
-  }
-
-  return days.size;
-}
-
-/**
- * One crack per qualifying day, up to the maximum.
- *
- * Deliberately linear. A curve would make the later cracks feel earned by volume
- * rather than by turning up, and turning up is the thing this product rewards.
- */
-export function crackStageForDays(qualifyingDays: number): number {
-  // `Number.isFinite` rather than a bare `<= 0`, because `NaN <= 0` is false and
-  // `Math.min(NaN, 5)` is NaN - which would eventually paint a shell with NaN
-  // cracks on it. Anything that is not a real, positive count is pristine.
-  if (!Number.isFinite(qualifyingDays) || qualifyingDays <= 0) return 0;
-  return Math.min(Math.floor(qualifyingDays), MAX_CRACK_STAGE);
-}
-
-export function isHatchEligibleFromDays(qualifyingDays: number): boolean {
-  return qualifyingDays >= HATCH_QUALIFYING_DAYS;
-}
-
-/**
- * The whole projection, from the one append-only source.
- *
- * Pure and total: the same keys always give the same answer, in any order, with no
- * clock, no timezone and no I/O.
- */
-export function eggProgress(awardedKeys: readonly string[]): EggProgress {
-  const qualifyingDays = qualifyingActiveDays(awardedKeys);
-  return {
-    qualifyingDays,
-    crackStage: crackStageForDays(qualifyingDays),
-    hatchEligible: isHatchEligibleFromDays(qualifyingDays),
-  };
+export function isCrackComplete(crackStage: number): boolean {
+  return crackStage >= MAX_CRACK_STAGE;
 }

@@ -95,7 +95,11 @@ describe('the path is activated only where it is meant to be', () => {
 
   it('only ever activates from a value the domain produced', () => {
     const onboarding = readFileSync(join(SRC, 'ui/screens/OnboardingScreen.tsx'), 'utf8');
-    expect(onboarding).toContain('data-path={recommendation.pathId}');
+    // The activated path is the FINAL chosen one, which is either the domain's
+    // recommendation or a FitnessPathId the user picked from the domain's own list.
+    // Either way it is never a string assembled in the view.
+    expect(onboarding).toContain('data-path={finalPathId}');
+    expect(onboarding).toMatch(/const finalPathId = chosenPathId \?\? recommendation\?\.pathId/);
   });
 
   it('never hardcodes a path id in a component', () => {
@@ -157,7 +161,7 @@ describe('nothing before the recommendation carries a path', () => {
    * made would quietly argue for the recommendation.
    */
   it('renders the onboarding branch without a path', () => {
-    const branch = /if \(game\.needsOnboarding[\s\S]*?\n  \}/.exec(app);
+    const branch = /if \(\(game\.needsOnboarding[\s\S]*?\n  \}/.exec(app);
     expect(branch, 'could not find the onboarding branch').not.toBeNull();
 
     // Comments stripped first: the branch carries a comment explaining why there
