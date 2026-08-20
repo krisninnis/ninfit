@@ -9,7 +9,6 @@ import { newId, type IdFactory } from '../ids';
 import type { DailyLog, ISODate, ISODateTime, PlannedActivity, WeeklyPlan } from '../types';
 import { isRestDay, resolveSessionForDate, summariseSessionCompletion } from '../weeklyPlan';
 import { consistencyProgress } from './consistency';
-import { qualifyingActiveDays } from './egg';
 import { evaluateMascot } from './mascot';
 import { earnedTrophies, type TrophyFacts } from './trophies';
 import type {
@@ -316,11 +315,11 @@ export function grantRewards(
   }
 
   const level = levelForXp(xpTotal);
-  // Counted from the awarded keys AFTER this pass has added its own, and never from
-  // `facts.distinctActiveDays` - that figure is recomputed from live logs and falls
-  // when an activity is un-ticked, which would let the shell heal.
+  // Egg readiness no longer depends on activity at all: finishing onboarding is what
+  // makes the egg ready, so nothing here can advance or heal the shell. Evolution
+  // readiness still comes from the level earned by real fitness.
   const mascot = evaluateMascot(state.mascot, {
-    qualifyingDays: qualifyingActiveDays([...awarded]),
+    onboardingCompleted: state.onboarding.completed,
     level,
   });
 

@@ -7,6 +7,8 @@ import {
 } from '../../domain/dailyLog';
 import { GameHeader } from '../components/GameHeader';
 import { useGame } from '../hooks/useGame';
+import { todayCompanionContext } from '../../domain/game/todayContext';
+import { MAX_CRACK_STAGE } from '../../domain/game/egg';
 import { todaySessionCompletion } from '../../domain/today';
 import type { SessionCompletion } from '../../domain/weeklyPlan';
 import type { PlannedActivity, SymptomTrend } from '../../domain/types';
@@ -122,7 +124,9 @@ function totalMinutes(activities: readonly PlannedActivity[]): number {
 }
 
 export function TodayScreen() {
-  const { date, view, log, completion, saveIndicator, isPersistent, isBlocked, update } = useToday();
+  // `completion` is deliberately not taken from the hook: the only thing that ever
+  // read it was the daily completion score, which this screen no longer keeps.
+  const { date, view, log, saveIndicator, isPersistent, isBlocked, update } = useToday();
   const game = useGame();
 
   // Rewards are derived from what is stored, so the game catches up once a change has
@@ -160,6 +164,36 @@ export function TodayScreen() {
   const plannedMinutes = totalMinutes(view.activities);
   const activeDays = game.facts.activeDays.length;
 
+  /*
+    What the companion has noticed today.
+
+    Decided in the domain from facts that are already on this screen - the session
+    completion computed above, the mascot state, and the last active day the reward
+    derivation already worked out. Nothing new is computed here and nothing is
+    stored: the header is handed an answer rather than left to guess at one from the
+    egg alone, which is all it could see before.
+  */
+  /*
+    The Mystery Egg on Today is now a RECOVERY state, not the normal one.
+
+    First-run hatching happens in onboarding, so an ordinary user reaches Today with
+    a starter mascot already. An egg here means a legitimately unfinished or migrated
+    save - someone who completed onboarding before the rule changed, or who chose
+    "Not now" at first run. They keep a working Hatch control rather than being
+    stranded, and the shell is drawn at its final stage because readiness no longer
+    has intermediate steps to show once onboarding is behind them.
+  */
+  const crackStage = game.state.mascot.eggState === 'unhatched' ? 0 : MAX_CRACK_STAGE;
+
+  const companionContext = todayCompanionContext({
+    eggState: game.state.mascot.eggState,
+    evolutionReady: game.state.mascot.evolutionReady,
+    completion: sessionCompletion.status,
+    grantedKinds: game.granted.map((event) => event.kind),
+    today: date,
+    lastActiveDate: game.facts.lastActiveDate,
+  });
+
   return (
     <Screen title="Today" subtitle={formatLongDate(date)}>
       {/*
@@ -177,10 +211,26 @@ export function TodayScreen() {
         <SaveDot indicator={saveIndicator} />
       </div>
 
+      {/*
+        THE PATH MASCOT IS TODAY'S COMPANION PRESENCE. LOCKED.
+
+        This strip belongs to the user's own fitness journey - egg, hatch, growth,
+        evolution - and it is the one permanent character on this screen.
+
+        OPAL IS NOT A SECOND ONE. Opal is the NinFit guide: contextual help,
+        occasional encouragement, hints, explanations. Opal may earn a place here
+        when there is a meaningful reason to speak, and must never become a second
+        permanent character card competing with the path mascot for equal weight. A
+        guide who is always on screen saying nothing is furniture, and it would push
+        today's session further down the page - which is the exact failure the phase
+        was opened to fix.
+      */}
       <GameHeader
         state={game.state}
         settings={game.settings}
         granted={game.granted}
+        context={companionContext}
+        crackStage={crackStage}
         onHatch={game.hatch}
         onEvolve={game.evolve}
       />
@@ -299,14 +349,14 @@ export function TodayScreen() {
       ) : null}
 
       {view.status === 'before_programme' ? (
-        <section className="card card--action plan">
+        <section className="card card--info plan">
           <h2 className="plan__title">Nothing planned yet</h2>
           <p className="plan__hint">Your programme starts a little later. Today is yours.</p>
         </section>
       ) : null}
 
       {view.status === 'no_plan' ? (
-        <section className="card card--action plan">
+        <section className="card card--info plan">
           <h2 className="plan__title">No session planned</h2>
           <p className="plan__hint">
             There is no plan for today yet. You can still record anything below.
@@ -564,11 +614,20 @@ export function TodayScreen() {
           : `${activeDays} active ${activeDays === 1 ? 'day' : 'days'} so far.`}
       </p>
 
-      <p className="today__footer">
-        {completion.filled === 0
-          ? 'Nothing recorded yet today.'
-          : `${completion.filled} of ${completion.total} sections recorded.`}
-      </p>
+      {/*
+        NO DAILY COMPLETION SCORE. A "3 of 5 sections recorded" line used to sit here.
+
+        It was the last piece of scorekeeping left on Today, and it counted the wrong
+        thing: how much of a form had been filled in. A person who did their whole
+        session and wrote nothing down scored 1 of 5, and the only way to raise the
+        number was to type more - so the line quietly argued for admin over exercise
+        and got quieter the more honest the day had been. The insight above counts
+        showing up instead, which is the number this product is actually about.
+
+        This is a locked product rule, not a layout preference: reward showing up,
+        never score the day. It must not come back in another form - no ring, no
+        percentage, no "complete your day".
+      */}
       <p className="today__disclaimer">
         A personal record, not a medical assessment.
       </p>

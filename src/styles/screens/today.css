@@ -36,12 +36,7 @@
 }
 
 
-.today__footer {
-  margin-top: var(--ft-space-2);
-  color: var(--ft-text-secondary);
-  font-size: var(--ft-text-sm);
-  text-align: center;
-}
+/* `.today__footer` was the daily completion score. Removed with it - see TodayScreen. */
 
 .today__disclaimer {
   color: var(--ft-text-tertiary);

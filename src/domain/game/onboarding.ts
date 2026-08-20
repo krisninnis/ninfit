@@ -178,8 +178,10 @@ export function questionsFor(answers: OnboardingAnswers): OnboardingQuestion[] {
   add('availableMinutes');
   add('preferredActivities');
   add('confidence');
-  add('anythingElse');
 
+  // Free text adds friction to the first-run journey but contributes nothing to
+  // recommendation scoring. Keep the field in the schema for future/Profile use,
+  // but do not ask it before the companion reveal.
   return questions;
 }
 

@@ -1,5 +1,4 @@
 import type { ISODateTime } from '../types';
-import { isHatchEligibleFromDays } from './egg';
 import { findMascotFamily } from './paths';
 import {
   MASCOT_STAGES,
@@ -20,19 +19,6 @@ import {
  *     undefined before then, so no screen can leak it through a name or a glyph.
  *   - Progress toward evolution is described in words, never as a percentage. The
  *     overall XP bar is allowed to be precise; this deliberately is not.
- */
-
-/**
- * Hatch eligibility now reads the MONOTONIC count.
- *
- * It used to take `distinctActiveDays`, which `deriveRewards` recomputes from the
- * live logs and which therefore falls when somebody un-ticks a completed activity.
- * `eggState` survived that only by accident: `evaluateMascot` promotes solely from
- * `unhatched`, so a ready egg could not be un-readied. That was a latch nobody
- * designed, protecting a rule that was quietly reversible underneath.
- *
- * The threshold and the counting now live in `egg.ts` and come from `awardedKeys`,
- * which only ever grows. One definition of qualifying progress, not two.
  */
 
 /**
@@ -73,25 +59,45 @@ export function isHatched(mascot: MascotState): boolean {
   return mascot.eggState === 'hatched';
 }
 
-/** Enough distinct qualifying days to make the egg ready. */
-export function isHatchEligible(qualifyingDays: number): boolean {
-  return isHatchEligibleFromDays(qualifyingDays);
+/**
+ * Whether the egg should be offered for hatching.
+ *
+ * One rule: finishing onboarding makes the egg ready. It replaces a count of
+ * qualifying activity days, which used to gate the introduction behind a week of
+ * exercise. Deliberately a named function rather than an inline check, because it
+ * is asserted directly by the tests that lock this product decision down.
+ */
+export function isHatchEligible(onboardingCompleted: boolean): boolean {
+  return onboardingCompleted;
 }
 
 /**
- * Move the egg to 'ready' when it has earned it, and mark evolution availability.
- * Never hatches and never evolves: both remain user actions.
+ * Move the egg to 'ready' once onboarding is done, and mark evolution availability.
+ * Never hatches and never evolves: both remain explicit user actions.
  */
 export function evaluateMascot(
   mascot: MascotState,
-  facts: { qualifyingDays: number; level: number },
+  facts: { onboardingCompleted: boolean; level: number },
 ): MascotState {
   let next = mascot;
 
-  // Promotes only from `unhatched`, so a ready or hatched egg can never be pushed
-  // backwards - including by the threshold itself changing underneath an existing
-  // save. Someone already holding a ready egg keeps it.
-  if (next.eggState === 'unhatched' && isHatchEligible(facts.qualifyingDays)) {
+  /*
+   * READINESS COMES FROM FINISHING ONBOARDING, NOT FROM SIX DAYS OF ACTIVITY.
+   *
+   * The old rule made the introduction something to earn with a week of exercise.
+   * Hatching is now the payoff for completing onboarding and choosing a path, and
+   * real fitness starts the mascot growing from that moment on.
+   *
+   * Evaluating it here as well as in `completeOnboarding` is what rescues existing
+   * saves: anyone who finished onboarding under the old rule and never reached six
+   * qualifying days would otherwise hold an egg that could never open. One
+   * deterministic rule - onboarding complete and still unhatched means ready -
+   * covers the new flow and every migrated save with the same line.
+   *
+   * Promotes only from `unhatched`, so a ready or hatched egg can never be pushed
+   * backwards, including by re-running onboarding later.
+   */
+  if (next.eggState === 'unhatched' && isHatchEligible(facts.onboardingCompleted)) {
     next = { ...next, eggState: 'ready' };
   }
 

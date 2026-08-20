@@ -381,7 +381,8 @@ describe('it does not disturb the running app', () => {
   // is also read in the `introDone` initialiser above it, which made an earlier
   // version of these two tests compare the wrong positions and silently slice an
   // empty string.
-  const ONBOARDING_BRANCH = 'if (game.needsOnboarding && !dismissedOnboarding)';
+  const ONBOARDING_BRANCH =
+    'if ((game.needsOnboarding || revealingCompanion) && !dismissedOnboarding)';
   const INTRO_BRANCH = 'if (!introDone)';
 
   it('renders before onboarding and before any tab', () => {
@@ -416,7 +417,8 @@ describe('it does not disturb the running app', () => {
 
   it('leaves onboarding reachable immediately afterwards', () => {
     expect(app).toContain('<OnboardingScreen');
-    expect(app).toContain('game.needsOnboarding && !dismissedOnboarding');
+    // The guard also keeps the screen mounted through the hatch and the reveal.
+    expect(app).toContain('(game.needsOnboarding || revealingCompanion) && !dismissedOnboarding');
   });
 
   it('does not disturb the account flow or the path theme', () => {

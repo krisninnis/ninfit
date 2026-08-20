@@ -13,6 +13,7 @@ import { BACKDROP_FOR_TAB } from './ui/backgrounds/registry';
 import { getAppContext } from './app/bootstrap';
 import { hasSeenIntro, markIntroSeen, shouldPlayIntro } from './ui/startup/introState';
 import { useGame } from './ui/hooks/useGame';
+import { visibleMascotFamily } from './domain/game/mascot';
 import {
   ACCOUNT_HASH,
   hashForTab,
@@ -42,6 +43,13 @@ export default function App() {
   // "Not now" hides onboarding for this session only. Nothing is written, and the
   // tracker is fully usable without ever answering a question.
   const [dismissedOnboarding, setDismissedOnboarding] = useState(false);
+  /*
+   * The first-run journey now ends with the hatch and the companion reveal, both of
+   * which happen AFTER onboarding has been recorded. Recording it flips
+   * `needsOnboarding` to false, which would unmount the screen mid-cinematic, so
+   * this keeps it mounted until the user has actually met their companion.
+   */
+  const [revealingCompanion, setRevealingCompanion] = useState(false);
 
   // The startup cinematic, decided once on mount. `useState` with an initialiser
   // rather than an effect, so a returning user never gets a frame of it.
@@ -92,7 +100,7 @@ export default function App() {
     );
   }
 
-  if (game.needsOnboarding && !dismissedOnboarding) {
+  if ((game.needsOnboarding || revealingCompanion) && !dismissedOnboarding) {
     // No data-path here, deliberately. Onboarding is where a path is chosen, so
     // there is nothing to theme yet, and tinting the chooser in one path's colour
     // would quietly argue for that path.
@@ -100,11 +108,24 @@ export default function App() {
       <div className="app">
         <main className="app__main" ref={mainRef}>
           <OnboardingScreen
-            onComplete={(input) => {
+            /*
+             * Two writes, in this order, both real. `completeOnboarding` records the
+             * FINAL chosen path and readies the egg; `hatch` is the single domain
+             * mutation that opens it. Neither grants XP, a trophy or any activity -
+             * hatching is the start of the journey, not a fitness reward.
+             */
+            onStartJourney={(input) => {
               game.completeOnboarding(input);
+              game.hatch();
+              setRevealingCompanion(true);
+            }}
+            onFinished={() => {
+              setRevealingCompanion(false);
               navigate(ACCOUNT_HASH);
             }}
             onDismiss={() => setDismissedOnboarding(true)}
+            // Undefined until the egg is genuinely hatched; the domain decides.
+            companionName={visibleMascotFamily(game.state.mascot)?.name}
           />
         </main>
       </div>

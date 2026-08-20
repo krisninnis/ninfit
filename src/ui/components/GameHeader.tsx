@@ -8,6 +8,7 @@ import { mascotMessage, type MascotContext } from '../../domain/game/messages';
 import type { GameSettings, GameState, RewardEvent } from '../../domain/game/types';
 import { levelProgress } from '../../domain/game/xp';
 import { EggArt } from './EggArt';
+import { useHatchCinematic } from '../hooks/useHatchCinematic';
 
 /**
  * The companion strip: "I'm progressing", not "this is what you came here to manage".
@@ -27,40 +28,76 @@ import { EggArt } from './EggArt';
  * Before the egg hatches this component cannot name or draw the animal: it asks the
  * domain for the visible family and gets `undefined`, so there is nothing to leak
  * through a label, an alt attribute or a glyph.
+ *
+ * IT NO LONGER DECIDES WHAT THE COMPANION HAS NOTICED.
+ *
+ * This component used to hold a private `contextFor(state)` that looked only at the
+ * egg and the evolution flag, so the message could never acknowledge a finished
+ * session, a planned rest day, a trophy or a return after time away - even though
+ * the copy for all four already existed. Worse, it was a screen deciding for itself
+ * what was true about the day, which is the one thing the architecture rule forbids:
+ * domain, then game state, then presentation.
+ *
+ * The choice now belongs to `todayCompanionContext` in the domain, and arrives as a
+ * prop. This component's whole job with it is to look up the wording and render it.
  */
 
 interface GameHeaderProps {
   state: GameState;
   settings: GameSettings;
   granted: readonly RewardEvent[];
+  /**
+   * What the companion has noticed, decided by the domain. Passed in rather than
+   * computed here so the message can reflect the day, and so there is exactly one
+   * place the precedence between "you finished" and "welcome back" is written down.
+   */
+  context: MascotContext;
+  crackStage: number;
   onHatch: () => void;
   onEvolve: () => void;
 }
 
-/** Placeholder art. Real mascot design is a separate piece of work. */
-function contextFor(state: GameState): MascotContext {
-  if (state.mascot.eggState === 'ready') return 'hatch_ready';
-  if (state.mascot.eggState === 'unhatched') return 'egg_waiting';
-  if (state.mascot.evolutionReady) return 'evolution_ready';
-  return 'idle';
-}
-
-export function GameHeader({ state, settings, granted, onHatch, onEvolve }: GameHeaderProps) {
+export function GameHeader({
+  state,
+  settings,
+  granted,
+  context,
+  crackStage,
+  onHatch,
+  onEvolve,
+}: GameHeaderProps) {
   const family = visibleMascotFamily(state.mascot);
   const progress = levelProgress(state.xp.total);
-  const message = mascotMessage(contextFor(state), settings.mascotPersonality);
+
+  /*
+   * The same cinematic onboarding uses. Today is the RECOVERY route into it - for a
+   * save that arrived here still holding an egg - so it must behave identically, and
+   * sharing the hook is what guarantees that rather than hoping two copies match.
+   */
+  const hatch = useHatchCinematic({
+    canHatch: state.mascot.eggState === 'ready',
+    onHatch,
+  });
+
+  const message = mascotMessage(context, settings.mascotPersonality);
   const latest = granted[granted.length - 1];
 
   const action =
     state.mascot.eggState === 'ready'
-      ? { label: 'Hatch egg', onClick: onHatch }
+      ? {
+          label: hatch.isRunning ? 'Hatching…' : 'Hatch egg',
+          onClick: hatch.request,
+          disabled: hatch.isRunning,
+        }
       : state.mascot.evolutionReady
         ? { label: 'See what changed', onClick: onEvolve }
         : undefined;
 
   return (
     <section className="game" aria-label="Your companion">
-      <div className="game__art">
+      <div
+        className={`game__art${hatch.isRunning ? ` egg-hatch--${hatch.phase}` : ''}`}
+      >
         {/*
           TEMPORARY PRESENTATION FALLBACK.
 
@@ -71,7 +108,15 @@ export function GameHeader({ state, settings, granted, onHatch, onEvolve }: Game
           and both should be replaced rather than refined.
         */}
         {family === undefined ? (
-          <EggArt ready={state.mascot.eggState === 'ready'} />
+          <>
+            <EggArt
+              ready={state.mascot.eggState === 'ready' && !hatch.isRunning}
+              crackStage={crackStage}
+            />
+            {hatch.phase === 'flash' ? (
+              <span className="egg__hatchFlash" aria-hidden="true" />
+            ) : null}
+          </>
         ) : (
           <span className="mascot" aria-hidden="true">
             {family.glyph}
@@ -129,7 +174,12 @@ export function GameHeader({ state, settings, granted, onHatch, onEvolve }: Game
         biggest button on a screen whose job is today's session.
       */}
       {action !== undefined ? (
-        <button type="button" className="btn btn--secondary game__action" onClick={action.onClick}>
+        <button
+          type="button"
+          className="btn btn--secondary game__action"
+          onClick={action.onClick}
+          disabled={'disabled' in action ? action.disabled : false}
+        >
           {action.label}
         </button>
       ) : null}

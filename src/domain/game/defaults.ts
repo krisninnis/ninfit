@@ -86,9 +86,12 @@ export interface CompleteOnboardingInput {
 /**
  * Record the outcome of onboarding.
  *
- * The chosen path sets the mascot family, so overriding the recommendation changes
- * which animal is waiting inside the egg. The user is never locked in: running
- * onboarding again simply produces a new outcome.
+ * Before hatch, the final chosen path decides which family is waiting inside the
+ * egg, so overriding the recommendation is a real choice.
+ *
+ * After hatch, the companion's identity is permanent. Re-running onboarding may
+ * change the fitness path and programme direction, but it must never transform an
+ * established companion into a different species.
  */
 export function completeOnboarding(
   state: GameState,
@@ -110,15 +113,36 @@ export function completeOnboarding(
     },
     mascot: {
       ...state.mascot,
-      // Only meaningful once hatched; held privately until then.
-      familyId: mascotFamilyForPath(input.pathId),
+      // Before hatch this comes from the FINAL chosen path, not the
+      // recommendation, and `visibleMascotFamily` refuses to reveal it until the
+      // egg opens - so recording it here leaks nothing. Once the companion
+      // exists its species is permanent, and a later path change moves the
+      // programme only.
+      familyId:
+        state.mascot.eggState === 'hatched'
+          ? state.mascot.familyId
+          : mascotFamilyForPath(input.pathId),
+      /*
+       * Finishing onboarding is what makes the egg ready. The explicit
+       * "Start my journey" action then runs the presentation and calls `hatchEgg`,
+       * which stays the one and only place the egg actually opens.
+       *
+       * Guarded to `unhatched` so re-running onboarding later can never reset a
+       * mascot that already exists, nor its stage, XP or evolution.
+       */
+      eggState: state.mascot.eggState === 'unhatched' ? 'ready' : state.mascot.eggState,
     },
     // Level is untouched on purpose. Onboarding never grants progression.
     xp: state.xp,
   };
 }
 
-/** Change path later without disturbing anything already earned. */
+/**
+ * Change path later without disturbing anything already earned.
+ *
+ * Before hatch, changing path also changes the hidden family. After hatch, the
+ * programme may change but the established companion's species does not.
+ */
 export function choosePath(state: GameState, pathId: FitnessPathId): GameState {
   return {
     ...state,
@@ -129,6 +153,12 @@ export function choosePath(state: GameState, pathId: FitnessPathId): GameState {
         state.onboarding.recommendedPathId !== undefined &&
         state.onboarding.recommendedPathId !== pathId,
     },
-    mascot: { ...state.mascot, familyId: mascotFamilyForPath(pathId) },
+    mascot: {
+      ...state.mascot,
+      familyId:
+        state.mascot.eggState === 'hatched'
+          ? state.mascot.familyId
+          : mascotFamilyForPath(pathId),
+    },
   };
 }
