@@ -18,7 +18,11 @@ import { createDefaultGameSettings } from '../domain/game/defaults';
 import { HATCH_QUALIFYING_DAYS } from '../domain/game/egg';
 import { evolutionStatus, visibleMascotFamily } from '../domain/game/mascot';
 import { recommendPath } from '../domain/game/onboarding';
-import { highlightedSkillsForPath, mascotFamilyForPath } from '../domain/game/paths';
+import {
+  FITNESS_PATHS,
+  highlightedSkillsForPath,
+  mascotFamilyForPath,
+} from '../domain/game/paths';
 import { PLATINUM_AVAILABLE, TROPHIES, findTrophy } from '../domain/game/trophies';
 import { SKILL_KINDS, type OnboardingAnswers } from '../domain/game/types';
 import { TROPHY_XP, XP_REWARDS, findSkill, levelForXp } from '../domain/game/xp';
@@ -606,6 +610,19 @@ describe('mascot', () => {
     expect(mascotFamilyForPath('build_stamina')).toBe('fox');
     expect(mascotFamilyForPath('balanced_fitness')).toBe('otter');
     expect(mascotFamilyForPath('return_to_fitness')).toBe('wolf');
+  });
+
+  it('leaves no path unmapped and no family unused', () => {
+    // Strengthens the case-by-case check above: listing five pairs proves those five
+    // are right, not that they are all of them. A sixth path added without a family -
+    // or a family with no path - would slip past the assertions above.
+    const mapped = FITNESS_PATHS.map((path) => mascotFamilyForPath(path.id));
+
+    expect(FITNESS_PATHS).toHaveLength(5);
+    expect(new Set(mapped).size, 'two paths share a family').toBe(mapped.length);
+    expect([...mapped].sort()).toEqual(
+      ['bear', 'fox', 'otter', 'tortoise', 'wolf'],
+    );
   });
 
   it('takes the family from the chosen path, not the recommended one', () => {

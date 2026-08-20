@@ -37,6 +37,13 @@
   min-height: 100dvh;
   max-width: var(--ft-content-max);
   margin-inline: auto;
+  /*
+   * Above the fixed world layer (see components/backdrop.css, z-index 0). The app
+   * itself stays transparent on a phone so the artwork reads between the cards;
+   * every card brings its own opaque surface, so text is never on illustration.
+   */
+  position: relative;
+  z-index: 1;
 }
 
 .app__main {
@@ -76,10 +83,42 @@
   }
 
   .app {
-    max-width: var(--ft-content-max-wide);
-    background: var(--ft-surface-page);
+    /*
+     * The desktop shell: a persistent side rail beside the reading column, rather
+     * than the phone layout centred in a wide window with a bar stuck to the bottom
+     * of a 27-inch monitor.
+     *
+     * The navigation is the SAME element as the mobile tab bar, re-composed by CSS.
+     * One component, one list of destinations, one source of truth for which tab is
+     * current - so desktop cannot drift out of step with mobile, and there is no
+     * second navigation to keep in sync.
+     *
+     * The nav sits in column 1 while remaining after `main` in the DOM. That is
+     * deliberate: content-first source order means a keyboard user reaches the page
+     * before the chrome, and the `<nav>` landmark is still announced normally.
+     */
+    grid-template-columns: var(--ft-sidenav-width) minmax(0, 1fr);
+    grid-template-rows: 1fr;
+    max-width: var(--ft-shell-max);
+    /*
+     * Not fully opaque any more: the last few per cent let the world show faintly
+     * through the gutters between cards.
+     *
+     * 95%, not 92%. This figure is load-bearing and computed, not chosen for looks -
+     * the desktop veil lifts to ~40% so the artwork can breathe in the surround, and
+     * this surface is what keeps the reading column safe. At 92% the worst case for
+     * tertiary text over solid-white artwork came out at 4.32:1, under the 4.5:1 AA
+     * requirement; 95% gives 4.51:1. See the computed test in backgrounds.test.ts.
+     */
+    background: color-mix(in oklab, var(--ft-surface-page) 95%, transparent);
+    backdrop-filter: blur(12px);
     border-inline: 1px solid var(--ft-border-subtle);
     box-shadow: var(--ft-shadow-card);
+  }
+
+  .app__main {
+    grid-column: 2;
+    grid-row: 1;
   }
 }
 /* ---------- Screens ---------- */

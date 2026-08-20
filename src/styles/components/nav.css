@@ -1,5 +1,13 @@
 /**
- * Bottom navigation.
+ * Navigation: a bottom bar on a phone, a side rail on a desktop.
+ *
+ * ONE COMPONENT, TWO COMPOSITIONS. The markup is identical at every width - the
+ * same `TabBar`, the same five destinations, the same `aria-current`. Only the
+ * arrangement changes, which is what keeps desktop from drifting out of step with
+ * mobile and means there is no second navigation to maintain.
+ *
+ * The bar is never hidden at any width. Whatever the layout, every area stays
+ * reachable from a visible control.
  */
 
 @layer components {
@@ -41,5 +49,71 @@
 
 .tabbar__label {
   line-height: 1.2;
+}
+
+/* --- Tablet -------------------------------------------------------------- */
+
+/*
+ * Tablets keep the bottom bar. A 700px-wide window is still held in two hands more
+ * often than not, and a side rail at that width eats the reading column to pay for
+ * navigation that was already within reach.
+ */
+
+/* --- Desktop side rail ---------------------------------------------------- */
+
+@media (min-width: 900px) {
+  .tabbar {
+    grid-column: 1;
+    grid-row: 1;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: var(--ft-space-1);
+    padding: var(--ft-space-5) var(--ft-space-3);
+    /* A hairline against the content column instead of a shadow above the fold. */
+    background: none;
+    box-shadow: none;
+    border-right: 1px solid var(--ft-border-subtle);
+  }
+
+  .tabbar__tab {
+    /* Icon and label side by side, left aligned: a rail reads as a list, not as
+       five stacked buttons. */
+    flex: 0 0 auto;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--ft-space-3);
+    min-height: var(--ft-control-md);
+    padding: var(--ft-space-2) var(--ft-space-3);
+    border-radius: var(--ft-radius-md);
+    font-size: var(--ft-text-sm);
+    font-weight: var(--ft-weight-medium);
+    text-align: left;
+    transition:
+      color 140ms ease,
+      background-color 140ms ease;
+  }
+
+  .tabbar__tab:hover {
+    background: var(--ft-surface-sunken);
+    color: var(--ft-text-primary);
+  }
+
+  /*
+   * The current destination is filled, not just tinted. On a rail the selected item
+   * has to hold its own against four siblings that are all equally visible, which is
+   * not true of a bottom bar where the row is read as one unit.
+   */
+  .tabbar__tab[aria-current='page'] {
+    background: var(--ft-accent-soft);
+    color: var(--ft-accent-strong);
+  }
+
+  .tabbar__tab[aria-current='page']:hover {
+    background: var(--ft-accent-soft);
+  }
+
+  .tabbar__label {
+    line-height: 1.3;
+  }
 }
 }

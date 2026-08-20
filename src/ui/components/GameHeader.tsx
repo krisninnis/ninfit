@@ -61,6 +61,15 @@ export function GameHeader({ state, settings, granted, onHatch, onEvolve }: Game
   return (
     <section className="game" aria-label="Your companion">
       <div className="game__art">
+        {/*
+          TEMPORARY PRESENTATION FALLBACK.
+
+          `EggArt` is drawn in code and `family.glyph` is a single letter - neither is
+          mascot artwork, and neither defines anything. The family name beside it is
+          the real answer to "who is this", which is why the glyph is `aria-hidden`.
+          Both are placeholders until the mascot art pipeline produces real assets,
+          and both should be replaced rather than refined.
+        */}
         {family === undefined ? (
           <EggArt ready={state.mascot.eggState === 'ready'} />
         ) : (

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { getAppContext } from '../../app/bootstrap';
 import { restartOnboarding } from '../../app/game';
 import {
@@ -39,7 +39,6 @@ import {
   Toggle,
 } from '../components/Field';
 import { AttentionIcon } from '../components/Icon';
-import { AccountSection } from '../components/AccountSection';
 import { Screen } from '../components/Screen';
 import { formatShortDay } from '../format';
 import { useProfile, type ProfileSaveStatus } from '../hooks/useProfile';
@@ -180,6 +179,11 @@ interface DraftMeasurement {
   notes?: string;
 }
 
+const AccountSection = lazy(() =>
+  import('../components/AccountSection').then((module) => ({
+    default: module.AccountSection,
+  })),
+);
 export function ProfileScreen() {
   const {
     profile,
@@ -227,7 +231,15 @@ export function ProfileScreen() {
         <SaveNote status={status} />
       </div>
 
-      <AccountSection />
+      <Suspense
+        fallback={
+          <section className="card">
+            <p className="footnote">Account controls loading…</p>
+          </section>
+        }
+      >
+        <AccountSection />
+      </Suspense>
 
       {hasStorageIssues ? (
         <section className="card card--attention">

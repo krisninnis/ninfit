@@ -1,3 +1,4 @@
+import type { StorageAdapter } from '../storage/StorageAdapter';
 import { createDefaultStorageAdapter } from '../storage/localStorageAdapter';
 import { createRepository, type InitialiseResult, type Repository } from '../storage/repository';
 
@@ -11,6 +12,15 @@ import { createRepository, type InitialiseResult, type Repository } from '../sto
 
 export interface AppContext {
   repository: Repository;
+  /**
+   * The raw store, for the few things that are genuinely not fitness records.
+   *
+   * The startup cinematic's "already seen" flag is the current example: it must
+   * persist, but it is not domain data, must never reach an export, and must never
+   * cost a schema version. Exposing the adapter here keeps that one string out of
+   * the repository without letting `localStorage` back into the component tree.
+   */
+  adapter: StorageAdapter;
   /** False when we fell back to in-memory storage; data will not survive a reload. */
   isPersistent: boolean;
   initialisation: InitialiseResult;
@@ -26,7 +36,7 @@ export function getAppContext(): AppContext {
   if (cached === undefined) {
     const { adapter, isPersistent } = createDefaultStorageAdapter();
     const repository = createRepository(adapter);
-    cached = { repository, isPersistent, initialisation: repository.initialise() };
+    cached = { repository, adapter, isPersistent, initialisation: repository.initialise() };
   }
   return cached;
 }

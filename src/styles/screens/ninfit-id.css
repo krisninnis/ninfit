@@ -1,0 +1,169 @@
+@layer screens {
+  .ninfit-id {
+    width: min(100%, var(--ft-content-max));
+    margin: 0 auto;
+    padding: var(--ft-space-6) var(--ft-space-4) var(--ft-space-7);
+    display: flex;
+    flex-direction: column;
+    gap: var(--ft-space-6);
+  }
+
+  .ninfit-id__hero {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: var(--ft-space-3);
+    padding: var(--ft-space-6);
+    border: 1px solid var(--ft-border-subtle);
+    border-radius: var(--ft-radius-xl);
+    background:
+      radial-gradient(
+        circle at 100% 0%,
+        var(--ft-accent-soft) 0,
+        transparent 44%
+      ),
+      var(--ft-surface-raised);
+    box-shadow: var(--ft-shadow-reward);
+  }
+
+  .ninfit-id__eyebrow {
+    color: var(--ft-accent-strong);
+    font-size: var(--ft-text-xs);
+    font-weight: var(--ft-weight-bold);
+    letter-spacing: var(--ft-tracking-wide);
+    text-transform: uppercase;
+  }
+
+  .ninfit-id__title {
+    max-width: 24rem;
+    margin: 0;
+    color: var(--ft-text-primary);
+    font-family: var(--ft-font-display);
+    font-size: var(--ft-text-2xl);
+    font-weight: var(--ft-weight-bold);
+    line-height: var(--ft-leading-tight);
+    letter-spacing: var(--ft-tracking-tight);
+  }
+
+  .ninfit-id__copy {
+    max-width: 34rem;
+    margin: 0;
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-base);
+    line-height: var(--ft-leading-normal);
+  }
+
+  .ninfit-id__privacy {
+    display: flex;
+    align-items: center;
+    gap: var(--ft-space-2);
+    padding-top: var(--ft-space-2);
+    color: var(--ft-text-tertiary);
+    font-size: var(--ft-text-sm);
+  }
+
+  .ninfit-id__actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ft-space-3);
+  }
+
+  .ninfit-id__social {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--ft-control-lg);
+    display: grid;
+    grid-template-columns: var(--ft-control-sm) 1fr auto;
+    align-items: center;
+    gap: var(--ft-space-2);
+    padding: 0 var(--ft-space-3);
+    border: 1px solid var(--ft-border-strong);
+    border-radius: var(--ft-radius-md);
+    background: var(--ft-surface-raised);
+    color: var(--ft-text-primary);
+    font: inherit;
+    font-size: var(--ft-text-sm);
+    font-weight: var(--ft-weight-semibold);
+    text-align: left;
+  }
+
+  .ninfit-id__social:disabled {
+    cursor: default;
+    opacity: 0.72;
+  }
+
+  .ninfit-id__social-mark {
+    display: grid;
+    place-items: center;
+    width: var(--ft-control-sm);
+    height: var(--ft-control-sm);
+    color: var(--ft-text-primary);
+    font-size: var(--ft-text-lg);
+    font-weight: var(--ft-weight-bold);
+  }
+
+  .ninfit-id__coming-soon {
+    color: var(--ft-text-tertiary);
+    font-size: var(--ft-text-xs);
+    font-weight: var(--ft-weight-medium);
+  }
+
+  .ninfit-id__divider {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: var(--ft-space-3);
+    color: var(--ft-text-tertiary);
+    font-size: var(--ft-text-xs);
+  }
+
+  .ninfit-id__divider::before,
+  .ninfit-id__divider::after {
+    content: '';
+    height: 1px;
+    background: var(--ft-divider);
+  }
+
+  .ninfit-id__email {
+    min-height: var(--ft-control-lg);
+  }
+
+  .ninfit-id__footer {
+    margin: 0;
+    color: var(--ft-text-tertiary);
+    font-size: var(--ft-text-xs);
+    line-height: var(--ft-leading-normal);
+    text-align: center;
+  }
+
+  /*
+   * A real button, so it is reachable and announced as an action, wearing the
+   * appearance of a link because it sits inside a sentence.
+   */
+  .ninfit-id__link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ft-accent-strong);
+    font: inherit;
+    font-weight: var(--ft-weight-semibold);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  @media (max-width: 430px) {
+    .ninfit-id {
+      padding-top: var(--ft-space-4);
+      gap: var(--ft-space-5);
+    }
+
+    .ninfit-id__hero {
+      padding: var(--ft-space-5);
+    }
+
+    .ninfit-id__title {
+      font-size: var(--ft-text-xl);
+    }
+  }
+}

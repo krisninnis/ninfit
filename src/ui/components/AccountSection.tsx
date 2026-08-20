@@ -1,15 +1,24 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import {
-  getSession,
-  onAuthStateChange,
-  signIn,
-  signOut,
-  signUp,
-} from '../../data/supabase/auth'
+import { getSession, onAuthStateChange, signOut } from '../../data/supabase/auth'
+import { ACCOUNT_HASH } from '../tabs'
 import { Section } from './Field'
 
-type Mode = 'sign_in' | 'sign_up'
+/**
+ * Account STATUS on Profile. Not account creation.
+ *
+ * This used to be the full signup and sign-in form, which put the most consequential
+ * decision in the app three quarters of the way down a settings screen. Creating or
+ * joining a NinFit ID now happens in the dedicated experience at `#/account`; what is
+ * left here answers one question - are you connected, and what does that mean for
+ * your data - and offers the one action that matches the answer.
+ *
+ * There is no password field in this file, by design. The only auth calls it makes
+ * are read-only (`getSession`, `onAuthStateChange`) plus `signOut`.
+ *
+ * Still lazy-loaded from Profile, so the Supabase client stays out of the core
+ * bundle for anyone who never opens this.
+ */
 
 function errorMessage(error: unknown): string {
   return error instanceof Error
@@ -20,12 +29,7 @@ function errorMessage(error: unknown): string {
 export function AccountSection() {
   const [session, setSession] = useState<Session | null>(null)
   const [loadingSession, setLoadingSession] = useState(true)
-  const [mode, setMode] = useState<Mode>('sign_in')
-  const [displayName, setDisplayName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -54,43 +58,9 @@ export function AccountSection() {
     }
   }, [])
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setBusy(true)
-    setError(null)
-    setMessage(null)
-
-    try {
-      if (mode === 'sign_up') {
-        await signUp({
-          email: email.trim(),
-          password,
-          displayName: displayName.trim() || undefined,
-        })
-
-        setMessage(
-          'Account created. If email confirmation is enabled, check your inbox, then sign in.',
-        )
-        setMode('sign_in')
-      } else {
-        await signIn({
-          email: email.trim(),
-          password,
-        })
-      }
-
-      setPassword('')
-    } catch (caught) {
-      setError(errorMessage(caught))
-    } finally {
-      setBusy(false)
-    }
-  }
-
   async function handleSignOut() {
     setBusy(true)
     setError(null)
-    setMessage(null)
 
     try {
       await signOut()
@@ -104,141 +74,97 @@ export function AccountSection() {
   if (loadingSession) {
     return (
       <Section title="NinFit account" defaultOpen={false}>
-        <p className="footnote">Checking account…</p>
+        <div className="account-journey account-journey--quiet">
+          <span className="account-journey__eyebrow">Your NinFit</span>
+          <p className="account-journey__status">Checking your account…</p>
+        </div>
       </Section>
     )
   }
 
   if (session) {
+    const displayName =
+      typeof session.user.user_metadata?.['display_name'] === 'string'
+        ? (session.user.user_metadata['display_name'] as string)
+        : undefined
+
     return (
       <Section title="NinFit account" defaultOpen={false}>
-        <p className="footnote">
-          Signed in as {session.user.email ?? 'your NinFit account'}.
-        </p>
+        <div className="account-journey">
+          <div className="account-journey__intro">
+            <span className="account-journey__eyebrow">Your NinFit</span>
 
-        <p className="footnote">
-          Your fitness records still stay on this device for now. Cloud sync is not enabled yet.
-        </p>
+            <h3 className="account-journey__title">
+              {displayName ?? session.user.email ?? 'Your NinFit account'}
+            </h3>
+          </div>
 
-        {error ? (
-          <p role="alert" className="footnote">
-            {error}
-          </p>
-        ) : null}
+          <div className="account-journey__summary">
+            <div className="account-journey__stat">
+              <span className="account-journey__stat-label">Account</span>
+              <span className="account-journey__stat-value">Connected</span>
+            </div>
 
-        <button
-          type="button"
-          className="btn btn--secondary btn--block"
-          disabled={busy}
-          onClick={handleSignOut}
-        >
-          {busy ? 'Signing out…' : 'Sign out'}
-        </button>
+            <div className="account-journey__stat">
+              <span className="account-journey__stat-label">Cloud sync</span>
+              <span className="account-journey__stat-value">Not enabled</span>
+            </div>
+
+            <div className="account-journey__stat">
+              <span className="account-journey__stat-label">Fitness data</span>
+              <span className="account-journey__stat-value">On this device</span>
+            </div>
+          </div>
+
+          {error ? (
+            <p
+              role="alert"
+              className="account-journey__message account-journey__message--error"
+            >
+              {error}
+            </p>
+          ) : null}
+
+          <button
+            type="button"
+            className="btn btn--secondary btn--block"
+            disabled={busy}
+            onClick={handleSignOut}
+          >
+            {busy ? 'Signing out…' : 'Sign out'}
+          </button>
+        </div>
       </Section>
     )
   }
 
   return (
     <Section title="NinFit account" defaultOpen={false}>
-      <p className="footnote">
-        Optional. NinFit works without an account. Sign in when you want cloud features later.
-      </p>
+      <div className="account-journey">
+        <div className="account-journey__intro">
+          <span className="account-journey__eyebrow">Your NinFit</span>
 
-      <div className="confirm__actions">
-        <button
-          type="button"
-          className={`btn ${mode === 'sign_in' ? 'btn--primary' : 'btn--secondary'}`}
-          onClick={() => {
-            setMode('sign_in')
-            setError(null)
-            setMessage(null)
-          }}
-        >
-          Sign in
-        </button>
+          <h3 className="account-journey__title">Not connected</h3>
 
-        <button
-          type="button"
-          className={`btn ${mode === 'sign_up' ? 'btn--primary' : 'btn--secondary'}`}
-          onClick={() => {
-            setMode('sign_up')
-            setError(null)
-            setMessage(null)
-          }}
-        >
-          Create account
-        </button>
-      </div>
-
-      <form onSubmit={submit}>
-        {mode === 'sign_up' ? (
-          <div className="control">
-            <label className="control__label" htmlFor="ninfit-display-name">
-              Display name
-            </label>
-            <input
-              id="ninfit-display-name"
-              type="text"
-              autoComplete="name"
-              value={displayName}
-              onChange={(event) => setDisplayName(event.target.value)}
-            />
-          </div>
-        ) : null}
-
-        <div className="control">
-          <label className="control__label" htmlFor="ninfit-email">
-            Email
-          </label>
-          <input
-            id="ninfit-email"
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-        </div>
-
-        <div className="control">
-          <label className="control__label" htmlFor="ninfit-password">
-            Password
-          </label>
-          <input
-            id="ninfit-password"
-            type="password"
-            autoComplete={mode === 'sign_up' ? 'new-password' : 'current-password'}
-            required
-            minLength={6}
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-        </div>
-
-        {message ? (
-          <p role="status" className="footnote">
-            {message}
+          <p className="account-journey__copy">
+            NinFit works without an account. Your fitness records remain on this
+            device.
           </p>
-        ) : null}
+        </div>
 
         {error ? (
-          <p role="alert" className="footnote">
+          <p
+            role="alert"
+            className="account-journey__message account-journey__message--error"
+          >
             {error}
           </p>
         ) : null}
 
-        <button
-          type="submit"
-          className="btn btn--primary btn--block"
-          disabled={busy}
-        >
-          {busy
-            ? 'Please wait…'
-            : mode === 'sign_up'
-              ? 'Create account'
-              : 'Sign in'}
-        </button>
-      </form>
+        <a className="btn btn--primary btn--block" href={ACCOUNT_HASH}>
+          Connect NinFit ID
+        </a>
+      </div>
     </Section>
   )
 }
