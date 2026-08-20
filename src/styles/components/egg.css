@@ -30,6 +30,26 @@
     opacity: 0.18;
   }
 
+  /*
+   * Temporary crack rendering.
+   *
+   * These paths prove the state/presentation contract before production artwork
+   * lands. The final image assets replace the drawing, not the crack-stage API.
+   */
+  .egg__crack {
+    fill: none;
+    stroke: var(--ft-border-strong);
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .egg__crack--bright {
+    stroke: var(--ft-accent);
+    stroke-width: 2.2;
+  }
+
   /* A gentle rock, not a demand for attention. */
   .egg--ready {
     animation: egg-rock 2.4s ease-in-out infinite;
@@ -41,6 +61,69 @@
     78% { transform: rotate(-5deg); }
     86% { transform: rotate(5deg); }
     94% { transform: rotate(-2deg); }
+  }
+
+  /*
+   * The hatch cinematic is deliberately presentation-only. The real state change
+   * still happens through the existing domain hatch action at the flash boundary.
+   */
+  .game__art--cracking .egg {
+    animation: egg-hatch-build 650ms ease-in forwards;
+    transform-origin: 50% 90%;
+  }
+
+  @keyframes egg-hatch-build {
+    0%   { transform: rotate(0deg) scale(1); }
+    18%  { transform: rotate(-4deg) scale(1.02); }
+    36%  { transform: rotate(5deg) scale(1.03); }
+    54%  { transform: rotate(-7deg) scale(1.04); }
+    72%  { transform: rotate(7deg) scale(1.06); }
+    86%  { transform: rotate(-4deg) scale(1.08); }
+    100% { transform: rotate(0deg) scale(1.1); }
+  }
+
+  .game__art--flash {
+    position: relative;
+  }
+
+  .egg__hatchFlash {
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: 3.5rem;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(
+      circle,
+      rgb(255 255 255 / 0.98) 0 20%,
+      rgb(255 244 190 / 0.8) 36%,
+      transparent 72%
+    );
+    animation: egg-hatch-flash 300ms ease-out forwards;
+  }
+
+  @keyframes egg-hatch-flash {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.3);
+    }
+
+    45% {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(2.4);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .game__art--cracking .egg,
+    .egg__hatchFlash {
+      animation: none;
+    }
   }
 
   /**

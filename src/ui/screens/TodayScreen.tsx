@@ -8,6 +8,7 @@ import {
 import { GameHeader } from '../components/GameHeader';
 import { useGame } from '../hooks/useGame';
 import { todayCompanionContext } from '../../domain/game/todayContext';
+import { eggProgress } from '../../domain/game/egg';
 import { todaySessionCompletion } from '../../domain/today';
 import type { SessionCompletion } from '../../domain/weeklyPlan';
 import type { PlannedActivity, SymptomTrend } from '../../domain/types';
@@ -172,6 +173,8 @@ export function TodayScreen() {
     stored: the header is handed an answer rather than left to guess at one from the
     egg alone, which is all it could see before.
   */
+  const egg = eggProgress(game.state.awardedKeys);
+
   const companionContext = todayCompanionContext({
     eggState: game.state.mascot.eggState,
     evolutionReady: game.state.mascot.evolutionReady,
@@ -217,6 +220,7 @@ export function TodayScreen() {
         settings={game.settings}
         granted={game.granted}
         context={companionContext}
+        crackStage={egg.crackStage}
         onHatch={game.hatch}
         onEvolve={game.evolve}
       />

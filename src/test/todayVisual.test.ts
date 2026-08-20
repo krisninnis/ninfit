@@ -276,6 +276,23 @@ describe('the companion stays a strip', () => {
     expect(gameHeaderSource).toContain('btn--secondary');
   });
 
+  it('keeps the real hatch action behind a short presentation-only reveal', () => {
+    expect(gameHeaderSource).toContain("hatchPhase");
+    expect(gameHeaderSource).toContain("setHatchPhase('cracking')");
+    expect(gameHeaderSource).toContain("setHatchPhase('flash')");
+    expect(gameHeaderSource).toContain('onHatch();');
+  });
+
+  it('prevents repeated hatch requests while the reveal is running', () => {
+    expect(gameHeaderSource).toContain("hatchPhase !== 'idle'");
+    expect(gameHeaderSource).toContain("disabled={'disabled' in action ? action.disabled : false}");
+  });
+
+  it('lets reduced-motion users hatch without waiting through the cinematic', () => {
+    expect(gameHeaderSource).toContain("prefers-reduced-motion: reduce");
+    expect(gameHeaderSource).toMatch(/if \(reduceMotion\)[\s\S]*onHatch\(\)/);
+  });
+
   it('still names the level and exposes XP to assistive technology', () => {
     expect(gameHeaderSource).toContain('Level {progress.level}');
     expect(gameHeaderSource).toMatch(/aria-label=\{[\s\S]*XP/);
@@ -309,6 +326,18 @@ describe('the companion stays a strip', () => {
     expect(todaySource).toContain("from '../../domain/game/todayContext'");
     expect(todaySource).toContain('todayCompanionContext({');
     expect(todaySource).toContain('context={companionContext}');
+  });
+
+
+  it('derives the Mystery Egg crack stage from monotonic earned reward keys', () => {
+    expect(todaySource).toContain("from '../../domain/game/egg'");
+    expect(todaySource).toContain('eggProgress(game.state.awardedKeys)');
+    expect(todaySource).toContain('crackStage={egg.crackStage}');
+  });
+
+  it('passes the earned crack stage through the companion strip to EggArt', () => {
+    expect(gameHeaderSource).toContain('crackStage: number');
+    expect(gameHeaderSource).toContain('crackStage={crackStage}');
   });
 
   it('feeds it the session completion already computed for the plan card', () => {

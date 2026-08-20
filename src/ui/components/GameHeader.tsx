@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import {
   EVOLUTION_STATUS_LABELS,
   MASCOT_STAGE_LABELS,
@@ -51,6 +52,7 @@ interface GameHeaderProps {
    * place the precedence between "you finished" and "welcome back" is written down.
    */
   context: MascotContext;
+  crackStage: number;
   onHatch: () => void;
   onEvolve: () => void;
 }
@@ -60,24 +62,73 @@ export function GameHeader({
   settings,
   granted,
   context,
+  crackStage,
   onHatch,
   onEvolve,
 }: GameHeaderProps) {
   const family = visibleMascotFamily(state.mascot);
   const progress = levelProgress(state.xp.total);
+
+  // Presentation only. The domain remains the sole authority on whether the egg
+  // may hatch and on the actual transition to `hatched`.
+  const [hatchPhase, setHatchPhase] = useState<'idle' | 'cracking' | 'flash'>('idle');
+  const hatchTimers = useRef<number[]>([]);
+
+  const clearHatchTimers = () => {
+    for (const timer of hatchTimers.current) window.clearTimeout(timer);
+    hatchTimers.current = [];
+  };
+
+  useEffect(() => clearHatchTimers, []);
+
+  const requestHatch = () => {
+    if (state.mascot.eggState !== 'ready' || hatchPhase !== 'idle') return;
+
+    const reduceMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (reduceMotion) {
+      onHatch();
+      return;
+    }
+
+    clearHatchTimers();
+    setHatchPhase('cracking');
+
+    hatchTimers.current.push(
+      window.setTimeout(() => {
+        setHatchPhase('flash');
+      }, 650),
+    );
+
+    hatchTimers.current.push(
+      window.setTimeout(() => {
+        onHatch();
+        setHatchPhase('idle');
+        hatchTimers.current = [];
+      }, 950),
+    );
+  };
   const message = mascotMessage(context, settings.mascotPersonality);
   const latest = granted[granted.length - 1];
 
   const action =
     state.mascot.eggState === 'ready'
-      ? { label: 'Hatch egg', onClick: onHatch }
+      ? {
+          label: hatchPhase === 'idle' ? 'Hatch egg' : 'Hatching…',
+          onClick: requestHatch,
+          disabled: hatchPhase !== 'idle',
+        }
       : state.mascot.evolutionReady
         ? { label: 'See what changed', onClick: onEvolve }
         : undefined;
 
   return (
     <section className="game" aria-label="Your companion">
-      <div className="game__art">
+      <div
+        className={`game__art${hatchPhase !== 'idle' ? ` game__art--${hatchPhase}` : ''}`}
+      >
         {/*
           TEMPORARY PRESENTATION FALLBACK.
 
@@ -88,7 +139,15 @@ export function GameHeader({
           and both should be replaced rather than refined.
         */}
         {family === undefined ? (
-          <EggArt ready={state.mascot.eggState === 'ready'} />
+          <>
+            <EggArt
+              ready={state.mascot.eggState === 'ready' && hatchPhase === 'idle'}
+              crackStage={crackStage}
+            />
+            {hatchPhase === 'flash' ? (
+              <span className="egg__hatchFlash" aria-hidden="true" />
+            ) : null}
+          </>
         ) : (
           <span className="mascot" aria-hidden="true">
             {family.glyph}
@@ -146,7 +205,12 @@ export function GameHeader({
         biggest button on a screen whose job is today's session.
       */}
       {action !== undefined ? (
-        <button type="button" className="btn btn--secondary game__action" onClick={action.onClick}>
+        <button
+          type="button"
+          className="btn btn--secondary game__action"
+          onClick={action.onClick}
+          disabled={'disabled' in action ? action.disabled : false}
+        >
           {action.label}
         </button>
       ) : null}

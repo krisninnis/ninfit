@@ -20,9 +20,29 @@ import type { CSSProperties } from 'react';
  * told about the egg in the surrounding copy rather than being handed a decorative
  * SVG. No label, alt text or title can therefore leak either.
  */
-export function EggArt({ ready = false, energy }: { ready?: boolean; energy?: number }) {
+export function EggArt({
+  ready = false,
+  energy,
+  crackStage = 0,
+}: {
+  ready?: boolean;
+  energy?: number;
+  crackStage?: number;
+}) {
   const style = energy === undefined ? undefined : ({ '--egg-energy': energy } as CSSProperties);
   const energised = energy === undefined ? '' : ' egg--energised';
+
+  // Domain progression has five earned crack stages, while the current presentation
+  // has three visible crack tiers. Keep that compression here, in presentation:
+  // the domain remains one qualifying day -> one monotonic stage.
+  const crackTier =
+    crackStage <= 0
+      ? 0
+      : crackStage <= 2
+        ? 1
+        : crackStage <= 4
+          ? 2
+          : 3;
 
   return (
     <svg
@@ -35,6 +55,39 @@ export function EggArt({ ready = false, energy }: { ready?: boolean; energy?: nu
       <ellipse cx="30" cy="44" rx="6" ry="8" className="egg__speck" />
       <ellipse cx="50" cy="66" rx="5" ry="6" className="egg__speck" />
       <ellipse cx="42" cy="30" rx="4" ry="5" className="egg__speck" />
+
+      {crackTier >= 1 ? (
+        <path
+          className="egg__crack"
+          d="M40 21 L37 30 L42 35 L38 43"
+        />
+      ) : null}
+
+      {crackTier >= 2 ? (
+        <>
+          <path
+            className="egg__crack"
+            d="M38 43 L29 48 L34 55 L25 62"
+          />
+          <path
+            className="egg__crack"
+            d="M42 35 L51 40 L47 48 L56 54"
+          />
+        </>
+      ) : null}
+
+      {crackTier >= 3 ? (
+        <>
+          <path
+            className="egg__crack egg__crack--bright"
+            d="M34 55 L42 61 L37 70 L45 78"
+          />
+          <path
+            className="egg__crack egg__crack--bright"
+            d="M47 48 L43 57 L52 64 L48 73"
+          />
+        </>
+      ) : null}
     </svg>
   );
 }
