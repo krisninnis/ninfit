@@ -1,0 +1,49 @@
+# NinFit line-ending policy.
+#
+# WHY THIS FILE EXISTS.
+#
+# Git stored LF, the Windows checkout held CRLF, and nothing in the repository
+# said which was correct. The result was ~41 tracked files permanently reported
+# as modified while containing no semantic change at all - every real diff had
+# to be found inside that noise, and `git add -A` would have committed 10,000
+# lines of line-ending churn at any moment.
+#
+# It was not cosmetic. Several suites assert against component source using
+# literals containing "\n" (see src/test/startupCinematic.test.ts). Those
+# assertions cannot match CRLF source, so the same commit passed on Linux and
+# failed on Windows, which is the most expensive kind of test failure there is.
+#
+# `core.autocrlf` cannot fix this: it is a per-machine setting, so it is a
+# developer preference rather than a repository policy. This file is the policy.
+#
+# WHAT IT DOES.
+#
+#   text=auto   Git decides text vs binary, and normalises text to LF on commit.
+#   eol=lf      Text is checked out as LF on every platform, Windows included.
+#
+# `eol=lf` is deliberate rather than incidental. `text=auto` alone would give
+# Git a clean LF history while still leaving CRLF in a Windows working tree -
+# which stops the phantom diffs but leaves the "\n" assertions failing locally.
+# Checking out LF everywhere is what makes local and CI agree.
+#
+# Modern Windows tooling - VS Code, Node, Vite, Git for Windows - all handle LF
+# working files without complaint. If a genuinely CRLF-only file is ever needed
+# (a .bat or .cmd, say), give it its own explicit `eol=crlf` rule below rather
+# than weakening the default.
+
+* text=auto eol=lf
+
+# Binary assets. Never converted, never diffed as text.
+#
+# `text=auto` already detects these correctly today. Declaring them means the
+# heuristic can never get it wrong about a background WebP, an icon or the intro
+# media - a single mistaken conversion would corrupt the file rather than merely
+# reformat it, so this is cheap insurance on the one class of error that is not
+# recoverable by re-running a formatter.
+#
+# SVG is deliberately absent: it is XML, it belongs under the text rule, and it
+# should diff as text.
+*.webp binary
+*.png  binary
+*.mp4  binary
+*.mp3  binary
