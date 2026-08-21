@@ -28,6 +28,32 @@
   color: var(--ft-accent);
 }
 
+/*
+ * Two options stay full width on a phone, where splitting the row gives each a
+ * comfortable target. On a wide screen the same rule produced two pills several
+ * hundred pixels across, which read as the most important thing on the page rather
+ * than as a filter above it. Capping the control, not the options, keeps them equal.
+ */
+@media (min-width: 600px) {
+  .rangebar {
+    max-width: 320px;
+  }
+}
+
+/*
+ * The name of the group of stats above the collapsible sections. Not a heading
+ * element: `Section` titles are not headings either, and introducing the screen's
+ * only `h2` here would tell a screen reader that the three sections below it are
+ * not sections. Matching the existing type is the honest choice until headings are
+ * fixed for every screen at once.
+ */
+.progress__group {
+  margin-bottom: var(--ft-space-3);
+  font-size: var(--ft-text-base);
+  line-height: var(--ft-leading-normal);
+  font-weight: var(--ft-weight-semibold);
+}
+
 
 
 
@@ -61,13 +87,30 @@
   font-size: var(--ft-text-sm);
 }
 
+/*
+ * Two parts, not three. This row used to be three justified columns - start date,
+ * meta, end date - and at 360px the middle column wrapped while the outer two did
+ * not, breaking "Thu, 13 Aug" across two lines and leaving the row ragged.
+ *
+ * Wrapping the whole row instead means the two parts sit side by side when there is
+ * room and stack cleanly when there is not, and neither is ever split mid-date.
+ */
 .trend__foot {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: var(--ft-space-2);
+  gap: var(--ft-space-1) var(--ft-space-3);
   color: var(--ft-text-tertiary);
   font-size: var(--ft-text-xs);
+}
+
+.trend__span {
+  white-space: nowrap;
+}
+
+.trend__meta {
+  min-width: 0;
 }
 
 .spark {

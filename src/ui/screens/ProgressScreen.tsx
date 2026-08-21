@@ -60,6 +60,21 @@ interface TrendProps {
 /**
  * One metric over time: current value, its relationship to the user's own baseline,
  * a sparkline, and how many readings it rests on. No interpretation of any kind.
+ *
+ * WHY THE LATEST READING LEADS.
+ *
+ * This row used to read "<first> to <latest>" at the largest type on the line, which
+ * put the oldest figure first and left the reader working out which end was now. On a
+ * metric that had moved a long way it read as a headline claim about the movement
+ * rather than a statement of where things stand.
+ *
+ * So the current reading is the value, and the earlier one moves into the meta line
+ * as "from X". Nothing is hidden and nothing new is asserted - the same two numbers
+ * are on screen, in the order the question "where am I now" actually asks for.
+ *
+ * The words stay neutral on purpose. "from" describes the series; "up", "down",
+ * "better" and "improving" would all be judgements about a body measurement, and
+ * this screen does not make those.
  */
 function Trend({ label, series, format, minSpan, baseline }: TrendProps) {
   const { first, latest, points } = series;
@@ -81,24 +96,20 @@ function Trend({ label, series, format, minSpan, baseline }: TrendProps) {
     <div className="trend">
       <div className="trend__head">
         <span className="trend__label">{label}</span>
-        <span className="trend__value">
-          {changed ? (
-            <>
-              {format(first.value)} <span className="muted">to</span> {format(latest.value)}
-            </>
-          ) : (
-            format(latest.value)
-          )}
-        </span>
+        <span className="trend__value">{format(latest.value)}</span>
       </div>
       <Sparkline points={points} scaleOptions={{ minSpan }} label={`${label} over time`} />
       <div className="trend__foot">
-        <span>{formatShortDay(first.date)}</span>
-        <span className="muted">
+        <span className="trend__span">
+          {points.length > 1
+            ? `${formatShortDay(first.date)} – ${formatShortDay(latest.date)}`
+            : formatShortDay(latest.date)}
+        </span>
+        <span className="trend__meta">
+          {changed ? `from ${format(first.value)} · ` : ''}
           {samples(points.length)}
           {baseline !== undefined ? ` · baseline ${format(baseline)}` : ''}
         </span>
-        <span>{formatShortDay(latest.date)}</span>
       </div>
     </div>
   );
@@ -166,6 +177,7 @@ export function ProgressScreen() {
       ) : null}
 
       <section className="card">
+        <p className="progress__group">Activity</p>
         <div className="statgrid">
           {overviewStats(summary).map(([label, value, note]) => (
             <Stat key={label} label={label} value={value} note={note} />

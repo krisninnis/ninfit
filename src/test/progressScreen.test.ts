@@ -324,6 +324,62 @@ describe('storage issues are not mistaken for empty history', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+
+/**
+ * How the trend row reads.
+ *
+ * These guard a presentation contract, not a layout. The screen may be restyled
+ * freely; what it may not do is lead with the oldest reading again, drop the earlier
+ * one, or start telling the user what a body measurement means.
+ */
+describe('a trend row answers "where am I now" before "what changed"', () => {
+  /**
+   * Comments stripped first. The component's own docstring explains which words are
+   * forbidden and why, so it necessarily contains them - and scanning raw source
+   * would match the explanation and report the opposite of the truth.
+   */
+  const code = progressScreenSource
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/[^\n]*/g, '');
+
+  it('gives the value slot to the latest reading', () => {
+    expect(code).toMatch(/className="trend__value">\{format\(latest\.value\)\}</);
+  });
+
+  it('no longer opens with the oldest reading', () => {
+    // The old row was "<first> to <latest>", which put the wrong end first.
+    expect(code).not.toMatch(/format\(first\.value\)\}\s*<span className="muted">to<\/span>/);
+  });
+
+  it('keeps the earlier reading rather than hiding the movement', () => {
+    expect(code).toMatch(/from \$\{format\(first\.value\)\}/);
+  });
+
+  it('states the span and the sample count alongside it', () => {
+    expect(code).toMatch(/trend__span/);
+    expect(code).toMatch(/samples\(points\.length\)/);
+  });
+
+  it('says what the numbers are, never what they mean', () => {
+    expect(code).not.toMatch(/improving|improved|declining|deteriorat|on track|falling behind/i);
+    expect(code).not.toMatch(/well done|keep it up|great work|nice work/i);
+  });
+
+  it('invents no goal, target, percentage or streak', () => {
+    expect(code).not.toMatch(/\bgoal\b|\btarget\b|\bstreak\b|percent|%/i);
+  });
+
+  it('names the group of activity stats so the screen can be scanned', () => {
+    expect(code).toMatch(/className="progress__group">Activity</);
+  });
+
+  it('still refuses to grade anything', () => {
+    expect(code).toMatch(/Nothing here is assessed or scored/);
+    expect(code).toMatch(/not a medical assessment/);
+  });
+});
+
 describe('architecture', () => {
   it('keeps localStorage out of the Progress UI', () => {
     expect(progressScreenSource).not.toMatch(/localStorage/);
