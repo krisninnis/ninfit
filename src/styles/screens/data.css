@@ -17,6 +17,19 @@
   border: 0;
 }
 
+/*
+ * The name of the storage and privacy group. Not a heading element: `Section` titles
+ * are not headings either, and introducing this screen's only `h2` here would tell a
+ * screen reader that the four sections above it are not sections. Matching the
+ * existing type is the honest choice until headings are fixed for every screen.
+ */
+.data__group {
+  margin-bottom: var(--ft-space-2);
+  font-size: var(--ft-text-base);
+  line-height: var(--ft-leading-normal);
+  font-weight: var(--ft-weight-semibold);
+}
+
 .issues {
   list-style: none;
   margin: 0;

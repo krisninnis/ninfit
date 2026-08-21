@@ -367,7 +367,7 @@ describe('the Data screen', () => {
   });
 
   it('explains storage and does not overstate it', () => {
-    expect(dataScreenSource).toMatch(/no account and no cloud sync/i);
+    expect(dataScreenSource).toMatch(/not synced to your NinFit ID or to the cloud/i);
     expect(dataScreenSource).toMatch(/personal health and fitness information/i);
   });
 
@@ -379,5 +379,101 @@ describe('the Data screen', () => {
 
   it('warns when storage is not durable', () => {
     expect(dataScreenSource).toMatch(/only available for this session/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+/**
+ * How the Data screen is weighted.
+ *
+ * These guard a presentation contract, not a layout. The screen may be restyled
+ * freely; what it may not do is make the full backup look like one option among
+ * three again, or push the explanation back above the actions.
+ */
+describe('weight on the Data screen follows consequence', () => {
+  /**
+   * Comments stripped first. This screen's docstring explains the weighting rule at
+   * length and therefore names the classes these tests forbid, so a scan of the raw
+   * source would match the explanation and report the opposite of the truth.
+   */
+  const code = dataScreenSource
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/[^\n]*/g, '');
+
+  const between = (open: string, close: string): string => {
+    const start = code.indexOf(open);
+    expect(start, `missing ${open}`).toBeGreaterThan(-1);
+    const rest = code.slice(start + open.length);
+    const end = rest.indexOf(close);
+    return end === -1 ? rest : rest.slice(0, end);
+  };
+
+  it('gives the full backup the only primary export button', () => {
+    const backup = between('<Section title="Backup">', '</Section>');
+    expect(backup).toMatch(/btn btn--primary btn--block/);
+    expect(backup).toMatch(/Export JSON backup/);
+  });
+
+  it('keeps the everyday export secondary, and says it is not a backup', () => {
+    const csv = between('<Section title="Everyday export">', '</Section>');
+    expect(csv).toMatch(/btn btn--secondary btn--block/);
+    expect(csv).not.toMatch(/btn--primary/);
+    expect(csv).toMatch(/not a full backup/);
+  });
+
+  it('does not open the restore path on a primary button', () => {
+    // The entry point is secondary; the confirmation inside it is what carries
+    // weight, and it keeps its attention styling.
+    const entry = between('<Section title="Restore from a backup"', '<div className="confirm">');
+    expect(entry).toMatch(/Choose a backup file/);
+    expect(entry).not.toMatch(/btn--primary/);
+    expect(code).toMatch(/btn btn--attention btn--block/);
+  });
+
+  it('marks a device that has never been backed up', () => {
+    const backup = between('<Section title="Backup">', '</Section>');
+    expect(backup).toMatch(/attention-chip/);
+  });
+
+  it('orders the screen actions first, explanation after, issues last', () => {
+    const backup = code.indexOf('<Section title="Backup">');
+    const csv = code.indexOf('<Section title="Everyday export">');
+    const restore = code.indexOf('<Section title="Restore from a backup"');
+    const storage = code.indexOf('className="card card--info"');
+    const issues = code.indexOf('<Section title="Stored data issue">');
+
+    for (const index of [backup, csv, restore, storage, issues]) {
+      expect(index).toBeGreaterThan(-1);
+    }
+    expect(csv).toBeGreaterThan(backup);
+    expect(restore).toBeGreaterThan(csv);
+    expect(storage).toBeGreaterThan(restore);
+    expect(issues).toBeGreaterThan(storage);
+  });
+
+  it('keeps the temporary-session warning above everything', () => {
+    const warning = code.indexOf('only available for this session');
+    expect(warning).toBeGreaterThan(-1);
+    expect(warning).toBeLessThan(code.indexOf('<Section title="Backup">'));
+  });
+
+  it('states the account boundary rather than implying there is no account', () => {
+    // NinFit ID exists and is reachable from Profile. Saying the app has no account
+    // at all stopped being true; saying the fitness records have none still is.
+    expect(code).toMatch(/stored on this device/i);
+    expect(code).toMatch(/not synced to your NinFit ID or to the cloud/i);
+    expect(code).toMatch(/does not contain your fitness records/i);
+  });
+
+  it('draws nothing from the game layer', () => {
+    /*
+     * A word ban would be wrong here: the import confirmation legitimately REPORTS
+     * what a backup contains, trophies included, and "export" contains "xp". What
+     * must stay out is the game layer itself, so this checks imports rather than
+     * prose. Reward STYLING is guarded separately in cardTaxonomy.test.ts.
+     */
+    expect(code).not.toMatch(/domain\/game/);
+    expect(code).not.toMatch(/components\/(Opal|EggArt|GameHeader)/);
   });
 });
