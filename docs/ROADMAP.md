@@ -189,22 +189,31 @@ Merged foundation commit:
 Merge pull request #1
 Build NinFit world, account journey and production backgrounds
 
-Current development branch:
+Current repository position:
 
-phase6/today-home-redesign-v1
+Live status is not tracked in this file.
+
+See docs/CURRENT_STATE.md for the current main SHA, the latest merged PR, the
+current phase and the next exact action, and verify it against live Git before
+acting - see skills/ninfit-handoff/SKILL.md.
 
 
 ==================================================
 CURRENT TECHNICAL HOUSEKEEPING
 ==================================================
 
-Before progressing significantly beyond the current Phase 6 slice:
+Standing practice for every slice:
 
-1. Finish the current Today/Home vertical slice.
-2. Fix deployment health.
-3. Resolve repository line-ending hygiene separately.
-4. Verify the branch cleanly.
-5. Commit only scoped semantic changes.
+1. Resolve repository line-ending hygiene separately.
+2. Verify the branch cleanly.
+3. Commit only scoped semantic changes.
+
+Still outstanding on item 1: this file is stored with mixed line endings.
+git ls-files --eol docs/ROADMAP.md reports i/mixed while every other document
+reports i/lf. Renormalise it on its own commit rather than inside a content change.
+
+The Today/Home vertical slice and the deployment-health fixes that headed the
+earlier version of this list are both complete.
 
 Deployment-health issues identified during the Phase 6 maintenance pass were resolved and browser-verified on 20 August 2026:
 
@@ -680,7 +689,7 @@ AI assistance must:
 
 ==================================================
 PHASE 6 — TODAY / HOME REDESIGN
-STATUS: ACTIVE CURRENT WORKSTREAM
+STATUS: COMPLETE — MERGED (PR #2)
 ==================================================
 
 Goal:
@@ -877,7 +886,7 @@ the established world architecture.
 
 ==================================================
 PHASE 7 — WEEK / PROGRESS / PROFILE / DATA POLISH
-STATUS: FUTURE
+STATUS: ACTIVE — WEEK (7A) AND PROGRESS (7B) MERGED; PROFILE AND DATA REMAIN
 ==================================================
 
 Week:
