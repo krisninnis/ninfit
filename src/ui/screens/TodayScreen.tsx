@@ -6,6 +6,7 @@ import {
   toggleActivityCompletion,
 } from '../../domain/dailyLog';
 import { GameHeader } from '../components/GameHeader';
+import { RewardAcknowledgement } from '../components/RewardAcknowledgement';
 import { useGame } from '../hooks/useGame';
 import { todayCompanionContext } from '../../domain/game/todayContext';
 import { MAX_CRACK_STAGE } from '../../domain/game/egg';
@@ -228,12 +229,21 @@ export function TodayScreen() {
       <GameHeader
         state={game.state}
         settings={game.settings}
-        granted={game.granted}
         context={companionContext}
         crackStage={crackStage}
         onHatch={game.hatch}
         onEvolve={game.evolve}
       />
+
+      {/*
+        WHAT WAS JUST EARNED, DIRECTLY UNDER THE COMPANION AND ABOVE THE PLAN.
+
+        It belongs to the companion's part of the screen rather than the plan's, and
+        it leaves on its own. In the flow rather than over it: an overlay would avoid
+        the plan shifting down for a couple of seconds, at the cost of covering the
+        session, and this screen exists for the session.
+      */}
+      <RewardAcknowledgement granted={game.granted} />
 
       {!isPersistent ? (
         <section className="card card--attention">

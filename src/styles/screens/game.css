@@ -154,26 +154,6 @@
   font-size: var(--ft-text-sm);
 }
 
-.xpfloat {
-  position: absolute;
-  top: calc(var(--ft-space-2) * -1);
-  right: var(--ft-space-3);
-  padding: 3px 10px;
-  border-radius: var(--ft-radius-pill);
-  background: var(--ft-accent);
-  color: var(--ft-text-on-accent);
-  font-size: var(--ft-text-xs);
-  font-weight: 700;
-  animation: xp-float 2.2s ease-out forwards;
-}
-
-@keyframes xp-float {
-  0% { opacity: 0; transform: translateY(6px); }
-  15% { opacity: 1; transform: translateY(0); }
-  70% { opacity: 1; }
-  100% { opacity: 0; transform: translateY(-10px); }
-}
-
 .tier {
   display: inline-block;
   padding: 1px 7px;
