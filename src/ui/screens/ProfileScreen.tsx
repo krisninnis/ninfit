@@ -1,16 +1,20 @@
-import { lazy, Suspense, useState } from 'react';
-import { getAppContext } from '../../app/bootstrap';
-import { restartOnboarding } from '../../app/game';
+import { lazy, Suspense, useState } from "react";
+import { getAppContext } from "../../app/bootstrap";
+import { restartOnboarding } from "../../app/game";
 import {
   FITNESS_PATHS,
   FITNESS_STAGE_LABELS,
   findPath,
   isHighlightedSkill,
-} from '../../domain/game/paths';
-import { findTrophy } from '../../domain/game/trophies';
-import type { MascotPersonality, SkillKind, SocialMode } from '../../domain/game/types';
-import { useGame } from '../hooks/useGame';
-import { sortMeasurementsDescending } from '../../domain/measurement';
+} from "../../domain/game/paths";
+import { findTrophy } from "../../domain/game/trophies";
+import type {
+  MascotPersonality,
+  SkillKind,
+  SocialMode,
+} from "../../domain/game/types";
+import { useGame } from "../hooks/useGame";
+import { sortMeasurementsDescending } from "../../domain/measurement";
 import type {
   DisplayUnitPreferences,
   ISODate,
@@ -18,7 +22,7 @@ import type {
   PriorStructuredExercise,
   Sex,
   WeightDisplayUnit,
-} from '../../domain/types';
+} from "../../domain/types";
 import {
   cmToInches,
   formatHeight,
@@ -26,7 +30,7 @@ import {
   kgToStoneAndPounds,
   roundTo,
   stoneAndPoundsToKg,
-} from '../../domain/units';
+} from "../../domain/units";
 import {
   DateField,
   NoteField,
@@ -37,11 +41,11 @@ import {
   Stepper,
   TextField,
   Toggle,
-} from '../components/Field';
-import { AttentionIcon } from '../components/Icon';
-import { Screen } from '../components/Screen';
-import { formatShortDay } from '../format';
-import { useProfile, type ProfileSaveStatus } from '../hooks/useProfile';
+} from "../components/Field";
+import { AttentionIcon } from "../components/Icon";
+import { Screen } from "../components/Screen";
+import { formatShortDay } from "../format";
+import { useProfile, type ProfileSaveStatus } from "../hooks/useProfile";
 
 /**
  * Viewing and correcting the starting record.
@@ -51,44 +55,49 @@ import { useProfile, type ProfileSaveStatus } from '../hooks/useProfile';
  */
 
 const SEX_OPTIONS: ReadonlyArray<{ value: Sex; label: string }> = [
-  { value: 'male', label: 'Male' },
-  { value: 'female', label: 'Female' },
-  { value: 'other', label: 'Other' },
-  { value: 'prefer_not_to_say', label: 'Prefer not to say' },
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
+  { value: "other", label: "Other" },
+  { value: "prefer_not_to_say", label: "Prefer not to say" },
 ];
 
 const SKILL_LABELS: Readonly<Record<SkillKind, string>> = {
-  strength: 'Strength',
-  stamina: 'Stamina',
-  mobility: 'Mobility',
-  consistency: 'Consistency',
-  recovery: 'Recovery',
+  strength: "Strength",
+  stamina: "Stamina",
+  mobility: "Mobility",
+  consistency: "Consistency",
+  recovery: "Recovery",
 };
 
-const PRIOR_EXERCISE: ReadonlyArray<{ value: PriorStructuredExercise; label: string }> = [
-  { value: 'none', label: 'None' },
-  { value: 'some', label: 'Some' },
-  { value: 'regular', label: 'Regular' },
+const PRIOR_EXERCISE: ReadonlyArray<{
+  value: PriorStructuredExercise;
+  label: string;
+}> = [
+  { value: "none", label: "None" },
+  { value: "some", label: "Some" },
+  { value: "regular", label: "Regular" },
 ];
 
-const WEIGHT_UNITS: ReadonlyArray<{ value: WeightDisplayUnit; label: string }> = [
-  { value: 'stone_lb', label: 'Stone and pounds' },
-  { value: 'kg', label: 'Kilograms' },
-];
+const WEIGHT_UNITS: ReadonlyArray<{ value: WeightDisplayUnit; label: string }> =
+  [
+    { value: "stone_lb", label: "Stone and pounds" },
+    { value: "kg", label: "Kilograms" },
+  ];
 
-const LENGTH_UNITS: ReadonlyArray<{ value: LengthDisplayUnit; label: string }> = [
-  { value: 'in', label: 'Inches' },
-  { value: 'cm', label: 'Centimetres' },
-];
+const LENGTH_UNITS: ReadonlyArray<{ value: LengthDisplayUnit; label: string }> =
+  [
+    { value: "in", label: "Inches" },
+    { value: "cm", label: "Centimetres" },
+  ];
 
 function SaveNote({ status }: { status: ProfileSaveStatus }) {
-  if (status === 'idle') return null;
+  if (status === "idle") return null;
   const text =
-    status === 'saved'
-      ? 'Saved'
-      : status === 'pending'
-        ? 'Saving'
-        : 'Not saved to this device. Your changes are still here.';
+    status === "saved"
+      ? "Saved"
+      : status === "pending"
+        ? "Saving"
+        : "Not saved to this device. Your changes are still here.";
   return (
     <span className={`savedot savedot--${status}`} role="status">
       {text}
@@ -108,8 +117,15 @@ function WeightField({
   unit: WeightDisplayUnit;
   onChange: (kg: number | undefined) => void;
 }) {
-  if (unit === 'kg') {
-    return <NumberField label={label} value={kg === undefined ? undefined : roundTo(kg, 1)} onChange={onChange} unit="kg" />;
+  if (unit === "kg") {
+    return (
+      <NumberField
+        label={label}
+        value={kg === undefined ? undefined : roundTo(kg, 1)}
+        onChange={onChange}
+        unit="kg"
+      />
+    );
   }
 
   const parts = kg === undefined ? undefined : kgToStoneAndPounds(kg);
@@ -120,7 +136,11 @@ function WeightField({
         label={`${label} (stone)`}
         value={parts?.stone}
         onChange={(stone) =>
-          onChange(stone === undefined ? undefined : stoneAndPoundsToKg(stone, parts?.pounds ?? 0))
+          onChange(
+            stone === undefined
+              ? undefined
+              : stoneAndPoundsToKg(stone, parts?.pounds ?? 0),
+          )
         }
         unit="st"
         min={0}
@@ -129,7 +149,11 @@ function WeightField({
         label="and pounds"
         value={parts?.pounds}
         onChange={(pounds) =>
-          onChange(parts === undefined ? undefined : stoneAndPoundsToKg(parts.stone, pounds ?? 0))
+          onChange(
+            parts === undefined
+              ? undefined
+              : stoneAndPoundsToKg(parts.stone, pounds ?? 0),
+          )
         }
         unit="lb"
         min={0}
@@ -150,7 +174,7 @@ function LengthField({
   unit: LengthDisplayUnit;
   onChange: (cm: number | undefined) => void;
 }) {
-  if (unit === 'cm') {
+  if (unit === "cm") {
     return (
       <NumberField
         label={label}
@@ -164,7 +188,9 @@ function LengthField({
     <NumberField
       label={label}
       value={cm === undefined ? undefined : roundTo(cmToInches(cm), 1)}
-      onChange={(inches) => onChange(inches === undefined ? undefined : inchesToCm(inches))}
+      onChange={(inches) =>
+        onChange(inches === undefined ? undefined : inchesToCm(inches))
+      }
       unit="in"
     />
   );
@@ -180,7 +206,7 @@ interface DraftMeasurement {
 }
 
 const AccountSection = lazy(() =>
-  import('../components/AccountSection').then((module) => ({
+  import("../components/AccountSection").then((module) => ({
     default: module.AccountSection,
   })),
 );
@@ -201,7 +227,9 @@ export function ProfileScreen() {
     addMeasurement,
   } = useProfile();
 
-  const [pendingStart, setPendingStart] = useState<ISODate | undefined>(undefined);
+  const [pendingStart, setPendingStart] = useState<ISODate | undefined>(
+    undefined,
+  );
   const [draft, setDraft] = useState<DraftMeasurement>({ recordedOn: today });
   const [newNote, setNewNote] = useState<string | undefined>(undefined);
   const [newNoteWhen, setNewNoteWhen] = useState<string | undefined>(undefined);
@@ -212,8 +240,8 @@ export function ProfileScreen() {
         <section className="card card--attention">
           <AttentionIcon />
           <p>
-            Your profile could not be read from this device. Nothing has been changed or
-            overwritten.
+            Your profile could not be read from this device. Nothing has been
+            changed or overwritten.
           </p>
         </section>
       </Screen>
@@ -225,26 +253,22 @@ export function ProfileScreen() {
     setDraft((current) => ({ ...current, ...patch }));
 
   return (
-    <Screen title="Profile & baseline" subtitle="Your starting measurements and your own notes.">
+    <Screen
+      title="Profile & baseline"
+      subtitle="Your starting measurements and your own notes."
+    >
       <div className="today__meta">
         <span className="today__programme">Everything here is editable</span>
         <SaveNote status={status} />
       </div>
 
-      <Suspense
-        fallback={
-          <section className="card">
-            <p className="footnote">Account controls loading…</p>
-          </section>
-        }
-      >
-        <AccountSection />
-      </Suspense>
-
       {hasStorageIssues ? (
         <section className="card card--attention">
           <AttentionIcon />
-          <p>Some stored data could not be read. Nothing has been repaired or removed.</p>
+          <p>
+            Some stored data could not be read. Nothing has been repaired or
+            removed.
+          </p>
         </section>
       ) : null}
 
@@ -279,26 +303,12 @@ export function ProfileScreen() {
           }}
           unit="cm"
         />
-        <p className="footnote">That is {formatHeight(profile.heightCm, 'in')}.</p>
+        <p className="footnote">
+          That is {formatHeight(profile.heightCm, "in")}.
+        </p>
       </Section>
 
-      <Section title="Units" defaultOpen={false}>
-        <SelectField
-          label="Show weight in"
-          value={units.weight}
-          options={WEIGHT_UNITS}
-          onChange={(weight) => updateProfile({ preferredUnits: { ...units, weight } })}
-        />
-        <SelectField
-          label="Show lengths in"
-          value={units.length}
-          options={LENGTH_UNITS}
-          onChange={(length) => updateProfile({ preferredUnits: { ...units, length } })}
-        />
-        <p className="footnote">Stored in kilograms and centimetres either way.</p>
-      </Section>
-
-      <Section title="Programme">
+      <Section title="Your Programme">
         <DateField
           label="Programme start date"
           hint="Day 1 of week 1. Weeks roll on from here, not from a Monday."
@@ -311,8 +321,9 @@ export function ProfileScreen() {
         {pendingStart !== undefined ? (
           <div className="confirm">
             <p>
-              You have days already recorded. Changing the start date will renumber which
-              programme day those dates fall on. The records themselves are not changed or moved.
+              You have days already recorded. Changing the start date will
+              renumber which programme day those dates fall on. The records
+              themselves are not changed or moved.
             </p>
             <div className="confirm__actions">
               <button
@@ -337,10 +348,11 @@ export function ProfileScreen() {
         ) : null}
       </Section>
 
-      <Section title="Baseline: where you started" defaultOpen={false}>
+      <Section title="Where You Started" defaultOpen={false}>
         <p className="footnote">
-          A historical record of your starting point. Editing it corrects that record; it does
-          not create a new measurement, and nothing you log later changes it.
+          A historical record of your starting point. Editing it corrects that
+          record; it does not create a new measurement, and nothing you log
+          later changes it.
         </p>
         <WeightField
           label="Weight"
@@ -357,7 +369,9 @@ export function ProfileScreen() {
         <NumberField
           label="Resting heart rate"
           value={baseline.restingHeartRateBpm}
-          onChange={(restingHeartRateBpm) => updateBaseline({ restingHeartRateBpm })}
+          onChange={(restingHeartRateBpm) =>
+            updateBaseline({ restingHeartRateBpm })
+          }
           unit="bpm"
         />
         <NumberField
@@ -370,7 +384,9 @@ export function ProfileScreen() {
           label="Estimated average daily steps"
           hint="Your estimate at the start, not a measured day."
           value={baseline.averageDailySteps}
-          onChange={(averageDailySteps) => updateBaseline({ averageDailySteps })}
+          onChange={(averageDailySteps) =>
+            updateBaseline({ averageDailySteps })
+          }
         />
         <Scale
           label="Back pain at the start"
@@ -382,28 +398,36 @@ export function ProfileScreen() {
         <Stepper
           label="Exercise capacity at the start"
           value={baseline.exerciseCapacityMinutes}
-          onChange={(exerciseCapacityMinutes) => updateBaseline({ exerciseCapacityMinutes })}
+          onChange={(exerciseCapacityMinutes) =>
+            updateBaseline({ exerciseCapacityMinutes })
+          }
           step={5}
           max={180}
           unit="min"
         />
         <SelectField
           label="Structured exercise before starting"
-          value={baseline.structuredExerciseBefore ?? 'none'}
+          value={baseline.structuredExerciseBefore ?? "none"}
           options={PRIOR_EXERCISE}
-          onChange={(structuredExerciseBefore) => updateBaseline({ structuredExerciseBefore })}
+          onChange={(structuredExerciseBefore) =>
+            updateBaseline({ structuredExerciseBefore })
+          }
         />
         <Stepper
           label="Planned active days per week"
           value={baseline.plannedDaysPerWeek}
-          onChange={(plannedDaysPerWeek) => updateBaseline({ plannedDaysPerWeek })}
+          onChange={(plannedDaysPerWeek) =>
+            updateBaseline({ plannedDaysPerWeek })
+          }
           max={7}
           unit="days"
         />
       </Section>
 
       <Section title="Add a measurement" defaultOpen={false}>
-        <p className="footnote">Fill in whatever you have. Everything except the date is optional.</p>
+        <p className="footnote">
+          Fill in whatever you have. Everything except the date is optional.
+        </p>
         <DateField
           label="Date"
           value={draft.recordedOn}
@@ -424,7 +448,9 @@ export function ProfileScreen() {
         <NumberField
           label="Resting heart rate"
           value={draft.restingHeartRateBpm}
-          onChange={(restingHeartRateBpm) => patchDraft({ restingHeartRateBpm })}
+          onChange={(restingHeartRateBpm) =>
+            patchDraft({ restingHeartRateBpm })
+          }
           unit="bpm"
         />
         <NumberField
@@ -452,18 +478,26 @@ export function ProfileScreen() {
           <div className="stats">
             {sortMeasurementsDescending(measurements).map((measurement) => (
               <div className="stat stat--row" key={measurement.id}>
-                <span className="stat__label">{formatShortDay(measurement.recordedOn)}</span>
+                <span className="stat__label">
+                  {formatShortDay(measurement.recordedOn)}
+                </span>
                 <span className="stat__value">
                   {[
-                    measurement.weightKg === undefined ? undefined : `${roundTo(measurement.weightKg, 1)} kg`,
-                    measurement.waistCm === undefined ? undefined : `${roundTo(measurement.waistCm, 1)} cm`,
+                    measurement.weightKg === undefined
+                      ? undefined
+                      : `${roundTo(measurement.weightKg, 1)} kg`,
+                    measurement.waistCm === undefined
+                      ? undefined
+                      : `${roundTo(measurement.waistCm, 1)} cm`,
                     measurement.restingHeartRateBpm === undefined
                       ? undefined
                       : `${measurement.restingHeartRateBpm} bpm`,
-                    measurement.hrvMs === undefined ? undefined : `${measurement.hrvMs} ms`,
+                    measurement.hrvMs === undefined
+                      ? undefined
+                      : `${measurement.hrvMs} ms`,
                   ]
                     .filter((part) => part !== undefined)
-                    .join(' · ')}
+                    .join(" · ")}
                 </span>
               </div>
             ))}
@@ -473,10 +507,11 @@ export function ProfileScreen() {
         )}
       </Section>
 
-      <Section title="Your notes: self-reported context" defaultOpen={false}>
+      <Section title="Your Notes" defaultOpen={false}>
         <p className="footnote">
-          Your own words about your health. The app records them and does nothing else with
-          them: it makes no diagnosis and draws no conclusions.
+          Your self-reported health context, kept in your own words. The app
+          records it and does nothing else with it: it makes no diagnosis and
+          draws no conclusions.
         </p>
         {healthContext !== undefined && healthContext.notes.length > 0 ? (
           <ul className="notelist">
@@ -491,7 +526,9 @@ export function ProfileScreen() {
                     <span className="notelist__detail">{note.noticedNote}</span>
                   ) : null}
                   {note.noticedOn !== undefined ? (
-                    <span className="notelist__detail">{formatShortDay(note.noticedOn)}</span>
+                    <span className="notelist__detail">
+                      {formatShortDay(note.noticedOn)}
+                    </span>
                   ) : null}
                 </span>
                 <button
@@ -526,10 +563,12 @@ export function ProfileScreen() {
           type="button"
           className="btn btn--primary btn--block"
           onClick={() => {
-            if (newNote === undefined || newNote.trim() === '') return;
+            if (newNote === undefined || newNote.trim() === "") return;
             addNote({
               label: newNote.trim(),
-              ...(newNoteWhen !== undefined ? { noticedNote: newNoteWhen } : {}),
+              ...(newNoteWhen !== undefined
+                ? { noticedNote: newNoteWhen }
+                : {}),
             });
             setNewNote(undefined);
             setNewNoteWhen(undefined);
@@ -539,23 +578,42 @@ export function ProfileScreen() {
         </button>
       </Section>
 
-      <GameSettingsSection />
+      <GameSection />
+      <SettingsSection
+        units={units}
+        onUnitsChange={(preferredUnits) => updateProfile({ preferredUnits })}
+      />
 
-      <p className="today__disclaimer">A personal record, not a medical assessment.</p>
+      <Suspense
+        fallback={
+          <section className="card">
+            <p className="footnote">Account controls loading…</p>
+          </section>
+        }
+      >
+        <AccountSection />
+      </Suspense>
+
+      <p className="today__disclaimer">
+        A personal record, not a medical assessment.
+      </p>
     </Screen>
   );
 }
 
-const PERSONALITIES: ReadonlyArray<{ value: MascotPersonality; label: string }> = [
-  { value: 'quiet', label: 'Quiet' },
-  { value: 'normal', label: 'Normal' },
-  { value: 'chatty', label: 'Chatty' },
+const PERSONALITIES: ReadonlyArray<{
+  value: MascotPersonality;
+  label: string;
+}> = [
+  { value: "quiet", label: "Quiet" },
+  { value: "normal", label: "Normal" },
+  { value: "chatty", label: "Chatty" },
 ];
 
 const SOCIAL_MODES: ReadonlyArray<{ value: SocialMode; label: string }> = [
-  { value: 'private', label: 'Private' },
-  { value: 'friends', label: 'Friends' },
-  { value: 'community', label: 'Community' },
+  { value: "private", label: "Private" },
+  { value: "friends", label: "Friends" },
+  { value: "community", label: "Community" },
 ];
 
 /**
@@ -565,9 +623,9 @@ const SOCIAL_MODES: ReadonlyArray<{ value: SocialMode; label: string }> = [
  * yet. Whatever is chosen here, health data stays private - a trophy's visibility
  * never carries a measurement, a symptom or a note with it.
  */
-function GameSettingsSection() {
+function GameSection() {
   const game = useGame();
-  const { state, settings } = game;
+  const { state } = game;
   const path = state.pathId === undefined ? undefined : findPath(state.pathId);
 
   return (
@@ -576,11 +634,15 @@ function GameSettingsSection() {
         <div className="stats">
           <div className="stat stat--row">
             <span className="stat__label">Path</span>
-            <span className="stat__value">{path?.name ?? 'Not chosen yet'}</span>
+            <span className="stat__value">
+              {path?.name ?? "Not chosen yet"}
+            </span>
           </div>
           <div className="stat stat--row">
             <span className="stat__label">Starting stage</span>
-            <span className="stat__value">{FITNESS_STAGE_LABELS[state.fitnessStage]}</span>
+            <span className="stat__value">
+              {FITNESS_STAGE_LABELS[state.fitnessStage]}
+            </span>
           </div>
           <div className="stat stat--row">
             <span className="stat__label">Level</span>
@@ -593,8 +655,11 @@ function GameSettingsSection() {
         <SelectField
           label="Switch path"
           hint="You are never locked in. Progress already earned is kept."
-          value={state.pathId ?? 'start_moving'}
-          options={FITNESS_PATHS.map((entry) => ({ value: entry.id, label: entry.name }))}
+          value={state.pathId ?? "start_moving"}
+          options={FITNESS_PATHS.map((entry) => ({
+            value: entry.id,
+            label: entry.name,
+          }))}
           onChange={(pathId) => game.choosePath(pathId)}
         />
 
@@ -625,9 +690,9 @@ function GameSettingsSection() {
               return (
                 <div className="stat stat--row" key={unlock.trophyId}>
                   <span className="stat__label">
-                    <span className={`tier tier--${trophy?.tier ?? 'bronze'}`}>
-                      {trophy?.tier ?? 'bronze'}
-                    </span>{' '}
+                    <span className={`tier tier--${trophy?.tier ?? "bronze"}`}>
+                      {trophy?.tier ?? "bronze"}
+                    </span>{" "}
                     {trophy?.name ?? unlock.trophyId}
                   </span>
                   <span className="stat__value muted">{unlock.visibility}</span>
@@ -637,71 +702,108 @@ function GameSettingsSection() {
           </div>
         )}
         <p className="footnote">
-          Trophies are private unless you change that. Nothing about your body is ever
-          attached to one.
-        </p>
-      </Section>
-
-      <Section title="Game settings" defaultOpen={false}>
-        <SelectField
-          label="Mascot personality"
-          value={settings.mascotPersonality}
-          options={PERSONALITIES}
-          onChange={(mascotPersonality) => game.updateSettings({ mascotPersonality })}
-        />
-        <Toggle
-          label="Sound"
-          checked={settings.soundEnabled}
-          onChange={(soundEnabled) => game.updateSettings({ soundEnabled })}
-        />
-        <Toggle
-          label="Haptics"
-          checked={settings.hapticsEnabled}
-          onChange={(hapticsEnabled) => game.updateSettings({ hapticsEnabled })}
-        />
-        <SelectField
-          label="Social mode"
-          hint="Not connected to anything yet. Private by default, and health data stays private whatever you pick."
-          value={settings.socialMode}
-          options={SOCIAL_MODES}
-          onChange={(socialMode) => game.updateSettings({ socialMode })}
-        />
-        <Toggle
-          label="Personal challenges"
-          checked={settings.challenges.personal}
-          onChange={(personal) =>
-            game.updateSettings({ challenges: { ...settings.challenges, personal } })
-          }
-        />
-        <Toggle
-          label="Friend challenges"
-          checked={settings.challenges.friends}
-          onChange={(friends) =>
-            game.updateSettings({ challenges: { ...settings.challenges, friends } })
-          }
-        />
-        <Toggle
-          label="Community challenges"
-          checked={settings.challenges.community}
-          onChange={(community) =>
-            game.updateSettings({ challenges: { ...settings.challenges, community } })
-          }
-        />
-        <button
-          type="button"
-          className="btn btn--primary btn--block"
-          onClick={() => {
-            restartOnboarding(getAppContext().repository);
-            window.location.reload();
-          }}
-        >
-          Run onboarding again
-        </button>
-        <p className="footnote">
-          Rerunning it only reconsiders your path. XP, trophies and everything in the tracker
-          are kept.
+          Trophies are private unless you change that. Nothing about your body
+          is ever attached to one.
         </p>
       </Section>
     </>
+  );
+}
+
+function SettingsSection({
+  units,
+  onUnitsChange,
+}: {
+  units: DisplayUnitPreferences;
+  onUnitsChange: (units: DisplayUnitPreferences) => void;
+}) {
+  const game = useGame();
+  const { settings } = game;
+
+  return (
+    <Section title="Settings" defaultOpen={false}>
+      <SelectField
+        label="Show weight in"
+        value={units.weight}
+        options={WEIGHT_UNITS}
+        onChange={(weight) => onUnitsChange({ ...units, weight })}
+      />
+      <SelectField
+        label="Show lengths in"
+        value={units.length}
+        options={LENGTH_UNITS}
+        onChange={(length) => onUnitsChange({ ...units, length })}
+      />
+      <p className="footnote">
+        Stored in kilograms and centimetres either way.
+      </p>
+
+      <SelectField
+        label="Mascot personality"
+        value={settings.mascotPersonality}
+        options={PERSONALITIES}
+        onChange={(mascotPersonality) =>
+          game.updateSettings({ mascotPersonality })
+        }
+      />
+      <Toggle
+        label="Sound"
+        checked={settings.soundEnabled}
+        onChange={(soundEnabled) => game.updateSettings({ soundEnabled })}
+      />
+      <Toggle
+        label="Haptics"
+        checked={settings.hapticsEnabled}
+        onChange={(hapticsEnabled) => game.updateSettings({ hapticsEnabled })}
+      />
+      <SelectField
+        label="Social mode"
+        hint="Not connected to anything yet. Private by default, and health data stays private whatever you pick."
+        value={settings.socialMode}
+        options={SOCIAL_MODES}
+        onChange={(socialMode) => game.updateSettings({ socialMode })}
+      />
+      <Toggle
+        label="Personal challenges"
+        checked={settings.challenges.personal}
+        onChange={(personal) =>
+          game.updateSettings({
+            challenges: { ...settings.challenges, personal },
+          })
+        }
+      />
+      <Toggle
+        label="Friend challenges"
+        checked={settings.challenges.friends}
+        onChange={(friends) =>
+          game.updateSettings({
+            challenges: { ...settings.challenges, friends },
+          })
+        }
+      />
+      <Toggle
+        label="Community challenges"
+        checked={settings.challenges.community}
+        onChange={(community) =>
+          game.updateSettings({
+            challenges: { ...settings.challenges, community },
+          })
+        }
+      />
+      <button
+        type="button"
+        className="btn btn--primary btn--block"
+        onClick={() => {
+          restartOnboarding(getAppContext().repository);
+          window.location.reload();
+        }}
+      >
+        Run onboarding again
+      </button>
+      <p className="footnote">
+        Rerunning it only reconsiders your path. XP, trophies and everything in
+        the tracker are kept.
+      </p>
+    </Section>
   );
 }
