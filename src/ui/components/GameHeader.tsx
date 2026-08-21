@@ -5,7 +5,7 @@ import {
   visibleMascotFamily,
 } from '../../domain/game/mascot';
 import { mascotMessage, type MascotContext } from '../../domain/game/messages';
-import type { GameSettings, GameState, RewardEvent } from '../../domain/game/types';
+import type { GameSettings, GameState } from '../../domain/game/types';
 import { levelProgress } from '../../domain/game/xp';
 import { EggArt } from './EggArt';
 import { useHatchCinematic } from '../hooks/useHatchCinematic';
@@ -40,12 +40,19 @@ import { useHatchCinematic } from '../hooks/useHatchCinematic';
  *
  * The choice now belongs to `todayCompanionContext` in the domain, and arrives as a
  * prop. This component's whole job with it is to look up the wording and render it.
+ *
+ * IT NO LONGER ANNOUNCES WHAT WAS EARNED EITHER.
+ *
+ * A floating pill used to show the XP of the LAST granted event and nothing else -
+ * no name for it, and no sign that three other things had been earned at the same
+ * time. Saying what happened is `RewardAcknowledgement`'s job now. What stays here
+ * is the standing picture: level, bar, total, message, stage, and the controls for
+ * hatching and evolving.
  */
 
 interface GameHeaderProps {
   state: GameState;
   settings: GameSettings;
-  granted: readonly RewardEvent[];
   /**
    * What the companion has noticed, decided by the domain. Passed in rather than
    * computed here so the message can reflect the day, and so there is exactly one
@@ -60,7 +67,6 @@ interface GameHeaderProps {
 export function GameHeader({
   state,
   settings,
-  granted,
   context,
   crackStage,
   onHatch,
@@ -80,7 +86,6 @@ export function GameHeader({
   });
 
   const message = mascotMessage(context, settings.mascotPersonality);
-  const latest = granted[granted.length - 1];
 
   const action =
     state.mascot.eggState === 'ready'
@@ -182,12 +187,6 @@ export function GameHeader({
         >
           {action.label}
         </button>
-      ) : null}
-
-      {latest !== undefined ? (
-        <span className="xpfloat" key={latest.id}>
-          +{latest.xp} XP
-        </span>
       ) : null}
     </section>
   );

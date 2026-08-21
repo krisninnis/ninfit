@@ -330,9 +330,12 @@ describe('the companion stays a strip', () => {
   it('reads the mascot state for artwork only, never to choose the message', () => {
     // The one remaining `state.mascot` reads decide what to draw and which action to
     // offer. None of them may decide what is said.
+    // Re-anchored when the XP float retired and took `const latest` with it. The
+    // slice is the same single declaration it always was: `const action` is now what
+    // follows the message, so the scope of this assertion is unchanged.
     const messageLine = gameHeaderSource.slice(
       gameHeaderSource.indexOf('const message ='),
-      gameHeaderSource.indexOf('const latest ='),
+      gameHeaderSource.indexOf('const action ='),
     );
     expect(messageLine).not.toContain('state.mascot');
   });

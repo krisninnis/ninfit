@@ -1,0 +1,86 @@
+/**
+ * Reward acknowledgement.
+ *
+ * Two treatments, and the difference between them is how rare the moment is. A
+ * routine batch gets the quiet surface and the standard entrance; a batch carrying
+ * something meaningful gets the reward card and the slower one. Nothing here is
+ * cinematic - that tier stays reserved for hatching and evolution.
+ *
+ * Layout only in `.reward`. The surface comes either from `.reward__surface` or from
+ * the shared card taxonomy, so the tint is spent through `.card--reward` rather than
+ * reinvented here.
+ */
+
+@layer components {
+  .reward {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ft-space-2);
+    animation: reward-in var(--ft-motion-standard) var(--ft-ease-standard) both;
+  }
+
+  /*
+   * The quiet surface, for work that happens several times a week. Deliberately
+   * lighter than a tracking card: this is an aside that leaves, not a panel to read.
+   */
+  .reward__surface {
+    padding: var(--ft-space-3) var(--ft-space-4);
+    border: 1px solid var(--ft-border-subtle);
+    border-radius: var(--ft-radius-lg);
+    background: var(--ft-surface-sunken);
+  }
+
+  /* Rarer, so slower and softer on arrival. */
+  .reward--reward {
+    animation-duration: var(--ft-motion-reward);
+    animation-timing-function: var(--ft-ease-reward);
+  }
+
+  .reward__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--ft-space-1);
+  }
+
+  /*
+   * `min-width: 0` on the label is what lets a long trophy name wrap instead of
+   * pushing the XP value off the row at 360px.
+   */
+  .reward__item {
+    display: flex;
+    align-items: baseline;
+    gap: var(--ft-space-2);
+    min-width: 0;
+  }
+
+  .reward__label {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: var(--ft-text-sm);
+  }
+
+  .reward__xp {
+    flex: 0 0 auto;
+    font-size: var(--ft-text-sm);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /*
+   * Arrival only. Nothing loops, pulses or repeats, and the global reduced-motion
+   * rule collapses this to nothing - which costs the movement and keeps the message.
+   */
+  @keyframes reward-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
