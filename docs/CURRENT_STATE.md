@@ -13,8 +13,8 @@ Last updated: **2026-08-21**
 | | |
 |---|---|
 | Remote | `https://github.com/krisninnis/ninfit.git` |
-| `main` at last update | `09fff703f7cdc84d19f64d8230e98343e9770f84` |
-| Latest merged PR | **#5** — `phase7b/progress-polish-v1` (`363f914`) |
+| `main` at last update | `bd3ec89358a287a5bdc4b390bc661ee622b1c5a9` |
+| Latest merged PR | **#6** — `docs/handoff-system-v1` (`aea4f8d`) |
 | Test baseline on `main` | **42 files / 1219 tests**, `npm run typecheck` exit 0, `npm run build` exit 0 |
 | Node | `24.x` (`package.json` `engines`) |
 | Deployment | Not established from the repository. No CI configuration, no `vercel.json`, no Dockerfile; `.vercel` is gitignored. Treat as INVESTIGATE — see `docs/production-readiness.md`. |
@@ -27,6 +27,7 @@ Merged into `main`, most recent first:
 
 | PR | Merge | What landed |
 |---|---|---|
+| #6 | `bd3ec89` | Durable handoff system — `docs/CURRENT_STATE.md`, `docs/DECISIONS.md`, `skills/ninfit-handoff/` (`aea4f8d`) |
 | #5 | `09fff70` | **Phase 7B** — Progress polish: trend rows lead with the current reading (`363f914`) |
 | #4 | `358211f` | Production-readiness review framework (`skills/production-readiness/`) and the NinFit profile (`docs/production-readiness.md`) |
 | #3 | `eb4d811` | **Phase 7A** — Week seven-day journey trail (`04edbd4`) |
@@ -43,13 +44,15 @@ left in `docs/ROADMAP.md` PHASE 7 is **Profile** and **Data**:
 - **Data** — "calm and trustworthy": backup, import, privacy, provenance, data
   durability. Explicitly *avoid unnecessary game decoration*.
 
-Nothing is in progress. The working tree is clean and `main` is synced.
+In flight at the time of writing: a documentation-only roadmap status alignment,
+uncommitted in the working tree. It changes `docs/ROADMAP.md` status wording only.
 
 ## Next exact action
 
-**Scope the next Phase 7 slice — Profile polish — as an investigation first**, the
-same shape as 7A and 7B: read the roadmap section and the current screen, propose a
-small hierarchy change, then implement only if the brief is authorised.
+**Commit the roadmap status alignment sitting in the working tree, then scope the
+next Phase 7 slice — Profile polish — as an investigation first**, the same shape as
+7A and 7B: read the roadmap section and the current screen, propose a small
+hierarchy change, then implement only if the brief is authorised.
 
 Data polish is the alternative if Profile is deferred. Do not start both.
 
@@ -131,11 +134,15 @@ Recently settled. Re-litigating any of these wastes a slice.
 
 ## Known stale documentation
 
-`docs/ROADMAP.md` remains the canonical product plan, but its status lines lag:
+`docs/ROADMAP.md` remains the canonical product plan. Its `CURRENT REPOSITORY
+STATUS`, `PHASE 6`, `PHASE 7` and `CURRENT TECHNICAL HOUSEKEEPING` wording has been
+brought back into line, and it now points here for live status rather than naming a
+branch that moves.
 
-- `CURRENT REPOSITORY STATUS` still names `54dc070` / PR #1 as the merged foundation
-  and `phase6/today-home-redesign-v1` as the current branch. Four PRs have merged.
-- `PHASE 6` is marked `STATUS: ACTIVE CURRENT WORKSTREAM`. It is merged.
-- `PHASE 7` is marked `STATUS: FUTURE`. 7A is merged and 7B is implemented.
+One genuine issue remains, recorded in the roadmap's own housekeeping list:
+`docs/ROADMAP.md` is stored with **mixed line endings** — `git ls-files --eol`
+reports `i/mixed` for it and `i/lf` for every other document. Renormalise it on its
+own commit, never inside a content change, or the real edit disappears into three
+thousand lines of line-ending churn.
 
 Read ROADMAP for *what to build*. Read this file for *where things stand*.
