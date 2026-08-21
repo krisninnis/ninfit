@@ -189,7 +189,9 @@ describe('Profile is account status only', () => {
 describe('lazy loading keeps Supabase out of the core bundle', () => {
   it('lazy-loads the account status card from Profile', () => {
     expect(profile).toContain('lazy(() =>')
-    expect(profile).toContain("import('../components/AccountSection')")
+    // Quote style is a formatter's business, not this test's. What must hold is
+    // that the module is reached through a dynamic import rather than a static one.
+    expect(profile).toMatch(/import\(\s*['"]\.\.\/components\/AccountSection['"]\s*\)/)
     expect(profile).toContain('<Suspense')
   })
 
@@ -200,8 +202,11 @@ describe('lazy loading keeps Supabase out of the core bundle', () => {
   })
 
   it('never statically imports either cloud component', () => {
-    expect(profile).not.toContain(
-      "import { AccountSection } from '../components/AccountSection'",
+    // Quote-style independent, for the same reason as the dynamic-import check
+    // above: a `toContain` on a single-quoted specifier stopped being able to fail
+    // the moment the screen was reformatted with double quotes.
+    expect(profile).not.toMatch(
+      /import\s*\{\s*AccountSection\s*\}\s*from\s*['"]\.\.\/components\/AccountSection['"]/,
     )
     expect(idScreen).not.toContain(
       "import { NinFitIdAuth } from '../components/NinFitIdAuth'",
