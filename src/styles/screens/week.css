@@ -1,5 +1,9 @@
 /**
- * Week: seven stacked day cards.
+ * Week: a light seven-day trail above seven stacked day cards.
+ *
+ * The order of those two matters. The trail is drawn first because it orients,
+ * and it is given no surface, no border and a single row of height because the
+ * cards below it are the record. Weight, not position, is what keeps it secondary.
  */
 
 @layer screens {
@@ -128,5 +132,107 @@
 .weekact__duration {
   color: var(--ft-text-tertiary);
   font-size: var(--ft-text-xs);
+}
+
+/* ---------- The seven-day journey trail ---------- */
+
+/*
+ * A strip, not a panel. No surface, no border, no card of its own: the trail is an
+ * orientation device and the records below it are what the screen is for. Its whole
+ * height budget is one row of small marks, which is what keeps "light" and
+ * "secondary" true in the layout rather than only in the prose.
+ */
+.weektrail {
+  display: flex;
+  align-items: center;
+  margin-top: calc(var(--ft-space-1) * -1);
+  margin-bottom: var(--ft-space-3);
+  padding: var(--ft-space-2) var(--ft-space-1);
+}
+
+/*
+ * Seven equal tracks. `flex: 1 1 0` with `min-width: 0` gives every node an exact
+ * seventh of whatever width exists, so the row shrinks with the viewport instead of
+ * pushing past it - the failure this screen has to survive at 360px.
+ */
+.weektrail__node {
+  flex: 1 1 0;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+}
+
+/* The path between days, drawn from each node back to the previous centre. */
+.weektrail__node + .weektrail__node::before {
+  content: '';
+  position: absolute;
+  left: -50%;
+  right: 50%;
+  height: 2px;
+  border-radius: var(--ft-radius-pill);
+  background: var(--ft-border-subtle);
+}
+
+.weektrail__mark {
+  position: relative;
+  z-index: 1;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--ft-radius-circle);
+  background: var(--ft-border-subtle);
+}
+
+/* A finished day is the only filled mark, and the largest. */
+.weektrail__node--complete .weektrail__mark {
+  width: 12px;
+  height: 12px;
+  background: var(--ft-accent);
+}
+
+/* Under way rather than finished: the same size, open instead of filled. */
+.weektrail__node--partial .weektrail__mark {
+  width: 12px;
+  height: 12px;
+  background: transparent;
+  border: 2px solid var(--ft-accent);
+}
+
+/*
+ * Rest is a deliberate part of the week, so it takes its own shape rather than a
+ * fainter version of a training day. It is not a gap in the row.
+ */
+.weektrail__node--rest .weektrail__mark {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--ft-radius-sm);
+  background: var(--ft-border-strong);
+}
+
+/*
+ * A day with nothing ticked and a day with no plan draw identically, which is the
+ * point. Neither is an outcome, and separating them visually could only be read as
+ * apportioning fault for the difference.
+ */
+.weektrail__node--quiet .weektrail__mark {
+  background: var(--ft-border-subtle);
+}
+
+/* Still to come. The same 0.72 the day cards use, so the two agree. */
+.weektrail__node--future .weektrail__mark {
+  width: 6px;
+  height: 6px;
+  opacity: 0.72;
+}
+
+/*
+ * Where you are. An outline rather than a fill, so the position is marked without
+ * altering what the day itself is - a finished today stays finished.
+ */
+.weektrail__node--here .weektrail__mark {
+  outline: 2px solid var(--ft-accent);
+  outline-offset: 3px;
 }
 }
