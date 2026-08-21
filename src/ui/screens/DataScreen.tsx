@@ -12,6 +12,26 @@ import { useData } from '../hooks/useData';
  * Two exports with genuinely different jobs, said plainly: JSON is the backup you
  * restore from, CSV is for looking at in a spreadsheet. Import replaces rather than
  * merges, takes a backup of what is here first, and asks before doing any of it.
+ *
+ * WEIGHT FOLLOWS CONSEQUENCE.
+ *
+ * The three actions used to be three identical full-width primary buttons, so the
+ * backup you should actually take looked exactly like the spreadsheet that cannot be
+ * restored from, which looked exactly like the restore that replaces everything. On
+ * a screen whose own copy says this device is the only copy, that is the wrong shape.
+ *
+ * One primary action: the full backup. The everyday export and the entry to restore
+ * are secondary. The confirmation inside restore keeps its attention styling, because
+ * that is the step with consequences.
+ *
+ * ORDER.
+ *
+ *   Backup -> everyday export -> restore -> storage and privacy -> issues
+ *
+ * Explanation moved below the actions. It is worth reading once; it should not stand
+ * between someone and the button they came for. What stays above everything is the
+ * warning that this browser will not keep anything, because that one is urgent
+ * rather than informative.
  */
 
 /** Storage keys are an implementation detail; these are the human names. */
@@ -123,21 +143,20 @@ export function DataScreen() {
         </section>
       ) : null}
 
-      <section className="card card--info">
-        <p>
-          Your records are stored on this device, in the app&rsquo;s own browser storage. There is
-          no account and no cloud sync, so this device is the only copy unless you export one.
-        </p>
-        <p className="footnote">
-          Browsers can clear storage, so an occasional backup is worth having.
-        </p>
-      </section>
-
       <Section title="Backup">
         <div className="stats">
           <div className="stat stat--row">
             <span className="stat__label">Last backup</span>
-            <span className="stat__value">{formatBackupTime(meta?.lastExportedAt)}</span>
+            <span className="stat__value">
+              {meta?.lastExportedAt === undefined ? (
+                <span className="attention-chip">
+                  <AttentionIcon />
+                  Never
+                </span>
+              ) : (
+                formatBackupTime(meta.lastExportedAt)
+              )}
+            </span>
           </div>
         </div>
         <button type="button" className="btn btn--primary btn--block" onClick={exportBackup} disabled={!canDownload}>
@@ -149,8 +168,8 @@ export function DataScreen() {
         </p>
       </Section>
 
-      <Section title="Spreadsheet export">
-        <button type="button" className="btn btn--primary btn--block" onClick={exportCsv} disabled={!canDownload}>
+      <Section title="Everyday export">
+        <button type="button" className="btn btn--secondary btn--block" onClick={exportCsv} disabled={!canDownload}>
           Export daily CSV
         </button>
         <p className="footnote">
@@ -180,7 +199,7 @@ export function DataScreen() {
             />
             <button
               type="button"
-              className="btn btn--primary btn--block"
+              className="btn btn--secondary btn--block"
               onClick={() => fileInput.current?.click()}
             >
               Choose a backup file
@@ -240,6 +259,21 @@ export function DataScreen() {
           </div>
         )}
       </Section>
+
+      <section className="card card--info">
+        <p className="data__group">Storage and privacy</p>
+        <p>
+          Your fitness records are stored on this device, in the app&rsquo;s own browser storage.
+          They are not synced to your NinFit ID or to the cloud, so this device is the only copy
+          unless you export a backup.
+        </p>
+        <p className="footnote">
+          A NinFit ID is only for sign-in and does not contain your fitness records.
+        </p>
+        <p className="footnote">
+          Browsers can clear storage, so an occasional backup is worth having.
+        </p>
+      </section>
 
       {issues.length > 0 ? (
         <Section title="Stored data issue">
