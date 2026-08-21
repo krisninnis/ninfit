@@ -132,6 +132,48 @@ export interface WeekView {
   summary: WeekSummary;
 }
 
+/**
+ * A day as one node on the seven-day trail.
+ *
+ * PRESENTATION ONLY. This is a mapping, not a new fact. Every input is a `DayState`
+ * the domain has already decided, and nothing here reads a log, a date, a plan or a
+ * reward. It lives beside `stateFor` rather than inside the screen for two reasons:
+ * it is pure and can be tested without rendering anything, and the Week screen is
+ * not allowed to calculate.
+ *
+ * FIVE NODES FROM SIX STATES, AND WHY TWO OF THEM COLLAPSE.
+ *
+ * `not_yet` is a day that has a session with nothing ticked. `unplanned` is a day no
+ * plan covers. On a day card that difference is useful and the card still draws it.
+ * On a trail it is not: both are an unfilled node, and the only thing a reader could
+ * infer from telling them apart is whose fault the emptiness was. So both become
+ * `quiet`, which describes the node rather than judging the day.
+ *
+ * `today` is deliberately NOT a member of this union. Today is a position, not a
+ * state: it coexists with all five, and folding it in would make a finished Tuesday
+ * stop looking finished the moment it became today. `WeekDay` keeps `isToday`
+ * separate for that reason and the trail keeps it separate too.
+ */
+export type TrailNodeState = 'complete' | 'partial' | 'rest' | 'quiet' | 'future';
+
+/**
+ * Exhaustive by construction: a seventh `DayState` stops this compiling, which is
+ * the point. A new state must be given a node deliberately rather than falling
+ * through a `default` into whichever shape happened to be listed last.
+ */
+const TRAIL_NODE_STATE: Readonly<Record<DayState, TrailNodeState>> = {
+  complete: 'complete',
+  partial: 'partial',
+  rest: 'rest',
+  future: 'future',
+  not_yet: 'quiet',
+  unplanned: 'quiet',
+};
+
+export function trailNodeState(day: WeekDay): TrailNodeState {
+  return TRAIL_NODE_STATE[day.state];
+}
+
 function stateFor(
   isRest: boolean,
   isFuture: boolean,

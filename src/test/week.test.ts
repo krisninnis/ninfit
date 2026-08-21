@@ -7,7 +7,14 @@ import { PROGRAMME_START_DATE } from '../domain/defaults';
 import { sequentialIdFactory } from '../domain/ids';
 import { resolveToday, todaySessionCompletion } from '../domain/today';
 import type { PlannedActivity, WeeklyPlan } from '../domain/types';
-import { buildWeekView, type WeekDay, type WeekView } from '../domain/week';
+import {
+  buildWeekView,
+  trailNodeState,
+  type DayState,
+  type TrailNodeState,
+  type WeekDay,
+  type WeekView,
+} from '../domain/week';
 import { createMemoryStorageAdapter, type StorageAdapter } from '../storage/StorageAdapter';
 import { Repository, createRepository } from '../storage/repository';
 
@@ -513,6 +520,129 @@ describe('empty and edge states', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+
+/**
+ * The seven-day journey trail.
+ *
+ * The trail is a light orientation device drawn from facts the week already holds.
+ * These tests protect the two decisions in it that are easy to lose: that the two
+ * empty-looking states are indistinguishable on the trail, and that being today is a
+ * position rather than a state.
+ */
+describe('the trail maps days to nodes without inventing anything', () => {
+  const node = (state: DayState): TrailNodeState => trailNodeState({ state } as WeekDay);
+
+  it('passes the four named outcomes straight through', () => {
+    expect(node('complete')).toBe('complete');
+    expect(node('partial')).toBe('partial');
+    expect(node('rest')).toBe('rest');
+    expect(node('future')).toBe('future');
+  });
+
+  it('draws an untouched day and an unplanned one identically', () => {
+    // The card still tells these two apart. The trail deliberately does not: the
+    // only thing a reader could take from the distinction is blame.
+    expect(node('not_yet')).toBe('quiet');
+    expect(node('unplanned')).toBe('quiet');
+  });
+
+  it('covers every day state the domain can produce', () => {
+    const states: DayState[] = [
+      'complete',
+      'partial',
+      'not_yet',
+      'rest',
+      'future',
+      'unplanned',
+    ];
+    for (const state of states) {
+      expect(node(state), `no node for ${state}`).toBeDefined();
+    }
+  });
+
+  it('yields only the five node shapes, never a sixth', () => {
+    const allowed: TrailNodeState[] = ['complete', 'partial', 'rest', 'quiet', 'future'];
+    for (const entry of week().days) {
+      expect(allowed).toContain(trailNodeState(entry));
+    }
+  });
+});
+
+describe('the trail reads the same week the cards do', () => {
+  it('has exactly one node per day, in order', () => {
+    const view = week();
+    expect(view.days.map(trailNodeState)).toHaveLength(7);
+    expect(view.days.map((entry) => entry.dayIndex)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+  });
+
+  it('fills a finished day and half-fills a started one', () => {
+    const one = session(DAY_1);
+    tick(one, yoga);
+    tick(one, walk);
+    one.save();
+
+    // Day 3 carries two activities, so ticking one of them is genuinely partial.
+    // Day 2 holds a single walk, where one tick is the whole session.
+    const three = session(DAY_3);
+    const [firstOnThree] = activitiesOn(DAY_3);
+    if (!firstOnThree) throw new Error('expected an activity on day 3');
+    tick(three, firstOnThree);
+    three.save();
+
+    const view = week(DAY_3);
+    expect(trailNodeState(day(view, 1))).toBe('complete');
+    expect(trailNodeState(day(view, 3))).toBe('partial');
+  });
+
+  it('marks a planned rest day as rest rather than as a gap', () => {
+    const view = week(DAY_7);
+    expect(day(view, 7).state).toBe('rest');
+    expect(trailNodeState(day(view, 7))).toBe('rest');
+  });
+
+  it('keeps days still to come quiet without calling them anything else', () => {
+    const view = week(DAY_1);
+    expect(trailNodeState(day(view, 2))).toBe('future');
+    expect(trailNodeState(day(view, 6))).toBe('future');
+  });
+
+  it('gives a past day with nothing ticked the same node as an unplanned one', () => {
+    const past = week(DAY_3);
+    expect(day(past, 1).state).toBe('not_yet');
+    expect(trailNodeState(day(past, 1))).toBe('quiet');
+
+    const noPlan = buildWeekView(plans, PROGRAMME_START_DATE, 2, repo.listDailyLogs(), '2026-08-21');
+    expect(day(noPlan, 1).state).toBe('unplanned');
+    expect(trailNodeState(day(noPlan, 1))).toBe('quiet');
+  });
+});
+
+describe('today is a position on the trail, not a node state', () => {
+  it('leaves a finished day finished on the day it happens', () => {
+    const one = session(DAY_1);
+    tick(one, yoga);
+    tick(one, walk);
+    one.save();
+
+    const entry = day(week(DAY_1), 1);
+    expect(entry.isToday).toBe(true);
+    expect(trailNodeState(entry)).toBe('complete');
+  });
+
+  it('marks exactly one day as today, and none when the week is elsewhere', () => {
+    expect(week(DAY_3).days.filter((entry) => entry.isToday)).toHaveLength(1);
+    expect(week('2026-09-30').days.filter((entry) => entry.isToday)).toHaveLength(0);
+  });
+
+  it('does not change a rest day just because it is today', () => {
+    expect(trailNodeState(day(week(DAY_7), 7))).toBe('rest');
+    expect(day(week(DAY_7), 7).isToday).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
 describe('architecture', () => {
   it('keeps localStorage out of the Week UI', () => {
     expect(weekScreenSource).not.toMatch(/localStorage/);
@@ -531,5 +661,48 @@ describe('architecture', () => {
 
   it('never speaks in scores or failure', () => {
     expect(weekScreenSource).not.toMatch(/readiness|failed|missed|overdue|streak/i);
+  });
+
+  it('keeps the trail decorative rather than announcing the week twice', () => {
+    // Every fact the trail draws is already written in words on the card below it.
+    expect(weekScreenSource).toMatch(/className="weektrail"\s+aria-hidden="true"/);
+  });
+
+  it('takes the node mapping from the domain instead of restating it', () => {
+    expect(weekScreenSource).toMatch(/import \{ trailNodeState \} from '\.\.\/\.\.\/domain\/week'/);
+    expect(weekScreenSource).toMatch(/trailNodeState\(day\)/);
+  });
+
+  it('draws one node per day and tallies nothing', () => {
+    const start = weekScreenSource.indexOf('function WeekTrail');
+    expect(start).toBeGreaterThan(-1);
+    const rest = weekScreenSource.slice(start + 1);
+    const trail = rest.slice(0, rest.indexOf('\nfunction '));
+
+    expect(trail).toMatch(/days\.map\(/);
+    // No total, no fraction, no percentage anywhere inside the strip.
+    expect(trail).not.toMatch(/\.length|formatCount|%/);
+  });
+
+  it('puts the trail above the records, and keeps the records', () => {
+    const trail = weekScreenSource.indexOf('<WeekTrail');
+    const cards = weekScreenSource.indexOf('className="week__days"');
+    expect(trail).toBeGreaterThan(-1);
+    expect(cards).toBeGreaterThan(trail);
+  });
+
+  it('stays clear of the game layer entirely', () => {
+    /*
+     * Comments stripped first. The trail's own docstring explains at length why no
+     * companion is drawn here yet, so it necessarily names the thing this test
+     * forbids - and a scan of the raw source would match that explanation and report
+     * the opposite of the truth.
+     */
+    const code = weekScreenSource
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/[^\n]*/g, '');
+
+    expect(code).not.toMatch(/domain\/game/);
+    expect(code).not.toMatch(/glyph|mascot/i);
   });
 });

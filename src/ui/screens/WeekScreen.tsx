@@ -1,3 +1,4 @@
+import { trailNodeState } from '../../domain/week';
 import type { DayState, WeekDay, WeekSummary } from '../../domain/week';
 import { Section } from '../components/Field';
 import { AttentionIcon } from '../components/Icon';
@@ -89,6 +90,53 @@ function DayCard({ day }: { day: WeekDay }) {
         </p>
       ) : null}
     </li>
+  );
+}
+
+/**
+ * The seven-day journey trail.
+ *
+ * An orientation strip, not a summary. It draws one node per day from states the
+ * week has already decided, and it is deliberately the lightest thing on the screen:
+ * the records below are what this screen is for, and a trail that competed with them
+ * would repeat the mistake Today made when the companion card sat above the workout.
+ *
+ * IT IS DECORATIVE, AND `aria-hidden` FOR A REASON.
+ *
+ * Every fact it draws is already stated in words in the day card beneath it - "Done",
+ * "2 of 3 done", "Rest day", "To come", the Today chip. Announcing all seven again as
+ * shapes would repeat reviewed copy in a worse form, and giving the strip a composed
+ * sentence of its own would open a route for new wording to reach the user without
+ * passing through the message table. So it says nothing, and nothing is lost.
+ *
+ * NOTHING HERE IS TALLIED.
+ *
+ * No total, no fraction, no label, no text at all. Seven marks in a row already sits
+ * close enough to a tally that printing a number beside it would finish the job, and
+ * this screen is a journal.
+ *
+ * WHERE A COMPANION WOULD GO.
+ *
+ * The roadmap allows the mascot to travel along the trail. It cannot yet: the only
+ * thing available to draw is a single letter the codebase marks temporary and hides
+ * from assistive technology, and drawing it here would spread a placeholder onto a
+ * second screen. When real mascot artwork exists it belongs on the node carrying
+ * `--here`, and nothing else in this component has to change to accept it.
+ */
+function WeekTrail({ days }: { days: WeekDay[] }) {
+  return (
+    <div className="weektrail" aria-hidden="true">
+      {days.map((day) => (
+        <span
+          key={day.date}
+          className={`weektrail__node weektrail__node--${trailNodeState(day)}${
+            day.isToday ? ' weektrail__node--here' : ''
+          }`}
+        >
+          <span className="weektrail__mark" />
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -186,6 +234,8 @@ export function WeekScreen() {
             ? 'Your first week is about consistency and seeing how your body responds.'
             : 'A rolling seven days from your programme start date.'}
       </p>
+
+      <WeekTrail days={days} />
 
       {!week.hasPlan ? (
         <section className="card">
