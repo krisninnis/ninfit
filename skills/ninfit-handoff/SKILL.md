@@ -45,6 +45,11 @@ the thing to fix.
 - the relevant section of `docs/ROADMAP.md` — what to build
 - the skills that own the active workstream
 
+`ninfit-delivery-loop` is the canonical development workflow: task classes, slice
+size, when a specification is required, branch conventions, the repository-truth
+verdicts, the three verification levels, and where every task is allowed to stop.
+Read it once the state above is established, before proposing any work.
+
 `ninfit-repository-workflow` owns preflight and working-tree safety in detail. Read
 it before touching anything.
 
@@ -163,6 +168,9 @@ difference between a confident line and a fabricated one.
 
 It routes; it does not restate. Cite these rather than repeating them:
 
+- `ninfit-delivery-loop` — the canonical development loop: task classes, slice size,
+  the spec-required rule, change boundaries, branch conventions, repository-truth
+  verdicts, verification levels, stop points, the parked-work register
 - `ninfit-repository-workflow` — preflight, working-tree safety, verification
   environments, permission boundaries, reporting
 - `ninfit-product-guardrails` — the fast pre-implementation boundary check
