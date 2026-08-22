@@ -39,9 +39,15 @@ Read relevant project documentation before implementation, including as applicab
 
 Inspect relevant implementation instead of relying on summaries.
 
-Related skills: `ninfit-product-guardrails` for what may be built,
-`ninfit-ui-verification` for how to prove UI work, `ninfit-deployment-health`
-for anything that must survive a deploy.
+Related skills: `ninfit-delivery-loop` for which kind of task this is, how big
+the slice may be, which branch it belongs on and where it must stop;
+`ninfit-product-guardrails` for what may be built, `ninfit-ui-verification` for
+how to prove UI work, `ninfit-deployment-health` for anything that must survive
+a deploy.
+
+This skill owns repository mechanics. `ninfit-delivery-loop` owns the lifecycle
+those mechanics sit inside, including the repository-truth verdicts that decide
+whether local work is safe at all.
 
 ## Working-tree safety
 
