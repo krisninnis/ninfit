@@ -1,0 +1,105 @@
+import { describe, expect, it, vi } from 'vitest';
+import {
+  startJourneyGeolocationWatch,
+  type GeolocationLike,
+} from '../app/journeyGeolocationAdapter';
+
+function position(
+  latitude = 51.505,
+  longitude = -0.09,
+  accuracy = 8,
+  timestamp = Date.parse('2026-08-25T12:00:00.000Z'),
+): GeolocationPosition {
+  return {
+    coords: {
+      latitude,
+      longitude,
+      accuracy,
+      altitude: null,
+      altitudeAccuracy: null,
+      heading: null,
+      speed: null,
+      toJSON: () => ({}),
+    },
+    timestamp,
+    toJSON: () => ({}),
+  };
+}
+
+function fakeGeolocation() {
+  let success: PositionCallback | undefined;
+  let failure: PositionErrorCallback | null | undefined;
+  let suppliedOptions: PositionOptions | undefined;
+  const clearWatch = vi.fn();
+
+  const geolocation: GeolocationLike = {
+    watchPosition(next, error, options) {
+      success = next;
+      failure = error;
+      suppliedOptions = options;
+      return 42;
+    },
+    clearWatch,
+  };
+
+  return {
+    geolocation,
+    emit(next: GeolocationPosition) {
+      success?.(next);
+    },
+    fail(error: GeolocationPositionError) {
+      failure?.(error);
+    },
+    clearWatch,
+    options() {
+      return suppliedOptions;
+    },
+  };
+}
+
+describe('Journey geolocation adapter', () => {
+  it('converts watchPosition readings into Journey GPS samples', () => {
+    const fake = fakeGeolocation();
+    const onSample = vi.fn();
+
+    const watch = startJourneyGeolocationWatch({ geolocation: fake.geolocation, onSample });
+    fake.emit(position());
+
+    expect(onSample).toHaveBeenCalledWith({
+      latitude: 51.505,
+      longitude: -0.09,
+      accuracyM: 8,
+      recordedAt: '2026-08-25T12:00:00.000Z',
+    });
+    expect(fake.options()).toEqual({ enableHighAccuracy: true, maximumAge: 0, timeout: 15_000 });
+
+    watch.stop();
+    expect(fake.clearWatch).toHaveBeenCalledWith(42);
+  });
+
+  it('forwards geolocation errors without inventing Journey state', () => {
+    const fake = fakeGeolocation();
+    const onSample = vi.fn();
+    const onError = vi.fn();
+    const error = { code: 1, message: 'denied', PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 } as GeolocationPositionError;
+
+    startJourneyGeolocationWatch({ geolocation: fake.geolocation, onSample, onError });
+    fake.fail(error);
+
+    expect(onError).toHaveBeenCalledWith(error);
+    expect(onSample).not.toHaveBeenCalled();
+  });
+
+  it('is idempotent when stopped and ignores later callbacks', () => {
+    const fake = fakeGeolocation();
+    const onSample = vi.fn();
+    const watch = startJourneyGeolocationWatch({ geolocation: fake.geolocation, onSample });
+
+    watch.stop();
+    watch.stop();
+    fake.emit(position());
+
+    expect(fake.clearWatch).toHaveBeenCalledTimes(1);
+    expect(onSample).not.toHaveBeenCalled();
+  });
+});
