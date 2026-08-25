@@ -7,6 +7,7 @@ import {
   loadActiveJourneySnapshot,
   saveActiveJourneySnapshot,
 } from '../storage/activeJourneySnapshot';
+import { saveJourneyToHistory } from '../storage/journeyHistory';
 
 export interface JourneyRecoveryController {
   load(): Journey | null;
@@ -18,9 +19,9 @@ export interface JourneyRecoveryController {
 }
 
 /**
- * Small application-layer coordinator joining pure recorder transitions to the
- * single active-Journey recovery slot. Completion clears recovery evidence;
- * it does not persist completed history yet.
+ * Small application-layer coordinator joining pure recorder transitions to local
+ * persistence. Active recording state lives in the recovery slot; completion is first
+ * written to durable Journey history and only then clears recovery evidence.
  */
 export function createJourneyRecoveryController(storage: StorageAdapter): JourneyRecoveryController {
   return {
@@ -47,6 +48,7 @@ export function createJourneyRecoveryController(storage: StorageAdapter): Journe
 
     complete(journey, completedAt) {
       const next = completeJourney(journey, completedAt);
+      saveJourneyToHistory(storage, next);
       clearActiveJourneySnapshot(storage);
       return next;
     },

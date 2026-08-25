@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { Journey } from '../domain/journey';
 import { createJourneyRecoveryController } from '../app/journeyRecoveryController';
-import { createMemoryStorageAdapter } from '../storage/StorageAdapter';
+import { createMemoryStorageAdapter, type StorageAdapter } from '../storage/StorageAdapter';
 import { activeJourneySnapshotKey } from '../storage/activeJourneySnapshot';
+import { journeyHistoryKey, loadJourneyHistory } from '../storage/journeyHistory';
 
 function journey(status: Journey['status'] = 'recording'): Journey {
   return {
@@ -47,7 +48,7 @@ describe('Journey recovery controller', () => {
     expect(controller.load()?.pauses[0]?.endedAt).toBe('2026-08-25T12:07:00.000Z');
   });
 
-  it('clears active recovery evidence on completion', () => {
+  it('persists completed history before clearing active recovery evidence', () => {
     const storage = createMemoryStorageAdapter();
     const controller = createJourneyRecoveryController(storage);
     const active = journey();
@@ -56,8 +57,30 @@ describe('Journey recovery controller', () => {
     const completed = controller.complete(active, '2026-08-25T12:20:00.000Z');
 
     expect(completed.status).toBe('completed');
+    expect(loadJourneyHistory(storage)).toEqual([completed]);
     expect(controller.load()).toBeNull();
     expect(storage.get(activeJourneySnapshotKey())).toBeNull();
+  });
+
+  it('retains active recovery evidence if completed history cannot be persisted', () => {
+    const memory = createMemoryStorageAdapter();
+    const storage: StorageAdapter = {
+      ...memory,
+      set(key, value) {
+        if (key === journeyHistoryKey()) throw new Error('history unavailable');
+        memory.set(key, value);
+      },
+    };
+    const controller = createJourneyRecoveryController(storage);
+    const active = journey();
+
+    controller.save(active, '2026-08-25T12:01:00.000Z');
+
+    expect(() => controller.complete(active, '2026-08-25T12:20:00.000Z')).toThrow(
+      'history unavailable',
+    );
+    expect(controller.load()).toEqual(active);
+    expect(storage.get(activeJourneySnapshotKey())).not.toBeNull();
   });
 
   it('clears active recovery evidence when discard is explicit', () => {
