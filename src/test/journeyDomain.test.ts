@@ -62,7 +62,7 @@ describe('Journey domain foundation', () => {
     });
 
     expect(journeyPausedSeconds(journey, '2026-08-23T10:11:15.000+01:00')).toBe(75);
-    expect(journey.pauses[0].endedAt).toBeUndefined();
+    expect(journey.pauses[0]?.endedAt).toBeUndefined();
   });
 
   it('derives active time as elapsed time minus explicit pauses', () => {
