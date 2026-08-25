@@ -72,10 +72,11 @@ export function evaluateJourneySegment(
 }
 
 export function accumulateJourneyDistanceM(samples: JourneyGpsSample[]): number {
-  if (samples.length < 2) return 0;
+  const first = samples[0];
+  if (!first || samples.length < 2) return 0;
 
   let total = 0;
-  let anchor = samples[0];
+  let anchor = first;
 
   for (const candidate of samples.slice(1)) {
     const segment = evaluateJourneySegment(anchor, candidate);
