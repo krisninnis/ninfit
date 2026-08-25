@@ -1,89 +1,62 @@
 # NinFit Phone-Work Checkpoint — 2026-08-25
 
-**Status:** Handoff/checkpoint only. This file is not a second canonical backlog and does not replace `docs/CURRENT_STATE.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`, or merged architecture specifications.
+**Status:** Handoff/checkpoint only. This file does not replace `docs/CURRENT_STATE.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`, or merged architecture specifications.
 
-**Purpose:** Preserve the work completed or prepared while working from the phone so the laptop session can resume without losing ideas, PR context, or implementation direction.
+**Purpose:** Preserve the work completed or prepared while working from the phone so the laptop session can resume without losing implementation direction.
 
-## 1. What was completed from the phone
-
-### Merged into `main`
-
-- **PR #17 — Living Journey & Wearable Architecture**
-  - defines one real activity = one Journey;
-  - preserves source provenance;
-  - requires duplicate/reconciliation before PBs, achievements and rewards;
-  - separates raw vs accepted GPS evidence;
-  - defines pause/time semantics, recovery direction and private-by-default route handling;
-  - records Fitbit / Health Connect / Apple HealthKit direction without implementing them.
-
-- **PR #19 — Privacy & Security Readiness**
-  - records GPS/location, wearable/health, storage/deletion, security, social and marketing gates.
-
-- **PR #21 — Installable NinFit PWA**
-  - adds `manifest.webmanifest`;
-  - uses existing generated NinFit icons;
-  - adds conservative service-worker registration;
-  - Android Chrome recognises NinFit as installable;
-  - production Vercel deployment for the merged PWA was verified green.
-
-### Existing earlier merged phone-session work
+## 1. Merged during the phone session
 
 - **PR #16 — Growth & Marketing Automation Roadmap**
-  - preserves the future agent/bot strategy for research, content, creative, paid acquisition, lifecycle and growth analytics.
-
-## 2. Open work prepared from the phone
-
-These are intentionally still draft/open and must be reviewed/merged deliberately rather than assumed complete.
-
-- **PR #18 — Living Journey domain foundation**
-  - canonical Journey types, provenance, route evidence, privacy defaults and pure time/source helpers;
-  - previously had a deployment/build issue and must be re-verified on laptop before merge.
-
+- **PR #17 — Living Journey & Wearable Architecture**
+- **PR #19 — Privacy & Security Readiness**
 - **PR #20 — Third-Party Service Register**
-  - Vercel, Supabase, maps/OpenStreetMap, GPS, Fitbit, Health Connect, HealthKit/Apple Watch and future analytics/marketing/monitoring providers.
-
+- **PR #21 — Installable NinFit PWA**
 - **PR #22 — Release Readiness Checklist**
-  - repository truth, automated checks, mobile/PWA, GPS/privacy, storage/recovery, deployment and rollback gates.
-
 - **PR #23 — Privacy Notice Skeleton**
-  - structure only; not a final legal policy or compliance claim.
-
 - **PR #24 — Data Retention & Deletion Matrix**
-  - route-only deletion vs whole-Journey deletion;
-  - provider disconnect vs deleting imported history;
-  - re-import protection;
-  - effects of deletion on PB/achievement/reward truth.
-
 - **PR #25 — Environment & Secrets Register**
-  - local/test/preview/production/native separation;
-  - `VITE_*` values are client-visible;
-  - future Fitbit OAuth, Supabase, maps, monitoring, analytics, push and native signing credential boundaries.
-
 - **PR #26 — App Store Package**
-  - store copy, screenshot plan, privacy-safe capture rules, permission wording, Play Data Safety / Apple privacy-label preparation and feature-availability guardrails.
+
+Together these establish the product, privacy, deployment and release guardrails needed before GPS/wearable work expands.
+
+The PWA has been recognised by Android Chrome as installable. This does **not** mean NinFit is a native APK/iOS app, has background GPS, or has Health Connect/HealthKit support.
+
+## 2. Remaining production-code foundation
+
+**PR #18 — Living Journey domain foundation** remains the production-code PR requiring deliberate review before merge.
+
+Its intended bounded scope is:
+
+- canonical Journey activity/status/source/provenance/metric/route/privacy/pause types;
+- raw GPS evidence kept separate from accepted route points;
+- private-by-default Journey privacy constants;
+- pure elapsed/paused/active time helpers;
+- source-lineage lookup and source-id integrity helpers;
+- focused domain tests;
+- no persistence, UI, GPS filtering, wearable integration, rewards or spike promotion.
+
+Do not merge it merely because the docs stack is settled. Verify its diff and checks independently.
 
 ## 3. GPS / Living Journey prototype truth
 
-A local GPS spike was built and field-tested before this checkpoint. It must remain separate from production until deliberately graduated through the merged Living Journey architecture.
+A local GPS spike was built and field-tested before this checkpoint. It must remain separate from production until deliberately graduated through the Living Journey architecture.
 
-Known prototype capability from the prior laptop/OpenCode session:
+Known prototype capability:
 
 - live phone geolocation;
 - map route display;
 - start / pause / resume / finish flow;
 - synthetic browser verification;
 - real phone access through the local HTTPS development server;
-- unfinished activity was intentionally memory-only in the spike and refresh could lose it.
+- unfinished activity intentionally memory-only, so refresh could lose it.
 
 Do **not** treat the spike as production GPS, background location, durable persistence, Health Connect or native capability.
 
 ## 4. Next product milestone
 
-The target milestone after returning to the laptop is:
+> Start a real walk in NinFit, see the live route, finish it, close/reopen NinFit, and still have the Journey saved correctly and privately.
 
-> Start a real walk in NinFit, see the live route, finish it, close/reopen NinFit, and still have the completed Journey saved correctly and privately.
-
-Recommended sequence remains:
+Recommended graduation sequence:
 
 1. settle and merge the Journey domain foundation;
 2. minimum persisted active-recording snapshot;
@@ -101,39 +74,21 @@ Do not collapse this sequence into one broad GPS refactor.
 
 ## 5. Open-source engineering reference strategy
 
-A useful idea from the phone session should be preserved for future implementation work:
+Locked working rule:
 
 > **Study broadly. Reimplement deliberately. Copy only when the licence has been checked and the reuse is explicitly documented.**
 
-### Primary references to investigate
+### OpenTracks
 
-#### OpenTracks
+Primary engineering reference for GPS/Living Journey topics such as recording, background behaviour, pause/resume, local-first storage, sensor handling, route export, recovery and privacy-oriented tracking.
 
-Use primarily as an engineering reference for:
+Before direct code reuse, verify the current licence and document attribution/reuse obligations.
 
-- GPS recording;
-- background recording behaviour;
-- pause/resume semantics;
-- local/offline-first storage;
-- sensor handling;
-- route export;
-- recovery and failure behaviour;
-- privacy-oriented activity tracking.
+### wger
 
-OpenTracks is expected to be the first reference for Living Journey/GPS engineering. Before copying any code, verify the current licence and document attribution/reuse obligations.
+Primary broader fitness-platform reference for workout/routine modelling, exercise libraries, progress/measurements, nutrition concepts, API design and multi-user patterns.
 
-#### wger
-
-Use primarily as a product/data-model reference for:
-
-- workout/routine modelling;
-- exercise libraries;
-- measurements and progress;
-- nutrition concepts;
-- API design;
-- multi-user fitness platform patterns.
-
-Treat direct source reuse more cautiously. Verify its current licence before any code incorporation; prefer independent implementation of useful concepts unless reuse has been explicitly reviewed.
+Treat direct source reuse more cautiously; prefer independent implementation of concepts unless reuse has been explicitly reviewed against the current licence.
 
 ### Follow-up research task
 
@@ -150,57 +105,44 @@ Create a **NinFit Open-Source Reference Register** covering roughly 10–15 rele
 - nutrition;
 - offline/local-first storage.
 
-For every project record:
-
-- project/repository;
-- what it does especially well;
-- current licence;
-- whether direct code reuse is acceptable, conditional or unsuitable;
-- patterns worth independently implementing in NinFit;
-- exact NinFit slice where the reference is useful.
-
-This register should be a reference library, not an excuse for copying architectures wholesale.
+For every project record the repository, what it does well, current licence, reuse status, patterns worth independently implementing, and the exact NinFit slice where it is useful.
 
 ## 6. Product principles reinforced during phone work
 
 - Private by default.
-- One real-world activity should not become multiple rewarding Journeys because several sources reported it.
+- One real activity should not become multiple rewarding Journeys because several sources reported it.
 - Precise route data is more sensitive than an ordinary workout summary.
-- Fitness facts can be derived from precise location without precise location becoming social/public data.
-- Delete-route-only should remain possible independently of deleting the whole Journey where architecture permits.
-- Disconnecting Fitbit/Health Connect/HealthKit is not automatically the same as deleting historical imported data.
-- Deleted/revoked provider records must not silently reappear without defined behaviour.
+- Delete-route-only should remain possible independently of deleting the whole Journey where practical.
+- Disconnecting a provider is not automatically the same as deleting historical imported data.
+- Deleted provider records must not silently reappear without defined behaviour.
 - Marketing/analytics must not receive raw GPS routes or health streams by default.
-- PWA installability is not the same as native APK/iOS capability.
-- Background GPS, Health Connect and Apple Watch remain future native/mobile work.
+- Game/reward systems consume verified fitness facts; they do not decide whether activity happened.
+- PWA installability is not native capability.
 
 ## 7. Laptop restart order
 
-When back at the laptop:
-
 1. establish live repository truth and local working-tree truth;
-2. verify PWA installation behaviour on the phone and note any acceptance issues;
+2. verify installed-PWA behaviour on the phone and record any acceptance issues;
 3. inspect/fix/verify PR #18 rather than merging blindly;
-4. review the docs-only PRs #20 and #22–#26 for merge suitability;
-5. locate the local GPS spike and preserve its exact branch/diff;
-6. create the Open-Source Reference Register before or alongside GPS graduation research;
-7. continue with the next bounded Living Journey implementation slice;
-8. keep Phase 8 expansion/reward work separate from Journey correctness work.
+4. locate and preserve the exact local GPS spike branch/diff;
+5. create the Open-Source Reference Register before or alongside GPS graduation research;
+6. begin the next bounded Living Journey slice: active-recording persistence/recovery foundation;
+7. keep reward/Phase 8 expansion separate from Journey correctness work.
 
 ## 8. Do not accidentally claim
 
-Until independently verified in the repository/runtime, do not claim that NinFit already has:
+Until independently verified, do not claim that NinFit already has:
 
 - production background GPS;
 - durable Journey recovery;
 - Health Connect sync;
 - direct Fitbit sync;
 - HealthKit / Apple Watch sync;
-- app-store-native packaging;
+- native app-store packaging;
 - production social route sharing;
 - final privacy/legal compliance;
 - production approval for planned third-party services.
 
 ## 9. Handoff summary
 
-The phone session produced more than documentation: it established the installable PWA shell and durable architecture/privacy direction for Living Journey. The next laptop session should therefore focus on turning the already-working GPS prototype into a correctly persisted, recoverable Journey in controlled slices rather than restarting discovery.
+The phone session moved NinFit beyond planning-only work: the installable PWA is merged, and the Living Journey architecture plus its privacy/release support documents are now in `main`. The next engineering focus is to settle the Journey domain foundation and then graduate the already-working GPS prototype into a persisted, recoverable Journey in controlled slices.
