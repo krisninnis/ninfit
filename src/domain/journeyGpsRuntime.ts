@@ -9,6 +9,7 @@ import {
 export type JourneyGpsRuntimeRejectionReason =
   | JourneyGpsRejectionReason
   | 'journey_not_recording'
+  | 'non_forward_time'
   | 'impossible_speed';
 
 export type JourneyGpsRuntimeResult =
