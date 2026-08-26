@@ -138,6 +138,7 @@ export default function App() {
   const showNinFitId = route.kind === 'account';
   const showJourney = route.kind === 'journey';
   const tab: TabId = route.kind === 'tab' ? route.tab : 'today';
+  const showJourneyLauncher = route.kind === 'tab' && tab === 'today';
   const CurrentScreen = SCREENS[tab];
 
   return (
@@ -155,7 +156,10 @@ export default function App() {
        * know which path is active. Undefined when no path has been chosen - the
        * attribute is then absent and the neutral sage accent applies.
        */}
-      <div className={`app${showJourney ? ' app--journey' : ''}`} data-path={game.state.pathId}>
+      <div
+        className={`app${showJourney ? ' app--journey' : ''}${showJourneyLauncher ? ' app--today' : ''}`}
+        data-path={game.state.pathId}
+      >
         <main className="app__main" ref={mainRef}>
           {showNinFitId ? (
             <NinFitIdScreen
@@ -169,7 +173,7 @@ export default function App() {
           )}
         </main>
 
-        {route.kind === 'tab' && tab === 'today' ? (
+        {showJourneyLauncher ? (
           <JourneyLauncher onOpen={() => navigate(JOURNEY_HASH)} />
         ) : null}
 
