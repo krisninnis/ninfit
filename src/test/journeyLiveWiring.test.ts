@@ -15,8 +15,19 @@ function between(source: string, start: string, end: string): string {
   return startAt === -1 || endAt === -1 ? '' : source.slice(startAt, endAt);
 }
 
-function compact(source: string): string {
-  return source.replace(/\s+/g, '');
+function effectDependenciesAfter(source: string, marker: string): string[] {
+  const markerAt = source.indexOf(marker);
+  if (markerAt === -1) return [];
+
+  const match = source.slice(markerAt).match(/\},\s*\[([^\]]*)\]\s*\);/);
+  const dependencies = match?.[1];
+  if (dependencies === undefined) return [];
+
+  return dependencies
+    .split(',')
+    .map((dependency) => dependency.trim())
+    .filter((dependency) => dependency.length > 0)
+    .sort();
 }
 
 describe('Journey product ownership', () => {
@@ -50,9 +61,9 @@ describe('foreground GPS ownership', () => {
   });
 
   it('keys watcher lifetime to recorder status and activity type, not the changing Journey object', () => {
-    const source = compact(screen);
-    expect(source).toContain('},[journey?.status,journey?.activityType,store]);');
-    expect(source).not.toContain('},[journey,store]);');
+    const dependencies = effectDependenciesAfter(screen, 'startForegroundJourneyGpsSession({');
+    expect(dependencies).toEqual(['journey?.activityType', 'journey?.status', 'store']);
+    expect(dependencies).not.toContain('journey');
   });
 
   it('does not start phone GPS for swim', () => {
