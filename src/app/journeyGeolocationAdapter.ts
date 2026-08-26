@@ -43,8 +43,15 @@ export function startJourneyGeolocationWatch(
 ): JourneyGeolocationWatch {
   const geolocation = options.geolocation ?? browserGeolocation();
   let stopped = false;
+  let watchId: number | undefined;
 
-  const watchId = geolocation.watchPosition(
+  function stop() {
+    if (stopped) return;
+    stopped = true;
+    if (watchId !== undefined) geolocation.clearWatch(watchId);
+  }
+
+  watchId = geolocation.watchPosition(
     (position) => {
       if (stopped) return;
       options.onSample({
@@ -56,16 +63,11 @@ export function startJourneyGeolocationWatch(
     },
     (error) => {
       if (stopped) return;
+      if (error.code === error.PERMISSION_DENIED) stop();
       options.onError?.(error);
     },
     options.positionOptions ?? DEFAULT_POSITION_OPTIONS,
   );
 
-  return {
-    stop() {
-      if (stopped) return;
-      stopped = true;
-      geolocation.clearWatch(watchId);
-    },
-  };
+  return { stop };
 }
