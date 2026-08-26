@@ -1,4 +1,13 @@
 @layer screens {
+  .app--journey {
+    width: 100%;
+    max-width: none;
+  }
+
+  .app--journey .app__main {
+    padding: 0;
+  }
+
   .active-journey {
     min-height: 100dvh;
     display: grid;
@@ -6,8 +15,9 @@
     gap: var(--ft-space-4);
     padding:
       max(var(--ft-space-4), env(safe-area-inset-top))
-      var(--ft-space-4)
-      max(var(--ft-space-4), env(safe-area-inset-bottom));
+      max(var(--ft-space-4), env(safe-area-inset-right))
+      max(var(--ft-space-4), env(safe-area-inset-bottom))
+      max(var(--ft-space-4), env(safe-area-inset-left));
     color: var(--ft-text-primary);
     background:
       radial-gradient(circle at 50% 24%, color-mix(in srgb, var(--ft-accent-soft) 72%, transparent), transparent 42%),
@@ -217,13 +227,33 @@
 
   @media (min-width: 768px) {
     .active-journey {
-      width: min(100%, 900px);
-      margin: 0 auto;
-      padding-inline: var(--ft-space-6);
+      padding-inline:
+        max(var(--ft-space-6), env(safe-area-inset-left))
+        max(var(--ft-space-6), env(safe-area-inset-right));
     }
 
     .active-journey__world {
       min-height: 440px;
+    }
+  }
+
+  @media (min-width: 900px) {
+    .app--journey {
+      grid-template-columns: minmax(0, 1fr);
+      background: transparent;
+      backdrop-filter: none;
+      border-inline: 0;
+      box-shadow: none;
+    }
+
+    .app--journey .app__main {
+      grid-column: 1;
+    }
+
+    .active-journey {
+      width: min(100%, 1180px);
+      margin-inline: auto;
+      padding-inline: var(--ft-space-7);
     }
   }
 }

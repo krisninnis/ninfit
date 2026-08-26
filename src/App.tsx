@@ -153,7 +153,7 @@ export default function App() {
        * know which path is active. Undefined when no path has been chosen - the
        * attribute is then absent and the neutral sage accent applies.
        */}
-      <div className="app" data-path={game.state.pathId}>
+      <div className={`app${showJourney ? ' app--journey' : ''}`} data-path={game.state.pathId}>
         <main className="app__main" ref={mainRef}>
           {showNinFitId ? (
             <NinFitIdScreen
