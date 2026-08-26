@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getAppContext } from '../../app/bootstrap';
 import { startForegroundJourneyGpsSession } from '../../app/foregroundJourneyGpsSession';
+import { journeyUsesPhoneGps } from '../../app/journeyLaunchController';
 import type { ActiveJourneyGpsSession } from '../../app/activeJourneyGpsSession';
 import { createJourneyRecoveryController } from '../../app/journeyRecoveryController';
 import { journeyActiveSeconds, type Journey } from '../../domain/journey';
@@ -32,6 +33,8 @@ function activityLabel(journey: Journey): string {
       return 'Hike';
     case 'cycle':
       return 'Cycle';
+    case 'swim':
+      return 'Swim';
     default:
       return 'Journey';
   }
@@ -39,6 +42,7 @@ function activityLabel(journey: Journey): string {
 
 function initialGpsState(journey: Journey | null): JourneyLiveGpsState {
   if (journey === null) return 'finished';
+  if (!journeyUsesPhoneGps(journey.activityType)) return 'not_applicable';
   if (journey.status === 'paused') return 'paused';
   if (journey.status === 'completed') return 'finished';
   return 'connecting';
@@ -64,13 +68,16 @@ export function ActiveJourneyScreen({ onClose }: ActiveJourneyScreenProps) {
   }, [journey?.status]);
 
   /*
-   * The watcher lifecycle follows recorder STATUS, not the whole Journey object.
-   * Accepted GPS samples replace `journey` many times while status stays recording;
-   * depending on the object would tear down and recreate watchPosition on every point.
+   * The watcher lifetime follows recorder STATUS, not the changing Journey object.
+   * Swim is deliberately excluded because phone GPS is not an honest pool recorder.
    */
   useEffect(() => {
     const current = journeyRef.current;
     if (current === null || current.status !== 'recording') return undefined;
+    if (!journeyUsesPhoneGps(current.activityType)) {
+      setGpsState('not_applicable');
+      return undefined;
+    }
 
     setGpsState('connecting');
     let session: ActiveJourneyGpsSession;
@@ -91,8 +98,6 @@ export function ActiveJourneyScreen({ onClose }: ActiveJourneyScreenProps) {
         },
       });
     } catch {
-      // Missing browser geolocation or malformed recovery state must not crash the UI.
-      // The Journey remains recoverable and the person can pause/finish or leave safely.
       setGpsState('runtime_error');
       return undefined;
     }
@@ -102,7 +107,7 @@ export function ActiveJourneyScreen({ onClose }: ActiveJourneyScreenProps) {
       session.stop();
       if (sessionRef.current === session) sessionRef.current = null;
     };
-  }, [journey?.status, store]);
+  }, [journey?.status, journey?.activityType, store]);
 
   const stopGps = () => {
     sessionRef.current?.stop();
@@ -115,9 +120,9 @@ export function ActiveJourneyScreen({ onClose }: ActiveJourneyScreenProps) {
         <div className="active-journey__empty-panel">
           <p className="active-journey__eyebrow">Living Journey</p>
           <h1 id="active-journey-title">No active Journey</h1>
-          <p>There is no unfinished Journey on this device. Start a walk from Today when you are ready.</p>
+          <p>There is no unfinished Journey on this device. Choose an activity from Journey when you are ready.</p>
           <button type="button" className="btn btn--primary" onClick={onClose}>
-            Back to Today
+            Back to Journey
           </button>
         </div>
       </section>
@@ -137,7 +142,7 @@ export function ActiveJourneyScreen({ onClose }: ActiveJourneyScreenProps) {
     const next = recovery.pause(journeyRef.current ?? journey, changedAt);
     journeyRef.current = next;
     setJourney(next);
-    setGpsState('paused');
+    setGpsState(journeyUsesPhoneGps(next.activityType) ? 'paused' : 'not_applicable');
     setNow(changedAt);
   };
 
@@ -147,7 +152,7 @@ export function ActiveJourneyScreen({ onClose }: ActiveJourneyScreenProps) {
     const next = recovery.resume(journeyRef.current ?? journey, changedAt);
     journeyRef.current = next;
     setJourney(next);
-    setGpsState('connecting');
+    setGpsState(journeyUsesPhoneGps(next.activityType) ? 'connecting' : 'not_applicable');
     setNow(changedAt);
   };
 
@@ -172,7 +177,7 @@ export function ActiveJourneyScreen({ onClose }: ActiveJourneyScreenProps) {
       <header className="active-journey__topbar">
         <button type="button" className="active-journey__leave" onClick={leave}>
           <span aria-hidden="true">←</span>
-          <span>Today</span>
+          <span>Journey</span>
         </button>
         <div className="active-journey__identity">
           <span className="active-journey__eyebrow">Living Journey</span>
@@ -199,9 +204,7 @@ export function ActiveJourneyScreen({ onClose }: ActiveJourneyScreenProps) {
       <div className="active-journey__metrics" aria-label="Live Journey metrics">
         <div className="active-journey__metric">
           <span className="active-journey__metric-label">Active time</span>
-          <strong className="active-journey__metric-value">
-            {formatJourneyDuration(activeSeconds)}
-          </strong>
+          <strong className="active-journey__metric-value">{formatJourneyDuration(activeSeconds)}</strong>
         </div>
         <div className="active-journey__metric">
           <span className="active-journey__metric-label">State</span>
@@ -214,7 +217,7 @@ export function ActiveJourneyScreen({ onClose }: ActiveJourneyScreenProps) {
       <div className="active-journey__dock" aria-label="Journey controls">
         {isCompleted ? (
           <button type="button" className="btn btn--primary active-journey__dock-action" onClick={leave}>
-            Back to Today
+            Back to Journey
           </button>
         ) : (
           <>
