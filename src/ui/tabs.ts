@@ -44,7 +44,10 @@ export function parseTabFromHash(hash: string): TabId {
   return isTabId(normalised) ? normalised : DEFAULT_TAB;
 }
 
-// --- The account route ------------------------------------------------------
+// --- Standalone routes -----------------------------------------------------
+
+/** The dedicated active recording experience. It is deliberately not a tab. */
+export const JOURNEY_HASH = '#/journey';
 
 /**
  * The dedicated NinFit ID experience, which is deliberately NOT a tab.
@@ -63,6 +66,7 @@ export const ACCOUNT_CONFIRMED_HASH = '#/account/confirmed';
 
 export type AppRoute =
   | { readonly kind: 'account'; readonly confirmed: boolean }
+  | { readonly kind: 'journey' }
   | { readonly kind: 'tab'; readonly tab: TabId };
 
 /**
@@ -86,15 +90,16 @@ export function looksLikeAuthReturn(hash: string): boolean {
 }
 
 /**
- * The whole of NinFit's routing: the account experience, or one of the five tabs.
+ * The whole of NinFit's routing: standalone experiences, or one of the five tabs.
  *
  * Layered over `parseTabFromHash` rather than replacing it, so tab parsing keeps its
  * existing behaviour exactly - including the fallback that sends anything
- * unrecognised, `#/account` included, to Today if it ever reaches that path.
+ * unrecognised to Today if it ever reaches that path.
  */
 export function parseRouteFromHash(hash: string): AppRoute {
   const normalised = normaliseHash(hash);
 
+  if (normalised === 'journey') return { kind: 'journey' };
   if (normalised === 'account') return { kind: 'account', confirmed: false };
   if (normalised === 'account/confirmed') return { kind: 'account', confirmed: true };
 

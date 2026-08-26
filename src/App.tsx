@@ -7,6 +7,7 @@ import { ProfileScreen } from './ui/screens/ProfileScreen';
 import { ProgressScreen } from './ui/screens/ProgressScreen';
 import { TodayScreen } from './ui/screens/TodayScreen';
 import { WeekScreen } from './ui/screens/WeekScreen';
+import { ActiveJourneyScreen } from './ui/screens/ActiveJourneyScreen';
 import { PageBackdrop } from './ui/components/PageBackdrop';
 import { StartupCinematic } from './ui/screens/StartupCinematic';
 import { BACKDROP_FOR_TAB } from './ui/backgrounds/registry';
@@ -32,9 +33,9 @@ const SCREENS: Record<TabId, ComponentType> = {
 };
 
 export default function App() {
-  // One navigation source of truth: the URL hash. The dedicated NinFit ID experience
-  // is a route rather than a piece of component state, so the phone's back button
-  // moves through it like anywhere else and a confirmation email can link into it.
+  // One navigation source of truth: the URL hash. Standalone experiences such as
+  // NinFit ID and an active Journey are routes rather than tabs, so the phone's back
+  // button can move through them without inventing a second navigation state.
   const [route, setRoute] = useState<AppRoute>(() =>
     parseRouteFromHash(window.location.hash),
   );
@@ -133,22 +134,18 @@ export default function App() {
   }
 
   const showNinFitId = route.kind === 'account';
+  const showJourney = route.kind === 'journey';
   const tab: TabId = route.kind === 'tab' ? route.tab : 'today';
   const CurrentScreen = SCREENS[tab];
 
   return (
     <>
       {/*
-       * The world the user is standing in. Decorative and sibling to the shell, so
-       * it can be fixed behind everything without any screen owning it.
-       *
-       * Deliberately NOT shown on the NinFit ID flow: that screen is a decision
-       * point rather than a place, and it brings its own hero treatment.
-       *
-       * The region comes from the route. It has nothing to do with `data-path`
-       * below, which is the fitness path and is set from game state.
+       * Tab screens stand in a shared world. Standalone routes own their own visual
+       * treatment: NinFit ID is a decision point, while the active Journey is itself
+       * the hero world surface and must not inherit a tab backdrop underneath it.
        */}
-      {!showNinFitId ? <PageBackdrop id={BACKDROP_FOR_TAB[tab]} /> : null}
+      {!showNinFitId && !showJourney ? <PageBackdrop id={BACKDROP_FOR_TAB[tab]} /> : null}
 
       {/*
        * The single place a path becomes visible. Every accent in the app resolves
@@ -156,19 +153,21 @@ export default function App() {
        * know which path is active. Undefined when no path has been chosen - the
        * attribute is then absent and the neutral sage accent applies.
        */}
-      <div className="app" data-path={game.state.pathId}>
+      <div className={`app${showJourney ? ' app--journey' : ''}`} data-path={game.state.pathId}>
         <main className="app__main" ref={mainRef}>
           {showNinFitId ? (
             <NinFitIdScreen
               returningFromConfirmation={route.confirmed}
               onSkip={() => navigate(hashForTab('today'))}
             />
+          ) : showJourney ? (
+            <ActiveJourneyScreen onClose={() => navigate(hashForTab('today'))} />
           ) : (
             <CurrentScreen />
           )}
         </main>
 
-        {!showNinFitId ? (
+        {route.kind === 'tab' ? (
           <TabBar current={tab} onSelect={(id) => setRoute({ kind: 'tab', tab: id })} />
         ) : null}
       </div>

@@ -22,6 +22,14 @@ const read = (...parts: string[]) => readFileSync(join(SRC, ...parts), 'utf8');
 const code = (source: string) =>
   source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
 
+function openingTagContaining(source: string, needle: string): string {
+  const at = source.indexOf(needle);
+  if (at === -1) return '';
+  const start = source.lastIndexOf('<', at);
+  const end = source.indexOf('>', at);
+  return start === -1 || end === -1 ? '' : source.slice(start, end + 1);
+}
+
 const app = read('App.tsx');
 const primitive = read('ui', 'components', 'PageBackdrop.tsx');
 const backdropCss = read('styles', 'components', 'backdrop.css');
@@ -270,10 +278,13 @@ describe('artwork stays decorative', () => {
 // ---------------------------------------------------------------------------
 
 describe('backgrounds are not a second path system', () => {
-  it('keeps exactly one data-path activation point', () => {
+  it('keeps exactly one data-path activation point on the app root', () => {
     const occurrences = [...app.matchAll(/data-path=/g)];
+    const rootTag = openingTagContaining(app, 'data-path={game.state.pathId}');
     expect(occurrences).toHaveLength(1);
-    expect(app).toContain('<div className="app" data-path={game.state.pathId}>');
+    expect(rootTag).toContain('className=');
+    expect(rootTag).toContain('app');
+    expect(rootTag).toContain('data-path={game.state.pathId}');
   });
 
   it('never lets the backdrop read or write the fitness path', () => {

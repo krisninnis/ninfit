@@ -153,11 +153,12 @@ describe('it disturbs nothing already working', () => {
     expect(shell).not.toContain('TabBar');
   });
 
-  it('leaves the account flow chrome-free', () => {
-    expect(app).toContain('{!showNinFitId ? (');
+  it('leaves standalone routes chrome-free', () => {
+    expect(app).toContain("route.kind === 'tab' ? (");
+    expect(app).toContain("route.kind === 'account'");
   });
 
-  it('adds no navigation library and no new routing', () => {
+  it('adds no navigation library and no new routing dependency', () => {
     expect(app).toContain('parseRouteFromHash');
     expect(app).toContain('routeAfterHashChange');
     const pkg = readFileSync(join(SRC, '..', 'package.json'), 'utf8');

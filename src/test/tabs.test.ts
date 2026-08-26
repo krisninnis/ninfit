@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_TAB,
+  JOURNEY_HASH,
   TABS,
   hashForTab,
   isTabId,
+  parseRouteFromHash,
   parseTabFromHash,
   tabDefinition,
 } from '../ui/tabs';
@@ -47,6 +49,17 @@ describe('parseTabFromHash', () => {
     expect(parseTabFromHash('  #/progress  ')).toBe('progress');
     expect(parseTabFromHash('profile')).toBe('profile');
     expect(parseTabFromHash('#/data/')).toBe('data');
+  });
+});
+
+describe('standalone routes', () => {
+  it('parses the active Journey without adding it to the tab bar', () => {
+    expect(parseRouteFromHash(JOURNEY_HASH)).toEqual({ kind: 'journey' });
+    expect(TABS.some((tab) => tab.id === ('journey' as never))).toBe(false);
+  });
+
+  it('keeps ordinary tab routing unchanged', () => {
+    expect(parseRouteFromHash('#/week')).toEqual({ kind: 'tab', tab: 'week' });
   });
 });
 

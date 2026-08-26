@@ -48,5 +48,6 @@
 @import './screens/profile.css';
 @import './screens/data.css';
 @import './screens/game.css';
+@import './screens/active-journey.css';
 
 @import './motion.css';
