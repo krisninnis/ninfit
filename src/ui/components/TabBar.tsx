@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
-import { TABS, hashForTab, type TabId } from '../tabs';
+import { PRIMARY_NAV, hashForPrimaryNav, type PrimaryNavId } from '../tabs';
 
 interface TabBarProps {
-  current: TabId;
-  onSelect: (id: TabId) => void;
+  current: PrimaryNavId;
+  onSelect: (id: PrimaryNavId) => void;
 }
 
-const ICON_PATHS: Record<TabId, ReactNode> = {
+const ICON_PATHS: Record<PrimaryNavId, ReactNode> = {
   today: (
     <>
       <rect x="4" y="4" width="16" height="16" rx="4.5" />
@@ -17,6 +17,13 @@ const ICON_PATHS: Record<TabId, ReactNode> = {
     <>
       <rect x="3.5" y="5" width="17" height="14.5" rx="3.5" />
       <path d="M3.5 10h17M3.5 14.75h17M9.5 10v9.5" />
+    </>
+  ),
+  journey: (
+    <>
+      <path d="M5 18.5c2.5-5 4.5-7 7-7s4.5 2 7 7" />
+      <circle cx="6" cy="6" r="2.25" />
+      <path d="M6 8.25v3.25" />
     </>
   ),
   progress: (
@@ -39,7 +46,7 @@ const ICON_PATHS: Record<TabId, ReactNode> = {
   ),
 };
 
-function TabIcon({ id }: { id: TabId }) {
+function TabIcon({ id }: { id: PrimaryNavId }) {
   return (
     <svg
       className="tabbar__icon"
@@ -60,21 +67,21 @@ function TabIcon({ id }: { id: TabId }) {
 export function TabBar({ current, onSelect }: TabBarProps) {
   return (
     <nav className="tabbar" aria-label="Main">
-      {TABS.map((tab) => {
-        const isCurrent = tab.id === current;
+      {PRIMARY_NAV.map((item) => {
+        const isCurrent = item.id === current;
         return (
           <button
-            key={tab.id}
+            key={item.id}
             type="button"
             className="tabbar__tab"
             aria-current={isCurrent ? 'page' : undefined}
             onClick={() => {
-              window.location.hash = hashForTab(tab.id);
-              onSelect(tab.id);
+              window.location.hash = hashForPrimaryNav(item.id);
+              onSelect(item.id);
             }}
           >
-            <TabIcon id={tab.id} />
-            <span className="tabbar__label">{tab.label}</span>
+            <TabIcon id={item.id} />
+            <span className="tabbar__label">{item.label}</span>
           </button>
         );
       })}

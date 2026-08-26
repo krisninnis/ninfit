@@ -1,6 +1,6 @@
 import type { ISODateTime, UUID } from './types';
 
-export type JourneyActivityType = 'walk' | 'run' | 'hike' | 'cycle' | 'other';
+export type JourneyActivityType = 'walk' | 'run' | 'hike' | 'cycle' | 'swim' | 'other';
 
 export type JourneyStatus = 'recording' | 'paused' | 'completed' | 'imported';
 

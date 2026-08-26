@@ -6,6 +6,8 @@ import {
   journeyDistanceM,
   journeyGpsLabel,
   journeyGpsPresentationState,
+  journeyLiveGpsLabel,
+  journeyLiveGpsNote,
 } from '../ui/journeyPresentation';
 
 function journey(): Journey {
@@ -53,7 +55,7 @@ describe('active Journey presentation', () => {
     expect(journeyDistanceM(value)).toBe(1250);
   });
 
-  it('shows stored GPS evidence only after a trusted accepted route point exists', () => {
+  it('treats accepted route points as stored evidence rather than proof of a live watcher', () => {
     const value = journey();
     expect(journeyGpsPresentationState(value)).toBe('waiting');
     expect(journeyGpsLabel('waiting')).toBe('GPS waiting');
@@ -72,5 +74,21 @@ describe('active Journey presentation', () => {
 
     expect(journeyGpsPresentationState(value)).toBe('receiving');
     expect(journeyGpsLabel('receiving')).toBe('GPS points saved');
+  });
+
+  it('labels live foreground GPS states without overstating degraded states', () => {
+    expect(journeyLiveGpsLabel('connecting')).toBe('GPS connecting');
+    expect(journeyLiveGpsLabel('live')).toBe('GPS live');
+    expect(journeyLiveGpsLabel('searching')).toBe('GPS searching');
+    expect(journeyLiveGpsLabel('permission_denied')).toBe('Location permission needed');
+    expect(journeyLiveGpsLabel('runtime_error')).toBe('GPS stopped');
+    expect(journeyLiveGpsLabel('paused')).toBe('GPS paused');
+    expect(journeyLiveGpsLabel('finished')).toBe('GPS finished');
+  });
+
+  it('explains that permission and runtime failures need an explicit retry', () => {
+    expect(journeyLiveGpsNote('permission_denied')).toContain('Pause and resume');
+    expect(journeyLiveGpsNote('runtime_error')).toContain('Pause and resume');
+    expect(journeyLiveGpsNote('live')).toContain('updating this Journey');
   });
 });

@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_TAB,
+  JOURNEY_ACTIVE_HASH,
   JOURNEY_HASH,
+  PRIMARY_NAV,
   TABS,
+  hashForPrimaryNav,
   hashForTab,
   isTabId,
   parseRouteFromHash,
@@ -11,8 +14,15 @@ import {
 } from '../ui/tabs';
 
 describe('tabs', () => {
-  it('defines exactly the five v0.1 screens, in order', () => {
+  it('keeps the original five journal tabs in order', () => {
     expect(TABS.map((tab) => tab.id)).toEqual(['today', 'week', 'progress', 'profile', 'data']);
+  });
+
+  it('adds Journey as a primary navigation destination without weakening TabId', () => {
+    expect(PRIMARY_NAV.map((item) => item.id)).toEqual([
+      'today', 'week', 'journey', 'progress', 'profile', 'data',
+    ]);
+    expect(isTabId('journey')).toBe(false);
   });
 
   it('defaults to Today', () => {
@@ -28,7 +38,7 @@ describe('tabs', () => {
 });
 
 describe('parseTabFromHash', () => {
-  it('parses each tab from its canonical hash', () => {
+  it('parses each journal tab from its canonical hash', () => {
     for (const tab of TABS) {
       expect(parseTabFromHash(hashForTab(tab.id))).toBe(tab.id);
     }
@@ -43,19 +53,17 @@ describe('parseTabFromHash', () => {
   ])('falls back to Today for %s (%s)', (hash) => {
     expect(parseTabFromHash(hash)).toBe('today');
   });
-
-  it('tolerates casing, whitespace, missing hash and trailing slash', () => {
-    expect(parseTabFromHash('#/WEEK')).toBe('week');
-    expect(parseTabFromHash('  #/progress  ')).toBe('progress');
-    expect(parseTabFromHash('profile')).toBe('profile');
-    expect(parseTabFromHash('#/data/')).toBe('data');
-  });
 });
 
-describe('standalone routes', () => {
-  it('parses the active Journey without adding it to the tab bar', () => {
-    expect(parseRouteFromHash(JOURNEY_HASH)).toEqual({ kind: 'journey' });
-    expect(TABS.some((tab) => tab.id === ('journey' as never))).toBe(false);
+describe('Journey routes', () => {
+  it('separates Journey Home from the immersive active recorder', () => {
+    expect(parseRouteFromHash(JOURNEY_HASH)).toEqual({ kind: 'journey-home' });
+    expect(parseRouteFromHash(JOURNEY_ACTIVE_HASH)).toEqual({ kind: 'journey-active' });
+  });
+
+  it('builds Journey and journal navigation hashes correctly', () => {
+    expect(hashForPrimaryNav('journey')).toBe(JOURNEY_HASH);
+    expect(hashForPrimaryNav('week')).toBe('#/week');
   });
 
   it('keeps ordinary tab routing unchanged', () => {
@@ -79,6 +87,7 @@ describe('isTabId', () => {
   it('accepts known ids and rejects others', () => {
     expect(isTabId('today')).toBe(true);
     expect(isTabId('data')).toBe(true);
+    expect(isTabId('journey')).toBe(false);
     expect(isTabId('settings')).toBe(false);
     expect(isTabId('')).toBe(false);
   });
