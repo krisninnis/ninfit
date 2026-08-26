@@ -1,0 +1,229 @@
+@layer screens {
+  .active-journey {
+    min-height: 100dvh;
+    display: grid;
+    grid-template-rows: auto minmax(320px, 1fr) auto auto;
+    gap: var(--ft-space-4);
+    padding:
+      max(var(--ft-space-4), env(safe-area-inset-top))
+      var(--ft-space-4)
+      max(var(--ft-space-4), env(safe-area-inset-bottom));
+    color: var(--ft-text-primary);
+    background:
+      radial-gradient(circle at 50% 24%, color-mix(in srgb, var(--ft-accent-soft) 72%, transparent), transparent 42%),
+      linear-gradient(180deg, color-mix(in srgb, var(--ft-surface-page) 88%, var(--ft-accent-soft)) 0%, var(--ft-surface-page) 72%);
+  }
+
+  .active-journey--empty {
+    place-items: center;
+    grid-template-rows: 1fr;
+  }
+
+  .active-journey__empty-panel {
+    width: min(100%, 420px);
+    display: grid;
+    gap: var(--ft-space-4);
+    text-align: center;
+    justify-items: center;
+    padding: var(--ft-space-6);
+  }
+
+  .active-journey__empty-panel h1,
+  .active-journey__identity h1 {
+    margin: 0;
+  }
+
+  .active-journey__empty-panel p {
+    margin: 0;
+    color: var(--ft-text-secondary);
+  }
+
+  .active-journey__topbar {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: var(--ft-space-3);
+  }
+
+  .active-journey__leave {
+    min-height: var(--ft-control-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ft-space-2);
+    border: 0;
+    padding: 0 var(--ft-space-2);
+    color: var(--ft-text-secondary);
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .active-journey__identity {
+    min-width: 0;
+  }
+
+  .active-journey__identity h1 {
+    font-size: var(--ft-text-xl);
+    line-height: var(--ft-leading-tight);
+  }
+
+  .active-journey__eyebrow,
+  .active-journey__metric-label,
+  .active-journey__distance-unit {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: var(--ft-text-xs);
+    font-weight: var(--ft-weight-semibold);
+    color: var(--ft-text-tertiary);
+  }
+
+  .active-journey__status {
+    min-height: var(--ft-control-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ft-space-2);
+    padding: 0 var(--ft-space-3);
+    border: 1px solid color-mix(in srgb, var(--ft-border-subtle) 74%, transparent);
+    border-radius: var(--ft-radius-pill);
+    background: color-mix(in srgb, var(--ft-surface-raised) 72%, transparent);
+    backdrop-filter: blur(16px);
+    font-size: var(--ft-text-sm);
+    color: var(--ft-text-secondary);
+  }
+
+  .active-journey__status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--ft-radius-circle);
+    background: var(--ft-text-tertiary);
+  }
+
+  .active-journey__status--receiving .active-journey__status-dot {
+    background: var(--ft-accent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--ft-accent-soft) 70%, transparent);
+  }
+
+  .active-journey__world {
+    position: relative;
+    overflow: hidden;
+    min-height: 320px;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: var(--ft-space-3);
+    isolation: isolate;
+    border-radius: var(--ft-radius-xl);
+    background:
+      radial-gradient(ellipse at 52% 78%, color-mix(in srgb, var(--ft-accent-soft) 78%, transparent), transparent 46%),
+      linear-gradient(180deg, color-mix(in srgb, var(--ft-surface-raised) 60%, transparent), color-mix(in srgb, var(--ft-surface-sunken) 82%, var(--ft-accent-soft)));
+    box-shadow: var(--ft-shadow-reward);
+  }
+
+  .active-journey__world::before,
+  .active-journey__world::after {
+    content: '';
+    position: absolute;
+    inset-inline: -10%;
+    bottom: -28%;
+    height: 62%;
+    border-radius: 50% 50% 0 0;
+    z-index: -1;
+    background: color-mix(in srgb, var(--ft-accent-soft) 54%, var(--ft-surface-sunken));
+    transform: rotate(-4deg);
+  }
+
+  .active-journey__world::after {
+    bottom: -38%;
+    transform: rotate(5deg) scaleX(1.18);
+    background: color-mix(in srgb, var(--ft-accent-soft) 34%, var(--ft-surface-sunken));
+  }
+
+  .active-journey__horizon {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    opacity: 0.58;
+    background:
+      linear-gradient(132deg, transparent 0 44%, color-mix(in srgb, var(--ft-border-subtle) 56%, transparent) 44.5% 45%, transparent 45.5% 100%),
+      linear-gradient(48deg, transparent 0 52%, color-mix(in srgb, var(--ft-border-subtle) 48%, transparent) 52.5% 53%, transparent 53.5% 100%);
+  }
+
+  .active-journey__distance {
+    display: flex;
+    align-items: baseline;
+    gap: var(--ft-space-2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .active-journey__distance-value {
+    font-family: var(--ft-font-display);
+    font-size: clamp(4.5rem, 20vw, 8rem);
+    line-height: 0.9;
+    letter-spacing: -0.06em;
+    font-weight: var(--ft-weight-bold);
+  }
+
+  .active-journey__distance-unit {
+    font-size: var(--ft-text-sm);
+  }
+
+  .active-journey__world-note {
+    max-width: 30ch;
+    margin: 0;
+    text-align: center;
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-sm);
+  }
+
+  .active-journey__metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--ft-space-3);
+  }
+
+  .active-journey__metric {
+    display: grid;
+    gap: var(--ft-space-1);
+    padding: var(--ft-space-3) var(--ft-space-4);
+    border-radius: var(--ft-radius-lg);
+    background: color-mix(in srgb, var(--ft-surface-raised) 68%, transparent);
+    backdrop-filter: blur(16px);
+  }
+
+  .active-journey__metric-value {
+    font-size: var(--ft-text-xl);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .active-journey__dock {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--ft-space-3);
+    padding: var(--ft-space-3);
+    border: 1px solid color-mix(in srgb, var(--ft-border-subtle) 74%, transparent);
+    border-radius: var(--ft-radius-xl);
+    background: color-mix(in srgb, var(--ft-surface-raised) 78%, transparent);
+    box-shadow: var(--ft-shadow-overlay);
+    backdrop-filter: blur(20px);
+  }
+
+  .active-journey__dock-action {
+    min-width: 0;
+  }
+
+  .active-journey__dock > :only-child {
+    grid-column: 1 / -1;
+  }
+
+  @media (min-width: 768px) {
+    .active-journey {
+      width: min(100%, 900px);
+      margin: 0 auto;
+      padding-inline: var(--ft-space-6);
+    }
+
+    .active-journey__world {
+      min-height: 440px;
+    }
+  }
+}
