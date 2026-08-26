@@ -26,8 +26,7 @@ function mobileBaseline(source: string): string {
 
 describe('one navigation, two compositions', () => {
   it('has exactly one navigation component', () => {
-    expect(app).toContain('<TabBar');
-    expect(app).toContain('current={currentNav}');
+    expect(app).toContain('<TabBar current={tab}');
     expect([...app.matchAll(/<TabBar/g)]).toHaveLength(1);
     expect(app).not.toMatch(/SideNav|Sidebar|DesktopNav/);
   });
