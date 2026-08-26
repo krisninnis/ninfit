@@ -152,10 +152,13 @@
     position: absolute;
     inset: 0;
     z-index: -2;
-    opacity: 0.58;
-    background:
-      linear-gradient(132deg, transparent 0 44%, color-mix(in srgb, var(--ft-border-subtle) 56%, transparent) 44.5% 45%, transparent 45.5% 100%),
-      linear-gradient(48deg, transparent 0 52%, color-mix(in srgb, var(--ft-border-subtle) 48%, transparent) 52.5% 53%, transparent 53.5% 100%);
+    opacity: 0.46;
+    background: linear-gradient(
+      180deg,
+      transparent 0 57%,
+      color-mix(in srgb, var(--ft-border-subtle) 52%, transparent) 57.5% 58%,
+      transparent 58.5% 100%
+    );
   }
 
   .active-journey__distance {
@@ -223,6 +226,28 @@
 
   .active-journey__dock > :only-child {
     grid-column: 1 / -1;
+  }
+
+  @media (max-width: 479px) {
+    .active-journey__topbar {
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: start;
+    }
+
+    .active-journey__identity {
+      justify-self: end;
+      padding-top: var(--ft-space-1);
+      text-align: right;
+    }
+
+    .active-journey__eyebrow {
+      white-space: nowrap;
+    }
+
+    .active-journey__status {
+      grid-column: 1 / -1;
+      justify-self: start;
+    }
   }
 
   @media (min-width: 768px) {
