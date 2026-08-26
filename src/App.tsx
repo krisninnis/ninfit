@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import { TabBar } from './ui/components/TabBar';
+import { JourneyLauncher } from './ui/components/JourneyLauncher';
 import { OnboardingScreen } from './ui/screens/OnboardingScreen';
 import { NinFitIdScreen } from './ui/screens/NinFitIdScreen';
 import { DataScreen } from './ui/screens/DataScreen';
@@ -17,6 +18,7 @@ import { useGame } from './ui/hooks/useGame';
 import { visibleMascotFamily } from './domain/game/mascot';
 import {
   ACCOUNT_HASH,
+  JOURNEY_HASH,
   hashForTab,
   parseRouteFromHash,
   routeAfterHashChange,
@@ -166,6 +168,10 @@ export default function App() {
             <CurrentScreen />
           )}
         </main>
+
+        {route.kind === 'tab' && tab === 'today' ? (
+          <JourneyLauncher onOpen={() => navigate(JOURNEY_HASH)} />
+        ) : null}
 
         {route.kind === 'tab' ? (
           <TabBar current={tab} onSelect={(id) => setRoute({ kind: 'tab', tab: id })} />
