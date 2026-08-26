@@ -6,9 +6,8 @@ import { describe, expect, it } from 'vitest';
 const SRC = fileURLToPath(new URL('..', import.meta.url));
 const read = (...parts: string[]) => readFileSync(join(SRC, ...parts), 'utf8');
 const app = read('App.tsx');
+const home = read('ui', 'screens', 'JourneyScreen.tsx');
 const screen = read('ui', 'screens', 'ActiveJourneyScreen.tsx');
-const launcher = read('ui', 'components', 'JourneyLauncher.tsx');
-const launcherCss = read('styles', 'components', 'journey-launcher.css');
 
 function between(source: string, start: string, end: string): string {
   const startAt = source.indexOf(start);
@@ -20,24 +19,25 @@ function compact(source: string): string {
   return source.replace(/\s+/g, '');
 }
 
-describe('live Journey entry point', () => {
-  it('offers the launcher only from Today and opens the standalone Journey route', () => {
-    expect(app).toContain("route.kind === 'tab' && tab === 'today'");
-    expect(app).toContain('<JourneyLauncher onOpen={() => navigate(JOURNEY_HASH)} />');
-    expect(app).toContain('JOURNEY_HASH');
+describe('Journey product ownership', () => {
+  it('renders Journey Home as a primary destination and keeps active recording immersive', () => {
+    expect(app).toContain("route.kind === 'journey-home'");
+    expect(app).toContain("route.kind === 'journey-active'");
+    expect(app).toContain('<JourneyScreen />');
+    expect(app).toContain("<ActiveJourneyScreen onClose={() => navigate(JOURNEY_HASH)} />");
+    expect(app).not.toContain('JourneyLauncher');
   });
 
-  it('reserves scroll space so the fixed Today launcher cannot cover interactive content', () => {
-    expect(app).toContain("showJourneyLauncher ? ' app--today' : ''");
-    expect(launcherCss).toContain('.app--today .app__main');
-    expect(launcherCss).toContain('padding-bottom: calc(');
-  });
-
-  it('creates or resumes through the launch controller rather than constructing a Journey in React', () => {
-    expect(launcher).toContain('createJourneyLaunchController');
-    expect(launcher).toContain("launch.start('walk', nowIso())");
-    expect(launcher).not.toContain("status: 'recording'");
-    expect(launcher).not.toContain("kind: 'ninfit_phone_gps'");
+  it('starts activities through the launch controller from Journey Home, not Today', () => {
+    expect(home).toContain('createJourneyLaunchController');
+    expect(home).toContain('PRIMARY_ACTIVITIES');
+    expect(home).toContain("'walk'");
+    expect(home).toContain("'run'");
+    expect(home).toContain("'cycle'");
+    expect(home).toContain("'swim'");
+    expect(home).toContain('launch.start(activityType, nowIso())');
+    expect(home).not.toContain("status: 'recording'");
+    expect(home).not.toContain("kind: 'ninfit_phone_gps'");
   });
 });
 
@@ -49,10 +49,15 @@ describe('foreground GPS ownership', () => {
     expect(screen).not.toContain('watchPosition(');
   });
 
-  it('keys watcher lifetime to recorder status instead of the changing Journey object', () => {
+  it('keys watcher lifetime to recorder status and activity type, not the changing Journey object', () => {
     const source = compact(screen);
-    expect(source).toContain('},[journey?.status,store]);');
+    expect(source).toContain('},[journey?.status,journey?.activityType,store]);');
     expect(source).not.toContain('},[journey,store]);');
+  });
+
+  it('does not start phone GPS for swim', () => {
+    expect(screen).toContain("if (!journeyUsesPhoneGps(current.activityType))");
+    expect(screen).toContain("setGpsState('not_applicable')");
   });
 
   it('stops GPS before persisting a pause transition', () => {
