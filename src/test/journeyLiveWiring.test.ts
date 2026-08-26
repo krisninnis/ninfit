@@ -8,6 +8,7 @@ const read = (...parts: string[]) => readFileSync(join(SRC, ...parts), 'utf8');
 const app = read('App.tsx');
 const screen = read('ui', 'screens', 'ActiveJourneyScreen.tsx');
 const launcher = read('ui', 'components', 'JourneyLauncher.tsx');
+const launcherCss = read('styles', 'components', 'journey-launcher.css');
 
 function between(source: string, start: string, end: string): string {
   const startAt = source.indexOf(start);
@@ -15,11 +16,21 @@ function between(source: string, start: string, end: string): string {
   return startAt === -1 || endAt === -1 ? '' : source.slice(startAt, endAt);
 }
 
+function compact(source: string): string {
+  return source.replace(/\s+/g, '');
+}
+
 describe('live Journey entry point', () => {
   it('offers the launcher only from Today and opens the standalone Journey route', () => {
     expect(app).toContain("route.kind === 'tab' && tab === 'today'");
     expect(app).toContain('<JourneyLauncher onOpen={() => navigate(JOURNEY_HASH)} />');
     expect(app).toContain('JOURNEY_HASH');
+  });
+
+  it('reserves scroll space so the fixed Today launcher cannot cover interactive content', () => {
+    expect(app).toContain("showJourneyLauncher ? ' app--today' : ''");
+    expect(launcherCss).toContain('.app--today .app__main');
+    expect(launcherCss).toContain('padding-bottom: calc(');
   });
 
   it('creates or resumes through the launch controller rather than constructing a Journey in React', () => {
@@ -39,8 +50,9 @@ describe('foreground GPS ownership', () => {
   });
 
   it('keys watcher lifetime to recorder status instead of the changing Journey object', () => {
-    expect(screen).toContain('}, [journey?.status, store]);');
-    expect(screen).not.toContain('}, [journey, store]);');
+    const source = compact(screen);
+    expect(source).toContain('},[journey?.status,store]);');
+    expect(source).not.toContain('},[journey,store]);');
   });
 
   it('stops GPS before persisting a pause transition', () => {
