@@ -1,4 +1,4 @@
-import { DEFAULT_JOURNEY_PRIVACY, type Journey, type JourneyActivityType } from '../domain/journey';
+import { DEFAULT_JOURNEY_PRIVACY, type Journey, type JourneyActivityType, type JourneySource } from '../domain/journey';
 import { newId, type IdFactory } from '../domain/ids';
 import type { ISODateTime } from '../domain/types';
 import type { StorageAdapter } from '../storage/StorageAdapter';
@@ -12,6 +12,30 @@ export interface JourneyLaunchResult {
 export interface JourneyLaunchController {
   loadActive(): Journey | null;
   start(activityType: JourneyActivityType, startedAt: ISODateTime): JourneyLaunchResult;
+}
+
+export function journeyUsesPhoneGps(activityType: JourneyActivityType): boolean {
+  return activityType !== 'swim';
+}
+
+function sourceForActivity(activityType: JourneyActivityType, idFactory: IdFactory): JourneySource {
+  if (!journeyUsesPhoneGps(activityType)) {
+    return {
+      id: idFactory(),
+      kind: 'manual',
+      observedBy: 'user',
+      transportedBy: 'manual',
+      importedBy: 'ninfit',
+    };
+  }
+
+  return {
+    id: idFactory(),
+    kind: 'ninfit_phone_gps',
+    observedBy: 'browser_geolocation',
+    transportedBy: 'direct',
+    importedBy: 'ninfit',
+  };
 }
 
 /**
@@ -39,15 +63,7 @@ export function createJourneyLaunchController(
         startedAt,
         pauses: [],
         metrics: [],
-        sources: [
-          {
-            id: idFactory(),
-            kind: 'ninfit_phone_gps',
-            observedBy: 'browser_geolocation',
-            transportedBy: 'direct',
-            importedBy: 'ninfit',
-          },
-        ],
+        sources: [sourceForActivity(activityType, idFactory)],
         privacy: { ...DEFAULT_JOURNEY_PRIVACY },
         createdAt: startedAt,
         updatedAt: startedAt,
