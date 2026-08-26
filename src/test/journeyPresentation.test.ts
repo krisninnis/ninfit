@@ -53,7 +53,7 @@ describe('active Journey presentation', () => {
     expect(journeyDistanceM(value)).toBe(1250);
   });
 
-  it('shows GPS as receiving only after a trusted accepted route point exists', () => {
+  it('shows stored GPS evidence only after a trusted accepted route point exists', () => {
     const value = journey();
     expect(journeyGpsPresentationState(value)).toBe('waiting');
     expect(journeyGpsLabel('waiting')).toBe('GPS waiting');
@@ -71,6 +71,6 @@ describe('active Journey presentation', () => {
     };
 
     expect(journeyGpsPresentationState(value)).toBe('receiving');
-    expect(journeyGpsLabel('receiving')).toBe('GPS route captured');
+    expect(journeyGpsLabel('receiving')).toBe('GPS points saved');
   });
 });
