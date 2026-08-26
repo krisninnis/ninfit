@@ -7,6 +7,7 @@ export type JourneyLiveGpsState =
   | 'searching'
   | 'permission_denied'
   | 'runtime_error'
+  | 'not_applicable'
   | 'paused'
   | 'finished';
 
@@ -55,6 +56,8 @@ export function journeyLiveGpsLabel(state: JourneyLiveGpsState): string {
       return 'Location permission needed';
     case 'runtime_error':
       return 'GPS stopped';
+    case 'not_applicable':
+      return 'GPS not used';
     case 'paused':
       return 'GPS paused';
     case 'finished':
@@ -74,6 +77,8 @@ export function journeyLiveGpsNote(state: JourneyLiveGpsState): string {
       return 'Location permission is off. Pause and resume after allowing location to retry.';
     case 'runtime_error':
       return 'GPS recording stopped safely. Pause and resume to retry.';
+    case 'not_applicable':
+      return 'Phone GPS is not used for swimming. Pool and wearable distance can be added later.';
     case 'paused':
       return 'GPS collection is paused.';
     case 'finished':
