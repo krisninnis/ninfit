@@ -1,4 +1,14 @@
 @layer components {
+  .app--today .app__main {
+    padding-bottom: calc(
+      var(--ft-control-lg) +
+      var(--ft-space-6) +
+      var(--ft-control-md) +
+      var(--ft-space-4) +
+      env(safe-area-inset-bottom)
+    );
+  }
+
   .journey-launcher {
     position: fixed;
     z-index: 4;
@@ -26,6 +36,10 @@
   }
 
   @media (min-width: 900px) {
+    .app--today .app__main {
+      padding-bottom: calc(var(--ft-control-md) + var(--ft-space-6) + var(--ft-space-4));
+    }
+
     .journey-launcher {
       right: max(var(--ft-space-6), calc((100vw - var(--ft-shell-max)) / 2 + var(--ft-space-6)));
       bottom: var(--ft-space-6);
