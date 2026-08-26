@@ -121,7 +121,7 @@ export function ActiveJourneyScreen({ onClose }: ActiveJourneyScreenProps) {
         </div>
         <p className="active-journey__world-note">
           {gpsState === 'receiving'
-            ? 'Trusted GPS points are reaching this Journey.'
+            ? 'Trusted GPS points are stored with this Journey.'
             : 'Live GPS connection arrives in the next wiring slice.'}
         </p>
       </div>
