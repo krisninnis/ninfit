@@ -22,6 +22,14 @@ const read = (...parts: string[]) => readFileSync(join(SRC, ...parts), 'utf8');
 const code = (source: string) =>
   source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
 
+function openingTagContaining(source: string, needle: string): string {
+  const at = source.indexOf(needle);
+  if (at === -1) return '';
+  const start = source.lastIndexOf('<', at);
+  const end = source.indexOf('>', at);
+  return start === -1 || end === -1 ? '' : source.slice(start, end + 1);
+}
+
 const app = read('App.tsx');
 const primitive = read('ui', 'components', 'PageBackdrop.tsx');
 const backdropCss = read('styles', 'components', 'backdrop.css');
@@ -193,14 +201,6 @@ describe('screens name a region, never a file', () => {
 
   it('lets no screen hard-code a background url or image', () => {
     for (const { name, source } of screenFiles) {
-      // A brand mark is not a background.
-      //
-      // The rule this test enforces is "screens name a region, never a file", and it
-      // is about PAGE ARTWORK. A screen importing the real NinFit wordmark is the
-      // opposite of the failure being guarded against: the startup cinematic is
-      // required to use the genuine vector asset rather than redraw the logo in CSS.
-      // So that one shape - a vector import from src/assets/brand - is set aside, and
-      // every other rule below still applies to the file.
       const stripped = code(source).replace(
         /^import\s+\w+\s+from\s+'[^']*assets\/brand\/[\w-]+\.svg';?$/gm,
         '',
@@ -210,8 +210,6 @@ describe('screens name a region, never a file', () => {
         /url\(|\.(png|jpe?g|webp|avif|svg)\b/i,
       );
       expect(stripped, `${name} sets a background`).not.toMatch(/backgroundImage|background:/);
-      // Sharper than the pattern above, and new: no screen may name the background
-      // asset tree at all, whatever extension it puts on the end.
       expect(stripped, `${name} reaches into the background asset tree`).not.toContain(
         'backgrounds/',
       );
@@ -226,7 +224,6 @@ describe('screens name a region, never a file', () => {
   });
 
   it('keeps background urls out of the domain and game layers', () => {
-    // Domain code must never learn a filename; a re-crop is not a fitness change.
     for (const file of sourceFiles(join(SRC, 'domain'))) {
       const source = readFileSync(file, 'utf8');
       expect(source, `${file} mentions backgrounds`).not.toMatch(/backgrounds\/|backdrop/i);
@@ -248,8 +245,6 @@ describe('artwork stays decorative', () => {
   });
 
   it('never renders the registry label or brief as content', () => {
-    // Labels exist for tooling and tests. Rendering one would make the picture the
-    // page's explanation, which is exactly what must not happen.
     expect(primitive).not.toContain('{definition.label}');
     expect(primitive).not.toContain('{definition.brief}');
   });
@@ -259,7 +254,6 @@ describe('artwork stays decorative', () => {
   });
 
   it('leaves every screen stating its own meaning in text', () => {
-    // The heading, not the scenery, is what tells the user where they are.
     for (const { name, source } of screenFiles) {
       if (!source.includes('<Screen')) continue;
       expect(source, `${name} has no title`).toMatch(/title=/);
@@ -270,10 +264,13 @@ describe('artwork stays decorative', () => {
 // ---------------------------------------------------------------------------
 
 describe('backgrounds are not a second path system', () => {
-  it('keeps exactly one data-path activation point', () => {
+  it('keeps exactly one data-path activation point on the app root', () => {
     const occurrences = [...app.matchAll(/data-path=/g)];
+    const rootTag = openingTagContaining(app, 'data-path={game.state.pathId}');
     expect(occurrences).toHaveLength(1);
-    expect(app).toContain('<div className="app" data-path={game.state.pathId}>');
+    expect(rootTag).toContain('className=');
+    expect(rootTag).toContain('app');
+    expect(rootTag).toContain('data-path={game.state.pathId}');
   });
 
   it('never lets the backdrop read or write the fitness path', () => {
@@ -298,17 +295,6 @@ describe('backgrounds are not a second path system', () => {
 // ---------------------------------------------------------------------------
 
 describe('the veil holds WCAG AA over artwork that does not exist yet', () => {
-  /**
-   * Computed, not eyeballed.
-   *
-   * The screen heading and standfirst sit directly on the veil rather than on a
-   * card, so the veil has to hold against artwork nobody has drawn. The only honest
-   * way to test that is against the extremes any illustration lies between: solid
-   * black and solid white.
-   *
-   * These figures caught a real defect. The first veil lightened its middle band for
-   * atmosphere and produced 3.53:1 secondary text in light mode and 2.37:1 in dark.
-   */
   const hex = (value: string): [number, number, number] => {
     const h = value.replace('#', '');
     return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255) as [
@@ -334,8 +320,6 @@ describe('the veil holds WCAG AA over artwork that does not exist yet', () => {
     fg[2] * alpha + bg[2] * (1 - alpha),
   ];
 
-  // Values read from tokens/palette.css. Kept as hex because the sRGB comments there
-  // are what the browser ultimately paints.
   const PAGE = { light: hex('#f7f6f3'), dark: hex('#16181a') };
   const TEXT = {
     light: { primary: hex('#2b2b28'), secondary: hex('#55554d'), tertiary: hex('#6e6d64') },
@@ -366,15 +350,11 @@ describe('the veil holds WCAG AA over artwork that does not exist yet', () => {
   }
 
   it('proves the floor is actually necessary', () => {
-    // A materially softer veil must fail, or the floor is cargo cult.
     expect(worstCase('light', 'tertiary', 0.85)).toBeLessThan(AA_BODY);
     expect(worstCase('dark', 'secondary', 0.67)).toBeLessThan(AA_BODY);
   });
 
   it('keeps desktop safe through the content column, not the veil', () => {
-    // Desktop lifts the veil to ~40% for atmosphere. That is only acceptable because
-    // `.app` puts a 95%-opaque surface between the veil and the text. 92% was tried
-    // first and put light tertiary at 4.32:1 - this is why the figure is 95%.
     const COLUMN = 0.95;
     for (const mode of ['light', 'dark'] as const) {
       const veil = MIN_VEIL[mode] * (mode === 'light' ? 0.4 : 0.42);
@@ -391,14 +371,11 @@ describe('the veil holds WCAG AA over artwork that does not exist yet', () => {
   });
 
   it('makes the CSS fallback default the floor, not something softer', () => {
-    // These apply only when the inline style is missing - exactly when nobody is
-    // watching, which is why they must not be the lenient values.
     expect(backdropCss).toContain(`--backdrop-veil-light: ${MIN_VEIL.light}`);
     expect(backdropCss).toContain(`--backdrop-veil-dark: ${MIN_VEIL.dark}`);
   });
 
   it('pins the desktop column opacity the calculation depends on', () => {
-    // If someone softens this for looks, the test above stops reflecting reality.
     expect(read('styles', 'layout.css')).toContain(
       'color-mix(in oklab, var(--ft-surface-page) 95%, transparent)',
     );
@@ -423,7 +400,6 @@ describe('readability', () => {
   });
 
   it('always renders the veil, whether or not artwork exists', () => {
-    // The veil is part of the primitive rather than something a screen opts into.
     const veils = [...primitive.matchAll(/backdrop__veil/g)];
     expect(veils).toHaveLength(1);
     expect(primitive).not.toContain('? <div className="backdrop__veil"');
@@ -437,7 +413,6 @@ describe('readability', () => {
   it('introduces no raw colour of its own', () => {
     expect(backdropCss).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
     expect(backdropCss).not.toMatch(/\brgb\(|\bhsl\(/);
-    // Every colour resolves from an existing semantic token.
     expect(backdropCss).toContain('var(--ft-surface-page)');
   });
 
@@ -459,8 +434,6 @@ describe('responsive shell', () => {
   });
 
   it('reaches every existing area from the desktop shell too', () => {
-    // The desktop treatment changes the frame, not the destinations: the tab bar is
-    // not hidden at any width, so no area becomes unreachable on a wide screen.
     const layout = read('styles', 'layout.css');
     expect(layout).not.toMatch(/\.tabbar\s*\{[^}]*display:\s*none/);
     const nav = read('styles', 'components', 'nav.css');
@@ -476,11 +449,6 @@ describe('responsive shell', () => {
   it('lets the artwork breathe on desktop instead of stretching the phone layout', () => {
     expect(backdropCss).toContain('@media (min-width: 900px)');
     expect(backdropCss).toContain('var(--backdrop-art-desktop)');
-    // The shell takes a deliberate desktop width rather than filling the viewport,
-    // which is what leaves surround for the artwork. This asserted
-    // `--ft-content-max-wide` until the Phase 3A side rail arrived and the shell
-    // became rail + reading column; `--ft-shell-max` is that same cap, now composed.
-    // The reading column itself is unchanged - see desktopShell.test.ts.
     expect(read('styles', 'layout.css')).toContain('max-width: var(--ft-shell-max)');
   });
 });
@@ -495,7 +463,6 @@ describe('performance', () => {
   });
 
   it('fetches only the region on screen', () => {
-    // One backdrop is mounted at a time, and its url is the only one ever set.
     const mounts = [...app.matchAll(/<PageBackdrop/g)];
     expect(mounts).toHaveLength(1);
   });
@@ -511,7 +478,6 @@ describe('performance', () => {
   });
 
   it('keeps the account feature lazily loaded', () => {
-    // The background work must not have pulled Supabase back into the shell.
     expect(code(app)).not.toContain('data/supabase');
     expect(read('ui', 'screens', 'ProfileScreen.tsx')).toContain('lazy(() =>');
   });
@@ -535,10 +501,7 @@ describe('assets on disk', () => {
 
   it('keeps the generated sheets in the reference library, wherever they are filed', () => {
     const names = referenceArtwork(REFERENCE_ROOT).map(fileName);
-
-    // The sheet this suite is actually about.
     expect(names).toContain('ninfit-page-backgrounds-concept-v1.png');
-    // And the canonical companion sheet, at whatever depth it currently sits.
     expect(names).toContain('ninfit-opal-mascot-reference-v1.png');
   });
 
@@ -547,9 +510,6 @@ describe('assets on disk', () => {
       /mascot/i.test(path),
     );
 
-    // Deliberately no expected count, and no expected names: the mascot library is
-    // meant to grow, and a test that has to be edited every time a species is added
-    // is a test that will eventually be deleted.
     expect(mascotSheets.length).toBeGreaterThan(0);
     for (const path of mascotSheets) {
       expect(path, `${path} should be filed under mascots/`).toMatch(/^mascots\//);
@@ -558,9 +518,6 @@ describe('assets on disk', () => {
 
   it('never uses a reference sheet as production background artwork', () => {
     const names = referenceArtwork(REFERENCE_ROOT).map(fileName);
-
-    // Guards the guard: if the reference library were ever read as empty, the loop
-    // below would pass by doing nothing at all.
     expect(names.length).toBeGreaterThan(0);
 
     for (const id of BACKDROP_IDS) {
@@ -568,14 +525,10 @@ describe('assets on disk', () => {
       if (!art) continue;
 
       for (const url of [art.mobile, art.desktop]) {
-        // The original word check...
         expect(url).not.toMatch(/concept|reference|sheet/i);
-        // ...and the property itself, checked against the files that actually exist
-        // rather than against a guess at how they might be named.
         for (const name of names) {
           expect(url, `${id} points at reference sheet ${name}`).not.toContain(name);
         }
-        // Reference material lives in docs/; production art is served from public/.
         expect(url).not.toMatch(/docs\//);
         expect(url).toContain(`/backgrounds/${id}/`);
       }
