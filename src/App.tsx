@@ -133,8 +133,7 @@ export default function App() {
         </main>
 
         {showPrimaryNav ? (
-          <TabBar
-            current={tab}
+          <TabBar current={tab}
             onSelect={(id) => setRoute(parseRouteFromHash(hashForPrimaryNav(id)))}
           />
         ) : null}
