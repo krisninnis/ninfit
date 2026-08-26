@@ -1,9 +1,29 @@
+/**
+ * Journey Home - the activity launch surface.
+ *
+ * WORLD-FIRST, WITHIN A COMPUTED CONSTRAINT.
+ *
+ * The Journey region is veiled at the MIN_VEIL floor (0.97 light / 0.95 dark), which
+ * `registry.ts` derives from WCAG AA against worst-case artwork and a test enforces.
+ * On a phone the artwork is therefore atmosphere, not scenery, and no amount of
+ * styling here may change that - lifting the veil is an accessibility regression.
+ *
+ * What IS available is not stacking a second opaque layer on top of it. The old
+ * treatment gave four 94%-opaque raised cards, so the interface read as a dashboard
+ * laid over the world rather than placed in it. These surfaces are translucent and
+ * blurred instead, on the same figures the Active Journey dock and status chip
+ * already use, so the veiled ground tones through and the two screens speak one
+ * language. Space between regions does the rest of the work.
+ */
+
 @layer screens {
   .journey-home {
     display: grid;
-    gap: var(--ft-space-6);
-    padding-bottom: var(--ft-space-4);
+    gap: var(--ft-space-7);
+    padding-bottom: var(--ft-space-6);
   }
+
+  /* --- Invitation ------------------------------------------------------- */
 
   .journey-home__header {
     display: grid;
@@ -11,14 +31,8 @@
   }
 
   .journey-home__header h1,
-  .journey-home__header p,
   .journey-home__recent h2 {
     margin: 0;
-  }
-
-  .journey-home__header > p:last-child {
-    max-width: 34rem;
-    color: var(--ft-text-secondary);
   }
 
   .journey-home__eyebrow {
@@ -29,59 +43,114 @@
     text-transform: uppercase;
   }
 
+  /*
+   * The question, not a standfirst. It is the second thing read after the identity
+   * and it is what the four tiles answer, so it carries real type weight rather than
+   * sitting in secondary grey like body copy.
+   */
+  .journey-home__invitation {
+    margin: 0;
+    max-width: 24rem;
+    font-size: var(--ft-text-xl);
+    font-weight: var(--ft-weight-medium);
+    line-height: 1.25;
+    color: var(--ft-text-primary);
+    text-wrap: balance;
+  }
+
+  /* --- Activities -------------------------------------------------------- */
+
+  /*
+   * Two columns at every width, including 360.
+   *
+   * The single-column phone layout was the card-soup complaint: four full-width
+   * horizontal bars of near-identical grey, read as a list of settings rows. A
+   * square-ish tile is a place to press rather than a row to scan, it halves the
+   * vertical run so the ground shows above and below, and at 360 each tile is still
+   * ~158px wide - far past any touch-target concern.
+   */
   .journey-home__activities {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--ft-space-3);
   }
 
-  .journey-home__activity,
-  .journey-home__continue {
-    min-height: 88px;
-    border: 1px solid var(--ft-border-subtle);
-    border-radius: var(--ft-radius-lg);
-    background: color-mix(in srgb, var(--ft-surface-raised) 94%, transparent);
-    color: var(--ft-text-primary);
-    box-shadow: var(--ft-shadow-card);
-    cursor: pointer;
-  }
-
   .journey-home__activity {
-    display: flex;
-    align-items: center;
+    min-height: 132px;
+    display: grid;
+    align-content: space-between;
     gap: var(--ft-space-3);
     padding: var(--ft-space-4);
     text-align: left;
+    border: 1px solid color-mix(in srgb, var(--ft-border-subtle) 74%, transparent);
+    border-radius: var(--ft-radius-xl);
+    background: color-mix(in srgb, var(--ft-surface-raised) 72%, transparent);
+    backdrop-filter: blur(16px);
+    color: var(--ft-text-primary);
+    box-shadow: var(--ft-shadow-card);
+    cursor: pointer;
+    transition:
+      transform var(--ft-motion-instant) var(--ft-ease-standard),
+      background-color var(--ft-motion-instant) var(--ft-ease-standard),
+      border-color var(--ft-motion-instant) var(--ft-ease-standard);
+  }
+
+  /* Tactile rather than decorative: the surface answers the finger, then settles. */
+  .journey-home__activity:hover {
+    background: color-mix(in srgb, var(--ft-surface-raised) 84%, transparent);
+    border-color: color-mix(in srgb, var(--ft-accent) 38%, var(--ft-border-subtle));
+  }
+
+  .journey-home__activity:active {
+    transform: scale(0.985);
   }
 
   .journey-home__activity-mark {
     display: grid;
-    width: 42px;
-    height: 42px;
-    flex: 0 0 42px;
+    width: 44px;
+    height: 44px;
     place-items: center;
     border-radius: 50%;
-    background: color-mix(in srgb, var(--ft-accent) 14%, var(--ft-surface-sunken));
-    color: var(--ft-accent);
+    background: color-mix(in srgb, var(--ft-accent) 18%, transparent);
+    color: var(--ft-accent-strong);
+    font-size: var(--ft-text-base);
     font-weight: var(--ft-weight-bold);
   }
 
-  .journey-home__activity span:last-child,
-  .journey-home__continue span:first-child {
+  .journey-home__activity span:last-child {
     display: grid;
-    gap: 3px;
+    gap: var(--ft-space-1);
   }
 
-  .journey-home__activity small,
-  .journey-home__continue small,
-  .journey-home__section-heading span,
-  .journey-home__recent-item span,
-  .journey-home__empty {
+  /* The activity name is the loudest thing in the tile. */
+  .journey-home__activity strong {
+    font-size: var(--ft-text-lg);
+    font-weight: var(--ft-weight-semibold);
+    line-height: 1.15;
+  }
+
+  /*
+   * Two lines are reserved whether or not the note needs them. The tiles bottom-align
+   * their text, so a one-line note and a two-line note put their activity names at
+   * different heights - visible as a ragged row on desktop, where only Swim wraps.
+   * Reserving the space costs nothing at phone widths, where they all wrap anyway.
+   */
+  .journey-home__activity small {
+    min-height: 1.95rem;
+    font-size: var(--ft-text-xs);
+    line-height: 1.3;
     color: var(--ft-text-secondary);
-    font-size: var(--ft-text-sm);
   }
 
+  /* --- Continue ---------------------------------------------------------- */
+
+  /*
+   * When an unfinished Journey exists it is the only action offered, and it is
+   * deliberately heavier than any launch tile: more opaque, accent-bordered and
+   * full width. Nothing beside it can start a replacement Journey.
+   */
   .journey-home__continue {
+    min-height: var(--ft-control-lg);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -89,23 +158,85 @@
     width: 100%;
     padding: var(--ft-space-4) var(--ft-space-5);
     text-align: left;
+    border: 1px solid color-mix(in srgb, var(--ft-accent) 46%, var(--ft-border-subtle));
+    border-radius: var(--ft-radius-xl);
+    background: color-mix(in srgb, var(--ft-surface-raised) 90%, transparent);
+    backdrop-filter: blur(20px);
+    color: var(--ft-text-primary);
+    box-shadow: var(--ft-shadow-overlay);
+    cursor: pointer;
   }
 
+  .journey-home__continue span:first-child {
+    display: grid;
+    gap: var(--ft-space-1);
+  }
+
+  .journey-home__continue small {
+    color: var(--ft-accent-strong);
+    font-size: var(--ft-text-xs);
+    font-weight: var(--ft-weight-semibold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .journey-home__continue strong {
+    font-size: var(--ft-text-xl);
+    font-weight: var(--ft-weight-semibold);
+  }
+
+  .journey-home__continue > span:last-child {
+    flex: 0 0 auto;
+    font-size: var(--ft-text-lg);
+    font-variant-numeric: tabular-nums;
+    color: var(--ft-text-secondary);
+  }
+
+  /* --- Recent ------------------------------------------------------------ */
+
+  /*
+   * Quieter than anything above it: no surface of its own, hairlines only. History
+   * is context for the decision, not the decision.
+   */
   .journey-home__recent {
     display: grid;
     gap: var(--ft-space-3);
   }
 
+  /*
+   * Grid rather than a baseline flex row. Space-between forced the heading to
+   * compete with its own meta text for one line, and at 390 "Recent Journeys" broke
+   * across two lines with the meta wrapping beside it. The meta now takes its own
+   * row until there is genuinely room for both.
+   */
   .journey-home__section-heading {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--ft-space-3);
+    display: grid;
+    gap: var(--ft-space-1);
+  }
+
+  .journey-home__section-heading h2 {
+    font-size: var(--ft-text-lg);
+  }
+
+  .journey-home__section-heading span,
+  .journey-home__recent-item span,
+  .journey-home__empty,
+  .journey-home__note {
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-sm);
+  }
+
+  @media (min-width: 480px) {
+    .journey-home__section-heading {
+      grid-template-columns: 1fr auto;
+      align-items: baseline;
+      gap: var(--ft-space-3);
+    }
   }
 
   .journey-home__recent-list {
     display: grid;
-    gap: var(--ft-space-2);
+    gap: 0;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -116,24 +247,61 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--ft-space-4);
-    padding: var(--ft-space-3) var(--ft-space-4);
-    border-top: 1px solid var(--ft-border-subtle);
+    min-width: 0;
+    padding: var(--ft-space-3) 0;
+    border-top: 1px solid color-mix(in srgb, var(--ft-border-subtle) 70%, transparent);
   }
 
   .journey-home__recent-item > div {
     display: grid;
-    gap: 2px;
+    gap: var(--ft-space-0);
+    min-width: 0;
+  }
+
+  .journey-home__recent-item strong {
+    font-weight: var(--ft-weight-semibold);
+  }
+
+  .journey-home__recent-item > span {
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
   }
 
   .journey-home__empty {
     margin: 0;
-    padding: var(--ft-space-5) 0;
-    border-top: 1px solid var(--ft-border-subtle);
+    padding: var(--ft-space-4) 0 0;
+    border-top: 1px solid color-mix(in srgb, var(--ft-border-subtle) 70%, transparent);
   }
 
-  @media (max-width: 430px) {
+  /*
+   * Privacy stays stated, but as a footnote rather than as the standfirst. It is a
+   * reassurance to find, not the second thing the screen says.
+   */
+  .journey-home__note {
+    margin: 0;
+  }
+
+  /* --- Desktop ----------------------------------------------------------- */
+
+  /*
+   * Four across, so the choice stays one glance rather than a 2x2 block adrift in a
+   * wide column. The tiles do not grow taller with the window - a launcher that
+   * scales into a billboard is the dashboard failure mode this pass exists to avoid.
+   */
+  @media (min-width: 900px) {
     .journey-home__activities {
-      grid-template-columns: 1fr;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .journey-home__activity {
+      min-height: 168px;
+      padding: var(--ft-space-5);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .journey-home__activity:active {
+      transform: none;
     }
   }
 }

@@ -61,7 +61,14 @@ export function JourneyScreen() {
       <header className="journey-home__header">
         <p className="journey-home__eyebrow">Living Journey</p>
         <h1 id="journey-home-title">Journey</h1>
-        <p>Choose how you are moving today. Your Journey stays private on this device by default.</p>
+        {/*
+         * The invitation, separated from the privacy line it used to share a sentence
+         * with. One is the question the four tiles answer; the other is a reassurance
+         * that belongs at the foot of the screen, not in second place.
+         */}
+        <p className="journey-home__invitation">
+          {active ? 'You have a Journey still going.' : 'Where are we going today?'}
+        </p>
       </header>
 
       {active ? (
@@ -104,6 +111,10 @@ export function JourneyScreen() {
           <p className="journey-home__empty">Completed walks, runs, cycles and swims will appear here.</p>
         )}
       </section>
+
+      <p className="journey-home__note">
+        Journeys stay private on this device by default.
+      </p>
     </section>
   );
 }
