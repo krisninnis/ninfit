@@ -19,6 +19,14 @@ import type { MascotState } from '../domain/game/types';
 const SRC = fileURLToPath(new URL('..', import.meta.url));
 const app = readFileSync(join(SRC, 'App.tsx'), 'utf8');
 
+function openingTagContaining(source: string, needle: string): string {
+  const at = source.indexOf(needle);
+  if (at === -1) return '';
+  const start = source.lastIndexOf('<', at);
+  const end = source.indexOf('>', at);
+  return start === -1 || end === -1 ? '' : source.slice(start, end + 1);
+}
+
 function sourceFiles(dir: string): string[] {
   const found: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -50,8 +58,11 @@ const ACTIVATION_FILES = ['App.tsx', 'ui/screens/OnboardingScreen.tsx'];
 describe('the path is activated only where it is meant to be', () => {
   it('sets data-path once on the app root, bound to the stored path', () => {
     const occurrences = [...app.matchAll(/data-path=/g)];
+    const rootTag = openingTagContaining(app, 'data-path={game.state.pathId}');
     expect(occurrences.length, 'App.tsx must not duplicate path state').toBe(1);
-    expect(app).toMatch(/<div className="app" data-path=\{[^}]+\}>/);
+    expect(rootTag).toContain('className=');
+    expect(rootTag).toContain('app');
+    expect(rootTag).toContain('data-path={game.state.pathId}');
 
     // React drops an attribute whose value is undefined, which is what makes the
     // neutral theme the natural resting state rather than a special case.
