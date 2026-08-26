@@ -106,16 +106,15 @@ export default function App() {
   const showNinFitId = route.kind === 'account';
   const showJourneyHome = route.kind === 'journey-home';
   const showActiveJourney = route.kind === 'journey-active';
-  const screenTab: TabId = route.kind === 'tab' ? (route.tab) : 'today';
+  const screenTab: TabId = route.kind === 'tab' ? route.tab : 'today';
   const CurrentScreen = SCREENS[screenTab];
   const tab: PrimaryNavId = showJourneyHome ? 'journey' : screenTab;
   const showPrimaryNav = route.kind === 'tab' || showJourneyHome;
+  const backdropId = tab === 'journey' ? 'journey-wall' : BACKDROP_FOR_TAB[tab];
 
   return (
     <>
-      {!showNinFitId && !showActiveJourney ? (
-        <PageBackdrop id={showJourneyHome ? 'journey-wall' : BACKDROP_FOR_TAB[screenTab]} />
-      ) : null}
+      {!showNinFitId && !showActiveJourney ? <PageBackdrop id={backdropId} /> : null}
 
       <div className={`app${showActiveJourney ? ' app--journey' : ''}`} data-path={game.state.pathId}>
         <main className="app__main" ref={mainRef}>
@@ -134,7 +133,8 @@ export default function App() {
         </main>
 
         {showPrimaryNav ? (
-          <TabBar current={tab}
+          <TabBar
+            current={tab}
             onSelect={(id) => setRoute(parseRouteFromHash(hashForPrimaryNav(id)))}
           />
         ) : null}
