@@ -31,5 +31,5 @@ export function journeyGpsPresentationState(
 }
 
 export function journeyGpsLabel(state: JourneyGpsPresentationState): string {
-  return state === 'receiving' ? 'GPS route captured' : 'GPS waiting';
+  return state === 'receiving' ? 'GPS points saved' : 'GPS waiting';
 }
