@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getAppContext } from '../../app/bootstrap';
-import {
-  startForegroundJourneyGpsSession,
-} from '../../app/foregroundJourneyGpsSession';
+import { startForegroundJourneyGpsSession } from '../../app/foregroundJourneyGpsSession';
 import type { ActiveJourneyGpsSession } from '../../app/activeJourneyGpsSession';
 import { createJourneyRecoveryController } from '../../app/journeyRecoveryController';
 import { journeyActiveSeconds, type Journey } from '../../domain/journey';
@@ -75,21 +73,29 @@ export function ActiveJourneyScreen({ onClose }: ActiveJourneyScreenProps) {
     if (current === null || current.status !== 'recording') return undefined;
 
     setGpsState('connecting');
-    const session = startForegroundJourneyGpsSession({
-      storage: store,
-      journey: current,
-      onJourneyChanged(next) {
-        journeyRef.current = next;
-        setJourney(next);
-        setGpsState('live');
-      },
-      onError(error) {
-        setGpsState(error.code === error.PERMISSION_DENIED ? 'permission_denied' : 'searching');
-      },
-      onRuntimeError() {
-        setGpsState('runtime_error');
-      },
-    });
+    let session: ActiveJourneyGpsSession;
+    try {
+      session = startForegroundJourneyGpsSession({
+        storage: store,
+        journey: current,
+        onJourneyChanged(next) {
+          journeyRef.current = next;
+          setJourney(next);
+          setGpsState('live');
+        },
+        onError(error) {
+          setGpsState(error.code === error.PERMISSION_DENIED ? 'permission_denied' : 'searching');
+        },
+        onRuntimeError() {
+          setGpsState('runtime_error');
+        },
+      });
+    } catch {
+      // Missing browser geolocation or malformed recovery state must not crash the UI.
+      // The Journey remains recoverable and the person can pause/finish or leave safely.
+      setGpsState('runtime_error');
+      return undefined;
+    }
     sessionRef.current = session;
 
     return () => {
