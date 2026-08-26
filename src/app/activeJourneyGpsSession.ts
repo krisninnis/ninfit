@@ -40,11 +40,14 @@ export function createActiveJourneyGpsSession(
   let stopped = false;
   const startWatch = options.startWatch ?? startJourneyGeolocationWatch;
   let watch: JourneyGeolocationWatch | undefined;
+  let stopWatchAfterStart = false;
+  let pendingRuntimeError: ActiveJourneyGpsSessionRuntimeError | undefined;
 
   function stop() {
     if (stopped) return;
     stopped = true;
-    watch?.stop();
+    if (watch) watch.stop();
+    else stopWatchAfterStart = true;
   }
 
   watch = startWatch({
@@ -57,8 +60,13 @@ export function createActiveJourneyGpsSession(
         currentJourney = result.journey;
         options.onJourneyChanged?.(currentJourney);
       } catch (cause) {
+        const runtimeError: ActiveJourneyGpsSessionRuntimeError = {
+          kind: 'runtime_ingest_failed',
+          cause,
+        };
         stop();
-        options.onRuntimeError?.({ kind: 'runtime_ingest_failed', cause });
+        if (watch) options.onRuntimeError?.(runtimeError);
+        else pendingRuntimeError = runtimeError;
       }
     },
     onError(error) {
@@ -66,6 +74,9 @@ export function createActiveJourneyGpsSession(
       options.onError?.(error);
     },
   });
+
+  if (stopWatchAfterStart) watch.stop();
+  if (pendingRuntimeError) options.onRuntimeError?.(pendingRuntimeError);
 
   return {
     getJourney() {

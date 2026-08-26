@@ -44,11 +44,14 @@ export function startJourneyGeolocationWatch(
   const geolocation = options.geolocation ?? browserGeolocation();
   let stopped = false;
   let watchId: number | undefined;
+  let clearWatchAfterStart = false;
+  let pendingPermissionError: GeolocationPositionError | undefined;
 
   function stop() {
     if (stopped) return;
     stopped = true;
     if (watchId !== undefined) geolocation.clearWatch(watchId);
+    else clearWatchAfterStart = true;
   }
 
   watchId = geolocation.watchPosition(
@@ -63,11 +66,21 @@ export function startJourneyGeolocationWatch(
     },
     (error) => {
       if (stopped) return;
-      if (error.code === error.PERMISSION_DENIED) stop();
+      if (error.code === error.PERMISSION_DENIED) {
+        const handleReady = watchId !== undefined;
+        stop();
+        if (!handleReady) {
+          pendingPermissionError = error;
+          return;
+        }
+      }
       options.onError?.(error);
     },
     options.positionOptions ?? DEFAULT_POSITION_OPTIONS,
   );
+
+  if (clearWatchAfterStart) geolocation.clearWatch(watchId);
+  if (pendingPermissionError) options.onError?.(pendingPermissionError);
 
   return { stop };
 }
