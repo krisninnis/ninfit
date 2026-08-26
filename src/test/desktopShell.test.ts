@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-import { TABS } from '../ui/tabs';
+import { PRIMARY_NAV } from '../ui/tabs';
 
 const SRC = fileURLToPath(new URL('..', import.meta.url));
 const read = (...parts: string[]) => readFileSync(join(SRC, ...parts), 'utf8');
@@ -14,45 +14,34 @@ const scales = read('styles', 'tokens', 'scales.css');
 const tabBar = read('ui', 'components', 'TabBar.tsx');
 const app = read('App.tsx');
 
-/** The `@media (min-width: 900px)` block of a stylesheet, to the end of the file. */
 function desktopBlock(source: string): string {
   const at = source.indexOf('@media (min-width: 900px)');
   return at === -1 ? '' : source.slice(at);
 }
 
-/** Everything before the first desktop breakpoint: the mobile-first baseline. */
 function mobileBaseline(source: string): string {
   const at = source.indexOf('@media (min-width: 900px)');
   return at === -1 ? source : source.slice(0, at);
 }
 
-/**
- * Phase 3A — the desktop application shell.
- *
- * The roadmap's instruction is "do not simply stretch the mobile interface across
- * desktop", and the failure mode it guards against is subtle: not an ugly layout,
- * but a SECOND navigation. The moment desktop grows its own nav component, the two
- * drift - a destination is added to one and not the other, `aria-current` is
- * computed twice, and the bug only appears at one viewport width.
- *
- * So most of what follows checks that there is exactly one navigation, rendered at
- * every width, re-composed rather than rebuilt.
- */
-
-// ---------------------------------------------------------------------------
-
 describe('one navigation, two compositions', () => {
   it('has exactly one navigation component', () => {
-    // A second nav is how desktop and mobile drift apart.
-    expect(app).toContain('<TabBar current={tab}');
+    expect(app).toContain('<TabBar');
+    expect(app).toContain('current={currentNav}');
     expect([...app.matchAll(/<TabBar/g)]).toHaveLength(1);
     expect(app).not.toMatch(/SideNav|Sidebar|DesktopNav/);
   });
 
-  it('renders the same five destinations from the same source at every width', () => {
-    expect(tabBar).toContain('TABS.map');
-    expect(TABS).toHaveLength(5);
-    // Nothing in the markup varies by viewport: the arrangement is CSS-only.
+  it('renders the same primary destinations from the same source at every width', () => {
+    expect(tabBar).toContain('PRIMARY_NAV.map');
+    expect(PRIMARY_NAV.map((item) => item.id)).toEqual([
+      'today',
+      'week',
+      'journey',
+      'progress',
+      'profile',
+      'data',
+    ]);
     expect(tabBar).not.toMatch(/matchMedia|innerWidth|isDesktop|min-width/);
   });
 
@@ -61,8 +50,6 @@ describe('one navigation, two compositions', () => {
     expect([...tabBar.matchAll(/aria-current/g)]).toHaveLength(1);
   });
 });
-
-// ---------------------------------------------------------------------------
 
 describe('every area stays reachable at every width', () => {
   it('never hides the navigation', () => {
@@ -77,7 +64,6 @@ describe('every area stays reachable at every width', () => {
   });
 
   it('keeps the bottom bar as the mobile-first baseline', () => {
-    // The phone layout is the default, and desktop is additive - not the reverse.
     const baseline = mobileBaseline(nav);
     expect(baseline).toContain('.tabbar {');
     expect(baseline).toContain('display: flex');
@@ -85,19 +71,15 @@ describe('every area stays reachable at every width', () => {
   });
 
   it('leaves tablets on the bottom bar', () => {
-    // The rail starts at 900px, so 600-899px keeps the thumb-reachable bar.
     expect(nav).toContain('@media (min-width: 900px)');
     expect(nav).not.toContain('@media (min-width: 600px)');
   });
 });
 
-// ---------------------------------------------------------------------------
-
 describe('desktop is composed, not stretched', () => {
   it('turns the bar into a vertical rail', () => {
     const desktop = desktopBlock(nav);
     expect(desktop).toContain('flex-direction: column');
-    // Each item becomes icon-beside-label rather than icon-above-label.
     expect(desktop).toContain('flex-direction: row');
   });
 
@@ -109,8 +91,6 @@ describe('desktop is composed, not stretched', () => {
   });
 
   it('does not widen the reading column to pay for the sidebar', () => {
-    // Desktop buys navigation, not longer lines: the shell grows by exactly the
-    // rail plus gutters, and --ft-content-max-wide is untouched.
     expect(scales).toContain('--ft-content-max-wide: 720px');
     expect(scales).toContain(
       '--ft-shell-max: calc(var(--ft-sidenav-width) + var(--ft-content-max-wide) + 96px)',
@@ -119,7 +99,6 @@ describe('desktop is composed, not stretched', () => {
   });
 
   it('distinguishes the current destination more strongly on a rail', () => {
-    // Five equally visible siblings need a fill, not just a tint.
     const desktop = desktopBlock(nav);
     expect(desktop).toContain("[aria-current='page']");
     expect(desktop).toContain('background: var(--ft-accent-soft)');
@@ -131,8 +110,6 @@ describe('desktop is composed, not stretched', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-
 describe('it disturbs nothing already working', () => {
   it('leaves the single path activation point alone', () => {
     expect([...app.matchAll(/data-path=/g)]).toHaveLength(1);
@@ -140,22 +117,21 @@ describe('it disturbs nothing already working', () => {
 
   it('leaves the backdrop and its computed contrast figure alone', () => {
     expect(app).toContain('<PageBackdrop');
-    // The 95% column opacity is load-bearing for AA over artwork.
     expect(layout).toContain(
       'color-mix(in oklab, var(--ft-surface-page) 95%, transparent)',
     );
   });
 
   it('leaves the startup cinematic outside the shell', () => {
-    // The cinematic returns its own root, so no rail appears during it.
     expect(app).toContain('<StartupCinematic');
     const shell = app.slice(app.indexOf('if (!introDone)'), app.indexOf('game.needsOnboarding'));
     expect(shell).not.toContain('TabBar');
   });
 
-  it('leaves standalone routes chrome-free', () => {
-    expect(app).toContain("route.kind === 'tab' ? (");
+  it('keeps only primary destinations chromed', () => {
+    expect(app).toContain("const showPrimaryNav = route.kind === 'tab' || showJourneyHome;");
     expect(app).toContain("route.kind === 'account'");
+    expect(app).toContain("route.kind === 'journey-active'");
   });
 
   it('adds no navigation library and no new routing dependency', () => {
