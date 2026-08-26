@@ -38,6 +38,7 @@
 @import './components/egg.css';
 @import './components/reward.css';
 @import './components/opal.css';
+@import './components/journey-launcher.css';
 
 @import './screens/startup.css';
 @import './screens/onboarding.css';
