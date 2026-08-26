@@ -40,15 +40,25 @@ function harness(runtimeController: JourneyGpsRuntimeController) {
 
   const changed = vi.fn();
   const errors = vi.fn();
+  const runtimeErrors = vi.fn();
   const session = createActiveJourneyGpsSession({
     initialJourney: journey(),
     runtimeController,
     startWatch,
     onJourneyChanged: changed,
     onError: errors,
+    onRuntimeError: runtimeErrors,
   });
 
-  return { session, emit: (sample: JourneyGpsSample) => onSample?.(sample), emitError: (error: GeolocationPositionError) => onError?.(error), stop, changed, errors };
+  return {
+    session,
+    emit: (sample: JourneyGpsSample) => onSample?.(sample),
+    emitError: (error: GeolocationPositionError) => onError?.(error),
+    stop,
+    changed,
+    errors,
+    runtimeErrors,
+  };
 }
 
 describe('active Journey GPS session', () => {
@@ -101,12 +111,63 @@ describe('active Journey GPS session', () => {
     expect(runtimeController.ingest).not.toHaveBeenCalled();
   });
 
-  /*
-   * The error path had a wired harness and no assertions. A geolocation error is the
-   * one signal that tells the interface recording has stopped being trustworthy, so
-   * losing it silently is worse than losing a sample: the screen would keep showing a
-   * confident Journey that is no longer being fed.
-   */
+  it('stops GPS and reports a fatal runtime ingestion error without changing the Journey', () => {
+    const cause = new Error('recovery persistence failed');
+    const runtimeController: JourneyGpsRuntimeController = {
+      ingest: vi.fn(() => {
+        throw cause;
+      }),
+    };
+    const test = harness(runtimeController);
+    const before = test.session.getJourney();
+
+    expect(() => test.emit({ latitude: 51.5, longitude: -3.5, accuracyM: 5, recordedAt: '2026-08-25T12:00:05.000Z' })).not.toThrow();
+
+    expect(test.stop).toHaveBeenCalledTimes(1);
+    expect(test.runtimeErrors).toHaveBeenCalledWith({ kind: 'runtime_ingest_failed', cause });
+    expect(test.session.getJourney()).toBe(before);
+    expect(test.changed).not.toHaveBeenCalled();
+
+    test.emit({ latitude: 51.5001, longitude: -3.5001, accuracyM: 5, recordedAt: '2026-08-25T12:00:10.000Z' });
+    expect(runtimeController.ingest).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops a synchronously-started watch before reporting a fatal ingestion error', () => {
+    const cause = new Error('recovery persistence failed');
+    const runtimeController: JourneyGpsRuntimeController = {
+      ingest: vi.fn(() => {
+        throw cause;
+      }),
+    };
+    const stop = vi.fn();
+    const observedStopCounts: number[] = [];
+    const runtimeErrors = vi.fn(() => observedStopCounts.push(stop.mock.calls.length));
+    const startWatch: NonNullable<ActiveJourneyGpsSessionOptions['startWatch']> = (options) => {
+      options.onSample({
+        latitude: 51.5,
+        longitude: -3.5,
+        accuracyM: 5,
+        recordedAt: '2026-08-25T12:00:05.000Z',
+      });
+      return { stop };
+    };
+
+    const session = createActiveJourneyGpsSession({
+      initialJourney: journey(),
+      runtimeController,
+      startWatch,
+      onRuntimeError: runtimeErrors,
+    });
+
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(runtimeErrors).toHaveBeenCalledWith({ kind: 'runtime_ingest_failed', cause });
+    expect(observedStopCounts).toEqual([1]);
+    expect(session.getJourney()).toEqual(journey());
+
+    session.stop();
+    expect(stop).toHaveBeenCalledTimes(1);
+  });
+
   it('forwards geolocation errors without touching the current Journey', () => {
     const runtimeController: JourneyGpsRuntimeController = {
       ingest: vi.fn((current: Journey): JourneyGpsRuntimeResult => ({

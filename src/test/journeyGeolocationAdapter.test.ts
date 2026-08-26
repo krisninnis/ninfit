@@ -77,17 +77,82 @@ describe('Journey geolocation adapter', () => {
     expect(fake.clearWatch).toHaveBeenCalledWith(42);
   });
 
-  it('forwards geolocation errors without inventing Journey state', () => {
+  it('clears the watcher before forwarding permission denial', () => {
     const fake = fakeGeolocation();
     const onSample = vi.fn();
-    const onError = vi.fn();
-    const error = { code: 1, message: 'denied', PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 } as GeolocationPositionError;
+    const observedClearCounts: number[] = [];
+    const onError = vi.fn(() => observedClearCounts.push(fake.clearWatch.mock.calls.length));
+    const error = {
+      code: 1,
+      message: 'denied',
+      PERMISSION_DENIED: 1,
+      POSITION_UNAVAILABLE: 2,
+      TIMEOUT: 3,
+    } as GeolocationPositionError;
 
     startJourneyGeolocationWatch({ geolocation: fake.geolocation, onSample, onError });
     fake.fail(error);
 
+    expect(fake.clearWatch).toHaveBeenCalledTimes(1);
+    expect(fake.clearWatch).toHaveBeenCalledWith(42);
+    expect(observedClearCounts).toEqual([1]);
     expect(onError).toHaveBeenCalledWith(error);
     expect(onSample).not.toHaveBeenCalled();
+
+    fake.emit(position());
+    expect(onSample).not.toHaveBeenCalled();
+  });
+
+  it('clears a synchronously-denied watcher before forwarding permission denial', () => {
+    const clearWatch = vi.fn();
+    const observedClearCounts: number[] = [];
+    const error = {
+      code: 1,
+      message: 'denied',
+      PERMISSION_DENIED: 1,
+      POSITION_UNAVAILABLE: 2,
+      TIMEOUT: 3,
+    } as GeolocationPositionError;
+    const onError = vi.fn(() => observedClearCounts.push(clearWatch.mock.calls.length));
+    const geolocation: GeolocationLike = {
+      watchPosition(_success, failure) {
+        failure?.(error);
+        return 42;
+      },
+      clearWatch,
+    };
+
+    const watch = startJourneyGeolocationWatch({
+      geolocation,
+      onSample: vi.fn(),
+      onError,
+    });
+
+    expect(clearWatch).toHaveBeenCalledTimes(1);
+    expect(clearWatch).toHaveBeenCalledWith(42);
+    expect(onError).toHaveBeenCalledWith(error);
+    expect(observedClearCounts).toEqual([1]);
+
+    watch.stop();
+    expect(clearWatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('forwards non-permission geolocation errors without stopping the watcher', () => {
+    const fake = fakeGeolocation();
+    const onError = vi.fn();
+    const error = {
+      code: 3,
+      message: 'timeout',
+      PERMISSION_DENIED: 1,
+      POSITION_UNAVAILABLE: 2,
+      TIMEOUT: 3,
+    } as GeolocationPositionError;
+
+    startJourneyGeolocationWatch({ geolocation: fake.geolocation, onSample: vi.fn(), onError });
+    fake.fail(error);
+
+    expect(fake.clearWatch).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledWith(error);
   });
 
   it('is idempotent when stopped and ignores later callbacks', () => {
