@@ -40,8 +40,12 @@ export function isTabId(value: string): value is TabId {
   return TAB_IDS.has(value);
 }
 
+function pathFromHash(hash: string): string {
+  return hash.trim().replace(/^#/, '').replace(/^\//, '').replace(/\/$/, '');
+}
+
 function normaliseHash(hash: string): string {
-  return hash.trim().replace(/^#/, '').replace(/^\//, '').replace(/\/$/, '').toLowerCase();
+  return pathFromHash(hash).toLowerCase();
 }
 
 export function parseTabFromHash(hash: string): TabId {
@@ -58,6 +62,7 @@ export type AppRoute =
   | { readonly kind: 'account'; readonly confirmed: boolean }
   | { readonly kind: 'journey-home' }
   | { readonly kind: 'journey-active' }
+  | { readonly kind: 'journey-detail'; readonly journeyId: string }
   | { readonly kind: 'tab'; readonly tab: TabId };
 
 const AUTH_FRAGMENT = /(^|[#&?])(access_token|refresh_token|error_code|error_description)=/;
@@ -68,7 +73,20 @@ export function looksLikeAuthReturn(hash: string): boolean {
 }
 
 export function parseRouteFromHash(hash: string): AppRoute {
-  const normalised = normaliseHash(hash);
+  const path = pathFromHash(hash);
+  const normalised = path.toLowerCase();
+
+  const detailPrefix = 'journey/detail/';
+  if (normalised.startsWith(detailPrefix)) {
+    const encodedId = path.slice(detailPrefix.length);
+    if (encodedId.length > 0) {
+      try {
+        return { kind: 'journey-detail', journeyId: decodeURIComponent(encodedId) };
+      } catch {
+        return { kind: 'journey-home' };
+      }
+    }
+  }
 
   if (normalised === 'journey') return { kind: 'journey-home' };
   if (normalised === 'journey/active') return { kind: 'journey-active' };
@@ -92,6 +110,10 @@ export function hashForTab(id: TabId): string {
 
 export function hashForPrimaryNav(id: PrimaryNavId): string {
   return id === 'journey' ? JOURNEY_HASH : hashForTab(id);
+}
+
+export function journeyDetailHash(journeyId: string): string {
+  return `#/journey/detail/${encodeURIComponent(journeyId)}`;
 }
 
 export function tabDefinition(id: TabId): TabDefinition {
