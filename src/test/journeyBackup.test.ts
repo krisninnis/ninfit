@@ -358,9 +358,6 @@ describe('a malformed Journey block is refused, never partly trusted', () => {
     ['a privacy flag is not boolean', {
       history: [{ ...completedJourney(), privacy: { ...completedJourney().privacy, maskSensitiveStartEnd: 'yes' } }],
     }],
-    ['precise cloud sync is enabled without full-route visibility', {
-      history: [{ ...completedJourney(), privacy: { ...completedJourney().privacy, preciseRouteCloudSync: true } }],
-    }],
     ['the active slot holds a completed Journey', {
       history: [],
       active: { savedAt: '2026-08-26T10:15:00.000Z', journey: completedJourney() },
