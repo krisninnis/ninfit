@@ -41,7 +41,7 @@ describe('Journey Live Map truth boundary', () => {
   it('keeps private Journey truth outside the generic map renderer', () => {
     expect(map).toContain('journeyTrustedRouteSegments(journey)');
     expect(map).toContain('journeyLatestTrustedPoint(journey)');
-    expect(renderer).not.toContain('JourneyRoute');
+    expect(renderer).not.toContain('Pick<Journey');
     expect(renderer).not.toContain('acceptedPoints');
     expect(renderer).not.toContain('segmentStarts');
     expect(renderer).not.toContain('rawPoints');
