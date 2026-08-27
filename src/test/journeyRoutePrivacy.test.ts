@@ -94,7 +94,7 @@ describe('Journey route privacy projection', () => {
       segmentStarts: [0, 4],
     });
 
-    expect(projectJourneyRouteForDisclosure(value).segments).toEqual([[p2, p3], [p4]]);
+    expect(projectJourneyRouteForDisclosure(value).segments).toEqual([[p2, p3]]);
   });
 
   it('splits a visible run instead of drawing across a hidden return to the start zone', () => {
@@ -110,6 +110,14 @@ describe('Journey route privacy projection', () => {
     );
 
     expect(projectJourneyRouteForDisclosure(value).segments).toEqual([[away1, away2], [away3]]);
+  });
+
+  it('does not disclose isolated one-point remnants', () => {
+    const value = journey([p0, p1, p2, p3, p4, p5, p6], 'masked_route', {
+      segmentStarts: [0, 4],
+    });
+    const projected = projectJourneyRouteForDisclosure(value);
+    expect(projected.segments).not.toContainEqual([p4]);
   });
 
   it('shows no geometry when masking consumes a short route', () => {
