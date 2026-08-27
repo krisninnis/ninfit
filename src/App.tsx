@@ -10,6 +10,7 @@ import { WeekScreen } from './ui/screens/WeekScreen';
 import { JourneyScreen } from './ui/screens/JourneyScreen';
 import { ActiveJourneyScreen } from './ui/screens/ActiveJourneyScreen';
 import { JourneyDetailScreen } from './ui/screens/JourneyDetailScreen';
+import { JourneyPostcardScreen } from './ui/screens/JourneyPostcardScreen';
 import { PageBackdrop } from './ui/components/PageBackdrop';
 import { StartupCinematic } from './ui/screens/StartupCinematic';
 import { BACKDROP_FOR_TAB } from './ui/backgrounds/registry';
@@ -23,6 +24,7 @@ import {
   hashForPrimaryNav,
   hashForTab,
   journeyDetailHash,
+  journeyPostcardHash,
   parseRouteFromHash,
   routeAfterHashChange,
   type AppRoute,
@@ -109,9 +111,12 @@ export default function App() {
   const showJourneyHome = route.kind === 'journey-home';
   const showActiveJourney = route.kind === 'journey-active';
   const showJourneyDetail = route.kind === 'journey-detail';
+  const showJourneyPostcard = route.kind === 'journey-postcard';
   const screenTab: TabId = route.kind === 'tab' ? route.tab : 'today';
   const CurrentScreen = SCREENS[screenTab];
-  const tab: PrimaryNavId = showJourneyHome || showJourneyDetail ? 'journey' : screenTab;
+  const tab: PrimaryNavId = showJourneyHome || showJourneyDetail || showJourneyPostcard
+    ? 'journey'
+    : screenTab;
   const showPrimaryNav = route.kind === 'tab' || showJourneyHome;
   const backdropId = tab === 'journey' ? 'journey-wall' : BACKDROP_FOR_TAB[tab];
 
@@ -135,6 +140,12 @@ export default function App() {
             <JourneyDetailScreen
               journeyId={route.journeyId}
               onClose={() => navigate(JOURNEY_HASH)}
+              onPreviewPostcard={() => navigate(journeyPostcardHash(route.journeyId))}
+            />
+          ) : showJourneyPostcard ? (
+            <JourneyPostcardScreen
+              journeyId={route.journeyId}
+              onClose={() => navigate(journeyDetailHash(route.journeyId))}
             />
           ) : showJourneyHome ? (
             <JourneyScreen />
