@@ -3,6 +3,7 @@ import {
   DEFAULT_TAB,
   JOURNEY_ACTIVE_HASH,
   JOURNEY_HASH,
+  PASSPORT_HASH,
   PRIMARY_NAV,
   TABS,
   hashForPrimaryNav,
@@ -92,6 +93,14 @@ describe('Journey routes', () => {
 
   it('fails malformed Postcard ids back to Journey Home', () => {
     expect(parseRouteFromHash('#/journey/postcard/%E0%A4%A')).toEqual({ kind: 'journey-home' });
+  });
+});
+
+describe('Passport route', () => {
+  it('opens a focused Passport route without becoming a primary nav id', () => {
+    expect(parseRouteFromHash(PASSPORT_HASH)).toEqual({ kind: 'passport' });
+    expect(PRIMARY_NAV.map((item) => item.id)).not.toContain('passport');
+    expect(isTabId('passport')).toBe(false);
   });
 });
 
