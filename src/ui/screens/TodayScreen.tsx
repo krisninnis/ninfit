@@ -6,6 +6,7 @@ import {
   toggleActivityCompletion,
 } from '../../domain/dailyLog';
 import { GameHeader } from '../components/GameHeader';
+import { LivingScrim } from '../components/LivingScrim';
 import { RewardAcknowledgement } from '../components/RewardAcknowledgement';
 import { useGame } from '../hooks/useGame';
 import { todayCompanionContext } from '../../domain/game/todayContext';
@@ -203,6 +204,7 @@ export function TodayScreen() {
         thing on the screen answered "how am I doing?" before anything answered "what
         am I doing today?". Those two questions are now in the right order.
       */}
+      <LivingScrim variant="bridge" className="today__living-bridge">
       <div className="today__meta">
         <span className="today__programme">
           {view.weekNumber !== undefined && view.dayIndex !== undefined
@@ -234,6 +236,7 @@ export function TodayScreen() {
         onHatch={game.hatch}
         onEvolve={game.evolve}
       />
+      </LivingScrim>
 
       {/*
         WHAT WAS JUST EARNED, DIRECTLY UNDER THE COMPANION AND ABOVE THE PLAN.
