@@ -39,7 +39,7 @@ function baseStyle(): StyleSpecification {
         tileSize: 256,
         maxzoom: 19,
         attribution:
-          '<a href="https://www.openstreetmap.org/copyright">Â© OpenStreetMap contributors</a>',
+          '<a href="https://www.openstreetmap.org/copyright">&copy; OpenStreetMap contributors</a>',
       },
     },
     layers: [
