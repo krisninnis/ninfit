@@ -1,0 +1,124 @@
+@layer screens {
+  .passport__back {
+    width: fit-content;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ft-space-2);
+    min-height: var(--ft-control-md);
+    padding: 0 var(--ft-space-3);
+    border: 0;
+    border-radius: var(--ft-radius-lg);
+    background: color-mix(in oklab, var(--ft-surface-raised) 72%, transparent);
+    color: var(--ft-text-primary);
+    cursor: pointer;
+  }
+
+  .passport__hero {
+    margin-top: var(--ft-space-4);
+  }
+
+  .passport__identity {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--ft-space-4);
+  }
+
+  .passport__portrait {
+    display: grid;
+    place-items: center;
+    width: calc(var(--ft-control-lg) + var(--ft-space-4));
+    aspect-ratio: 1;
+    border: 2px solid var(--ft-accent);
+    border-radius: var(--ft-radius-circle);
+    background: color-mix(in oklab, var(--ft-accent-soft) 76%, var(--ft-surface-raised));
+    color: var(--ft-accent-strong);
+    font-size: var(--ft-text-2xl);
+    font-weight: var(--ft-weight-bold);
+  }
+
+  .passport__identity-copy {
+    min-width: 0;
+  }
+
+  .passport__identity-copy h2,
+  .passport__section-heading h2 {
+    margin: 0;
+  }
+
+  .passport__identity-copy > p:last-child,
+  .passport__sealed-note p,
+  .passport__footnote {
+    color: var(--ft-text-secondary);
+  }
+
+  .passport__identity-copy > p:last-child {
+    margin: var(--ft-space-2) 0 0;
+  }
+
+  .passport__eyebrow {
+    margin: 0 0 var(--ft-space-1);
+    color: var(--ft-accent);
+    font-size: var(--ft-text-xs);
+    font-weight: var(--ft-weight-semibold);
+    letter-spacing: var(--ft-tracking-wide);
+    text-transform: uppercase;
+  }
+
+  .passport__record {
+    display: grid;
+    gap: var(--ft-space-3);
+    margin-top: var(--ft-space-5);
+  }
+
+  .passport__facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--ft-space-3);
+    margin: 0;
+  }
+
+  .passport__facts > div,
+  .passport__sealed-note {
+    padding: var(--ft-space-4);
+    border: 1px solid var(--ft-border-subtle);
+    border-radius: var(--ft-radius-lg);
+    background: color-mix(in oklab, var(--ft-surface-raised) 84%, transparent);
+  }
+
+  .passport__facts dt {
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-xs);
+  }
+
+  .passport__facts dd {
+    margin: var(--ft-space-1) 0 0;
+    color: var(--ft-text-primary);
+    font-weight: var(--ft-weight-semibold);
+  }
+
+  .passport__sealed-note {
+    margin-top: var(--ft-space-5);
+  }
+
+  .passport__sealed-note p {
+    margin: var(--ft-space-2) 0 0;
+  }
+
+  .passport__footnote {
+    margin: var(--ft-space-5) auto 0;
+    max-width: 56ch;
+    font-size: var(--ft-text-sm);
+    text-align: center;
+  }
+
+  @media (max-width: 430px) {
+    .passport__identity {
+      grid-template-columns: 1fr;
+    }
+
+    .passport__facts {
+      grid-template-columns: 1fr;
+    }
+  }
+}

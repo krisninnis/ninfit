@@ -11,6 +11,7 @@ import { JourneyScreen } from './ui/screens/JourneyScreen';
 import { ActiveJourneyScreen } from './ui/screens/ActiveJourneyScreen';
 import { JourneyDetailScreen } from './ui/screens/JourneyDetailScreen';
 import { JourneyPostcardScreen } from './ui/screens/JourneyPostcardScreen';
+import { PassportScreen } from './ui/screens/PassportScreen';
 import { PageBackdrop } from './ui/components/PageBackdrop';
 import { StartupCinematic } from './ui/screens/StartupCinematic';
 import { BACKDROP_FOR_TAB } from './ui/backgrounds/registry';
@@ -112,11 +113,14 @@ export default function App() {
   const showActiveJourney = route.kind === 'journey-active';
   const showJourneyDetail = route.kind === 'journey-detail';
   const showJourneyPostcard = route.kind === 'journey-postcard';
+  const showPassport = route.kind === 'passport';
   const screenTab: TabId = route.kind === 'tab' ? route.tab : 'today';
   const CurrentScreen = SCREENS[screenTab];
   const tab: PrimaryNavId = showJourneyHome || showJourneyDetail || showJourneyPostcard
     ? 'journey'
-    : screenTab;
+    : showPassport
+      ? 'profile'
+      : screenTab;
   const showPrimaryNav = route.kind === 'tab' || showJourneyHome;
   const backdropId = tab === 'journey' ? 'journey-wall' : BACKDROP_FOR_TAB[tab];
 
@@ -149,6 +153,8 @@ export default function App() {
             />
           ) : showJourneyHome ? (
             <JourneyScreen />
+          ) : showPassport ? (
+            <PassportScreen onClose={() => navigate(hashForTab('profile'))} />
           ) : (
             <CurrentScreen />
           )}
