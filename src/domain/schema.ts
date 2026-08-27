@@ -284,6 +284,29 @@ function validateJourney(
     if (!Array.isArray(value[key])) errors.push(`${label}.${key} must be an array`);
   }
 
+  const privacy = value['privacy'];
+  if (!isRecord(privacy)) {
+    errors.push(`${label}.privacy must be an object`);
+  } else {
+    const visibility = privacy['visibility'];
+    if (
+      typeof visibility !== 'string'
+      || !['private', 'summary_only', 'masked_route', 'full_route'].includes(visibility)
+    ) {
+      errors.push(`${label}.privacy.visibility is invalid`);
+    }
+    for (const key of ['maskSensitiveStartEnd', 'preciseRouteCloudSync'] as const) {
+      if (typeof privacy[key] !== 'boolean') {
+        errors.push(`${label}.privacy.${key} must be a boolean`);
+      }
+    }
+    if (privacy['preciseRouteCloudSync'] === true && visibility !== 'full_route') {
+      errors.push(
+        `${label}.privacy.preciseRouteCloudSync requires full_route visibility`,
+      );
+    }
+  }
+
   const route = value['route'];
   if (route !== undefined) {
     if (!isRecord(route)) {
