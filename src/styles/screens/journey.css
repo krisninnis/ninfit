@@ -58,6 +58,99 @@
     text-wrap: balance;
   }
 
+  /* --- Companion --------------------------------------------------------- */
+
+  /*
+   * The path companion's presence: a strip, not a card.
+   *
+   * It sits under the invitation and above the tiles because that is where a
+   * travelling companion belongs - beside the question, not in front of the answer.
+   * It is deliberately the quietest surface on the screen: less opaque than the
+   * launch tiles, no shadow, no motion, and a single line of type. A second tall
+   * character card here would be the dashboard failure this screen was built to
+   * avoid.
+   *
+   * Same translucent-and-blurred language as everything else on Journey Home, so it
+   * reads as placed in the world rather than laid over it.
+   *
+   * The negative top margin halves the screen's 48px region gap for this one join.
+   * The companion belongs to the invitation above it, not to the tiles below, and a
+   * full region gap on both sides made it read as a third region of its own.
+   */
+  .journey-home__companion {
+    display: flex;
+    align-items: center;
+    gap: var(--ft-space-3);
+    min-width: 0;
+    margin-top: calc(var(--ft-space-5) * -1);
+    padding: var(--ft-space-3) var(--ft-space-4);
+    border: 1px solid var(--ft-border-subtle);
+    border-radius: var(--ft-radius-lg);
+    background: color-mix(in srgb, var(--ft-surface-raised) 72%, transparent);
+    backdrop-filter: blur(16px);
+  }
+
+  /*
+   * TEMPORARY PRESENTATION FALLBACK - a single letter standing in for mascot art.
+   * The slot is sized from an existing control scale so real artwork can replace the
+   * letter without re-spacing the strip.
+   */
+  .journey-home__companion-mark {
+    flex: 0 0 var(--ft-control-md);
+    display: grid;
+    place-items: center;
+    width: var(--ft-control-md);
+    height: var(--ft-control-md);
+    border: 1px solid var(--ft-border-subtle);
+    border-radius: var(--ft-radius-circle);
+    background: var(--ft-surface-sunken);
+    font-size: var(--ft-text-lg);
+    font-weight: var(--ft-weight-bold);
+    line-height: 1;
+  }
+
+  .journey-home__companion-body {
+    display: grid;
+    gap: var(--ft-space-1);
+    min-width: 0;
+  }
+
+  .journey-home__companion-name {
+    font-size: var(--ft-text-sm);
+    font-weight: var(--ft-weight-semibold);
+    color: var(--ft-text-primary);
+  }
+
+  /*
+   * One line, and it truncates rather than reflowing the strip. Measured against the
+   * chatty personality at 360px, which is the longest copy the table can produce.
+   */
+  .journey-home__companion-message {
+    overflow: hidden;
+    font-size: var(--ft-text-xs);
+    line-height: 1.3;
+    color: var(--ft-text-secondary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /*
+   * Contextual reaction treatment, decided before this CSS ever sees it.
+   *
+   * Atmosphere only: no text, count, score, progress or meaning is encoded here, and
+   * nothing relies on motion to be understood. There is no `celebrate` rule, and
+   * that is not an omission - Journey has no trustworthy freshness identity, so a
+   * stored Journey from last spring must never be able to reach a celebration.
+   */
+  .journey-home__companion[data-companion-reaction='warm'] {
+    border-color: color-mix(in oklab, var(--ft-accent) 30%, var(--ft-border-subtle));
+    background: color-mix(in srgb, var(--ft-accent-soft) 22%, var(--ft-surface-raised) 72%);
+  }
+
+  .journey-home__companion[data-companion-reaction='action'] {
+    border-color: color-mix(in oklab, var(--ft-accent) 36%, var(--ft-border-subtle));
+  }
+
   /* --- Activities -------------------------------------------------------- */
 
   /*
