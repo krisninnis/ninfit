@@ -1,10 +1,14 @@
 import { useMemo } from 'react';
 import { getAppContext } from '../../app/bootstrap';
 import { createJourneyLaunchController } from '../../app/journeyLaunchController';
+import { createDefaultGameSettings } from '../../domain/game/defaults';
+import { visibleMascotFamily } from '../../domain/game/mascot';
 import type { Journey, JourneyActivityType } from '../../domain/journey';
 import type { ISODateTime } from '../../domain/types';
 import { loadJourneyHistory } from '../../storage/journeyHistory';
 import { JOURNEY_ACTIVE_HASH, journeyDetailHash } from '../tabs';
+import { JourneyCompanion } from '../components/JourneyCompanion';
+import { journeyCompanionPresence } from '../journeyCompanionPresentation';
 import { formatJourneyDistance, journeyDistanceM } from '../journeyPresentation';
 
 const PRIMARY_ACTIVITIES: ReadonlyArray<{
@@ -53,9 +57,31 @@ function RecentJourney({ journey }: { journey: Journey }) {
 
 export function JourneyScreen() {
   const storage = useMemo(() => getAppContext().adapter, []);
+  const repository = useMemo(() => getAppContext().repository, []);
   const launch = useMemo(() => createJourneyLaunchController(storage), [storage]);
   const active = launch.loadActive();
-  const recent = loadJourneyHistory(storage).slice(0, 3);
+  const history = loadJourneyHistory(storage);
+  const recent = history.slice(0, 3);
+
+  /*
+   * THE COMPANION IS READ, NEVER SYNCED, FROM THIS SCREEN.
+   *
+   * `useGame()` is deliberately not used here. It calls `syncGame`, which derives and
+   * GRANTS rewards and can write game state - and a screen about walking somewhere
+   * has no business granting anything. `getGameState` and `getGameSettings` are plain
+   * reads: no derivation, no grant, no write, and no fifth independent game instance
+   * added to an architecture already carrying an open question about the four that
+   * exist (see docs/CURRENT_STATE.md).
+   *
+   * Two booleans are all that crosses into the companion. Distance, duration, route
+   * and every metric stay where they belong, on Journey's own presentation path.
+   */
+  const gameState = repository.getGameState();
+  const settings = repository.getGameSettings() ?? createDefaultGameSettings();
+  const companion = journeyCompanionPresence(
+    gameState === undefined ? undefined : visibleMascotFamily(gameState.mascot),
+    { hasActiveJourney: active !== null, hasCompletedJourney: history.length > 0 },
+  );
 
   const start = (activityType: JourneyActivityType) => {
     launch.start(activityType, nowIso());
@@ -76,6 +102,24 @@ export function JourneyScreen() {
           {active ? 'You have a Journey still going.' : 'Where are we going today?'}
         </p>
       </header>
+
+      {/*
+        THE PATH MASCOT IS JOURNEY HOME'S COMPANION PRESENCE.
+
+        One low strip under the invitation, and nothing more. Opal is not a second
+        character here for the same reason Opal is not one on Today: a guide who is
+        permanently on screen saying nothing is furniture, and it would push the
+        activity tiles - the reason this screen exists - further down the page.
+
+        It is absent entirely before the egg hatches, because there is no companion to
+        name yet and the animal is a secret until the user opens it themselves.
+      */}
+      {companion !== undefined ? (
+        <JourneyCompanion
+          presence={companion}
+          personality={settings.mascotPersonality}
+        />
+      ) : null}
 
       {active ? (
         <button type="button" className="journey-home__continue" onClick={openActiveJourney}>
