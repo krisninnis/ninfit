@@ -1,4 +1,4 @@
-import type { Journey, JourneyGpsPoint, JourneyMetricObservation } from './journey';
+import type { Journey, JourneyGpsPoint, JourneyMetricObservation, JourneyRoute } from './journey';
 import { evaluateJourneySegment } from './journeyDistance';
 import {
   acceptJourneyGpsSample,
@@ -19,6 +19,18 @@ export type JourneyGpsRuntimeResult =
 export interface JourneyGpsRuntimeIds {
   phoneGpsSourceId: string;
   distanceMetricId: string;
+}
+
+export interface JourneyGpsIngestOptions {
+  /**
+   * True when this sample is the first offered by a freshly started watcher run.
+   *
+   * The caller latches it, not this function: a rejected sample must not consume the
+   * marker, so the flag stays true until something is actually accepted. The index is
+   * then recorded against the point that begins the run rather than against whichever
+   * bad fix happened to arrive first.
+   */
+  startsNewSegment?: boolean;
 }
 
 function toPoint(sample: JourneyGpsSample): JourneyGpsPoint {
@@ -70,6 +82,7 @@ export function ingestJourneyGpsSample(
   journey: Journey,
   sample: JourneyGpsSample,
   ids: JourneyGpsRuntimeIds,
+  options: JourneyGpsIngestOptions = {},
 ): JourneyGpsRuntimeResult {
   if (journey.status !== 'recording') {
     return { accepted: false, journey, reason: 'journey_not_recording' };
@@ -107,12 +120,27 @@ export function ingestJourneyGpsSample(
   const point = toPoint(sample);
   const route = journey.route ?? { rawPoints: [], acceptedPoints: [] };
   const totalDistance = currentDistance(journey) + distanceAddedM;
+
+  /*
+   * Recorded only now, on the accepted path, and only against the index this point is
+   * about to occupy. A route that already held points and no segmentation gains just
+   * this one start - the earlier points were observed by a run nobody recorded, and
+   * claiming index 0 for them would manufacture evidence of continuity that does not
+   * exist.
+   */
+  const nextRoute: JourneyRoute = {
+    rawPoints: [...route.rawPoints, point],
+    acceptedPoints: [...route.acceptedPoints, point],
+  };
+  if (options.startsNewSegment === true) {
+    nextRoute.segmentStarts = [...(route.segmentStarts ?? []), route.acceptedPoints.length];
+  } else if (route.segmentStarts !== undefined) {
+    nextRoute.segmentStarts = [...route.segmentStarts];
+  }
+
   const next: Journey = {
     ...journey,
-    route: {
-      rawPoints: [...route.rawPoints, point],
-      acceptedPoints: [...route.acceptedPoints, point],
-    },
+    route: nextRoute,
     metrics: upsertDistanceMetric(journey, totalDistance, ids, sample.recordedAt),
     updatedAt: sample.recordedAt,
   };

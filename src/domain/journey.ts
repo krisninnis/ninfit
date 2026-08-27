@@ -56,6 +56,27 @@ export interface JourneyGpsPoint {
 export interface JourneyRoute {
   rawPoints: JourneyGpsPoint[];
   acceptedPoints: JourneyGpsPoint[];
+  /**
+   * Indexes into `acceptedPoints`, each naming the first point of a continuously
+   * observed GPS run.
+   *
+   * WHAT IT IS FOR. Between one watcher stopping and the next starting - a pause, a
+   * reload, leaving the screen - NinFit is not observing. The points either side are
+   * both trusted, but the line between them was never seen. Recording where each run
+   * began lets a later map draw what was observed and leave the rest blank, instead of
+   * inventing a straight line across a gap.
+   *
+   * WHY ABSENT IS NOT "ONE SEGMENT". A Journey recorded before this existed carries no
+   * segmentation evidence at all, and that is different from evidence of continuity.
+   * `undefined` therefore means unknown, and a consumer must not read it as a single
+   * unbroken run. When a fresh watcher later adds to such a route it records only its
+   * own start index - never a fabricated 0 for the points it did not witness.
+   *
+   * WHAT IT IS NOT. Presentation metadata, and nothing else. Distance stays the
+   * business of `journeyGpsRuntime` and the `distance_m` metric; nothing here may
+   * become a second opinion about how far someone went.
+   */
+  segmentStarts?: number[];
 }
 
 export interface JourneyPrivacy {
