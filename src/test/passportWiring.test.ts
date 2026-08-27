@@ -15,7 +15,11 @@ describe('Passport v1 wiring', () => {
   it('is a dedicated sub-route rather than a new primary navigation tab', () => {
     expect(tabs).toContain("export const PASSPORT_HASH = '#/passport';");
     expect(tabs).toContain("{ readonly kind: 'passport' }");
-    expect(tabs).not.toMatch(/PRIMARY_NAV[\s\S]*passport/i);
+    const primaryNav = tabs.slice(
+      tabs.indexOf('export const PRIMARY_NAV'),
+      tabs.indexOf('export const DEFAULT_TAB'),
+    );
+    expect(primaryNav).not.toMatch(/passport/i);
   });
 
   it('opens from Profile and returns there', () => {
@@ -23,6 +27,11 @@ describe('Passport v1 wiring', () => {
     expect(profile).toContain('PASSPORT_HASH');
     expect(app).toContain("route.kind === 'passport'");
     expect(app).toContain('navigate(hashForTab(\'profile\'))');
+  });
+
+  it('uses the Profile world while remaining a focused sub-route', () => {
+    expect(app).toContain("showPassport ? 'profile'");
+    expect(app).toContain("const showPrimaryNav = route.kind === 'tab' || showJourneyHome");
   });
 
   it('uses the shared Living Interface hero primitive', () => {
