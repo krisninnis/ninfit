@@ -95,10 +95,11 @@ describe('freshness wiring', () => {
     expect(today).toContain('freshMomentKey={companionMomentKey}');
   });
 
-  it('does not pass reward kinds, XP or labels into GameHeader lifetime logic', () => {
+  it('does not pass reward kinds or reward fields into GameHeader lifetime logic', () => {
     const executable = code(header);
-    expect(executable).not.toMatch(/RewardEvent|RewardKind|\.kind\b|\.xp\b|\.label\b/);
+    expect(executable).not.toMatch(/RewardEvent|RewardKind|\.kind\b/);
     expect(executable).not.toMatch(/trophy_unlocked|session_completed|activity_completed/);
+    expect(executable).not.toMatch(/granted|freshReward|rewardKind|rewardLabel|rewardXp/i);
   });
 
   it('does not replay a moment when the fresh key is empty', () => {
