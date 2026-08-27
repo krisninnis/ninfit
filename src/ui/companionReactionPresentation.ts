@@ -18,6 +18,9 @@ export type CompanionReactionPresentation =
 
 export type CompanionReactionLifetime = 'standing' | 'moment';
 
+/** Bounded emphasis time for one freshly observed companion moment. */
+export const COMPANION_MOMENT_DWELL_MS = 3200;
+
 export const COMPANION_REACTION_PRESENTATION: Readonly<
   Record<MascotContext, CompanionReactionPresentation>
 > = {
@@ -58,4 +61,18 @@ export function companionReactionLifetime(
   context: MascotContext,
 ): CompanionReactionLifetime {
   return COMPANION_REACTION_LIFETIME[context];
+}
+
+/**
+ * Standing states remain visible for as long as their truth remains current.
+ * Moment states get their stronger treatment only while a fresh moment is active.
+ * Their copy may remain truthful after emphasis ends; only the atmosphere returns
+ * to calm.
+ */
+export function companionReactionPresentationForLifetime(
+  context: MascotContext,
+  momentActive: boolean,
+): CompanionReactionPresentation {
+  if (companionReactionLifetime(context) === 'moment' && !momentActive) return 'calm';
+  return companionReactionPresentation(context);
 }
