@@ -6,6 +6,7 @@ import {
   toggleActivityCompletion,
 } from '../../domain/dailyLog';
 import { GameHeader } from '../components/GameHeader';
+import { LivingScrim } from '../components/LivingScrim';
 import { RewardAcknowledgement } from '../components/RewardAcknowledgement';
 import { useGame } from '../hooks/useGame';
 import { todayCompanionContext } from '../../domain/game/todayContext';
@@ -198,42 +199,45 @@ export function TodayScreen() {
   return (
     <Screen title="Today" subtitle={formatLongDate(date)}>
       {/*
-        PHASE 6 ORDER. Context, then companion, then the plan - and the plan is the
-        hero. This used to open with the game card, which meant the first and largest
-        thing on the screen answered "how am I doing?" before anything answered "what
-        am I doing today?". Those two questions are now in the right order.
+        LIVING INTERFACE BRIDGE.
+
+        Programme context and the companion now read as one foreground threshold into
+        the NinFit world rather than two unrelated rows. The session still follows as
+        the strongest action surface; this bridge must never become the product hero.
       */}
-      <div className="today__meta">
-        <span className="today__programme">
-          {view.weekNumber !== undefined && view.dayIndex !== undefined
-            ? `Week ${view.weekNumber} · Day ${view.dayIndex}`
-            : 'Not started yet'}
-        </span>
-        <SaveDot indicator={saveIndicator} />
-      </div>
+      <LivingScrim variant="bridge" className="today__living-bridge">
+        <div className="today__meta">
+          <span className="today__programme">
+            {view.weekNumber !== undefined && view.dayIndex !== undefined
+              ? `Week ${view.weekNumber} · Day ${view.dayIndex}`
+              : 'Not started yet'}
+          </span>
+          <SaveDot indicator={saveIndicator} />
+        </div>
 
-      {/*
-        THE PATH MASCOT IS TODAY'S COMPANION PRESENCE. LOCKED.
+        {/*
+          THE PATH MASCOT IS TODAY'S COMPANION PRESENCE. LOCKED.
 
-        This strip belongs to the user's own fitness journey - egg, hatch, growth,
-        evolution - and it is the one permanent character on this screen.
+          This strip belongs to the user's own fitness journey - egg, hatch, growth,
+          evolution - and it is the one permanent character on this screen.
 
-        OPAL IS NOT A SECOND ONE. Opal is the NinFit guide: contextual help,
-        occasional encouragement, hints, explanations. Opal may earn a place here
-        when there is a meaningful reason to speak, and must never become a second
-        permanent character card competing with the path mascot for equal weight. A
-        guide who is always on screen saying nothing is furniture, and it would push
-        today's session further down the page - which is the exact failure the phase
-        was opened to fix.
-      */}
-      <GameHeader
-        state={game.state}
-        settings={game.settings}
-        context={companionContext}
-        crackStage={crackStage}
-        onHatch={game.hatch}
-        onEvolve={game.evolve}
-      />
+          OPAL IS NOT A SECOND ONE. Opal is the NinFit guide: contextual help,
+          occasional encouragement, hints, explanations. Opal may earn a place here
+          when there is a meaningful reason to speak, and must never become a second
+          permanent character card competing with the path mascot for equal weight. A
+          guide who is always on screen saying nothing is furniture, and it would push
+          today's session further down the page - which is the exact failure the phase
+          was opened to fix.
+        */}
+        <GameHeader
+          state={game.state}
+          settings={game.settings}
+          context={companionContext}
+          crackStage={crackStage}
+          onHatch={game.hatch}
+          onEvolve={game.evolve}
+        />
+      </LivingScrim>
 
       {/*
         WHAT WAS JUST EARNED, DIRECTLY UNDER THE COMPANION AND ABOVE THE PLAN.
@@ -255,13 +259,10 @@ export function TodayScreen() {
         </section>
       ) : null}
 
-      {/* --- The plan ------------------------------------------------------ */}
-
       {view.status === 'planned' ? (
         <section className="card card--action plan plan--hero">
           <div className="plan__head">
             <h2 className="plan__title">Today&rsquo;s session</h2>
-            {/* Duration and intensity as two glanceable facts, not two sentences. */}
             <p className="plan__facts">
               {plannedMinutes > 0 ? <span className="plan__fact">{plannedMinutes} min</span> : null}
               {view.targetEffortMin !== undefined && view.targetEffortMax !== undefined ? (
@@ -283,7 +284,6 @@ export function TodayScreen() {
             ))}
           </ul>
 
-          {/* Exactly one primary action, always pointing at the next undone thing. */}
           {nextUp !== undefined ? (
             nextUp.activity.externalUrl !== undefined ? (
               <a
@@ -312,11 +312,6 @@ export function TodayScreen() {
         </section>
       ) : null}
 
-      {/*
-        Rest is a planned day, so it gets the hero treatment and a real primary action
-        of its own. Every benchmark treats a rest day as an empty state; here it is
-        something you can complete, because the programme asked for it.
-      */}
       {view.status === 'rest' ? (
         <section className="card card--action plan plan--hero plan--rest">
           <div className="plan__head">
@@ -382,18 +377,8 @@ export function TodayScreen() {
         </section>
       ) : null}
 
-      {/* --- Quick check-in ------------------------------------------------- */}
-
       <QuickCheckIn log={log} onChange={update} />
 
-      {/* --- How it went --------------------------------------------------- */}
-
-      {/*
-        Everything below is closed by default from Phase 6 on. Open sections turned
-        Today into a page of forms, which is the "wall of metrics" the benchmark
-        warned about. Each header now carries its own value, so closed still answers
-        the question - it just stops shouting it.
-      */}
       <Section
         title="How did it go?"
         defaultOpen={false}
@@ -437,8 +422,6 @@ export function TodayScreen() {
           placeholder="Anything worth remembering."
         />
       </Section>
-
-      {/* --- Back and symptoms --------------------------------------------- */}
 
       <Section
         title="How is your back?"
@@ -493,8 +476,6 @@ export function TodayScreen() {
         />
       </Section>
 
-      {/* --- Food ----------------------------------------------------------- */}
-
       <Section
         title="Today&rsquo;s food target"
         defaultOpen={false}
@@ -505,141 +486,100 @@ export function TodayScreen() {
         }
       >
         <Toggle
-          label="Fruit before midday"
-          checked={nutrition?.morningFruit}
-          onChange={(checked) => update({ nutrition: { morningFruit: checked } })}
-        />
-        <Toggle
-          label="Main meal with protein"
-          checked={nutrition?.proteinMainMeal}
-          onChange={(checked) => update({ nutrition: { proteinMainMeal: checked } })}
-        />
-        <Toggle
-          label="Gousto meal"
-          checked={nutrition?.goustoMeal}
-          onChange={(checked) => update({ nutrition: { goustoMeal: checked } })}
+          label="Protein with meals"
+          checked={nutrition?.proteinWithMeals}
+          onChange={(checked) => update({ nutrition: { proteinWithMeals: checked } })}
         />
         <Stepper
           label="Fruit and veg"
           value={nutrition?.fruitVegServings}
           onChange={(value) => update({ nutrition: { fruitVegServings: value } })}
-          max={20}
+          min={0}
+          max={12}
           unit="servings"
         />
+        <Toggle
+          label="Sweet snack"
+          checked={nutrition?.sweetSnack}
+          onChange={(checked) => update({ nutrition: { sweetSnack: checked } })}
+        />
+        <Toggle
+          label="Takeaway"
+          checked={nutrition?.takeaway}
+          onChange={(checked) => update({ nutrition: { takeaway: checked } })}
+        />
         <NoteField
-          label="Snacks or chocolate"
-          value={nutrition?.snackNote}
-          onChange={(value) => update({ nutrition: { snackNote: value } })}
-          placeholder="Just a note. No counting."
+          label="Food note"
+          value={nutrition?.notes}
+          onChange={(value) => update({ nutrition: { notes: value } })}
+          placeholder="Anything useful about meals or snacks."
         />
       </Section>
-
-      {/* --- Water ---------------------------------------------------------- */}
 
       <Section
-        title="Water"
+        title="Hydration"
         defaultOpen={false}
-        summary={
-          hydration?.glasses !== undefined ? `${hydration.glasses} glasses` : undefined
-        }
+        summary={`${hydration.glasses} glasses`}
       >
-        <Stepper
-          label="Glasses or cups"
-          hint={`Most days land somewhere around ${HYDRATION_GUIDE_LOW}–${HYDRATION_GUIDE_HIGH}. It is a rough guide, not a target.`}
-          value={hydration?.glasses}
-          onChange={(value) => update({ hydration: { glasses: value } })}
-          max={30}
-        />
-        <div
-          className="hydration"
-          role="img"
-          aria-label={`${glasses} glasses recorded`}
-        >
-          <div className="hydration__fill" style={{ width: `${hydrationPercent}%` }} />
+        <div className="bar" aria-label={`${hydration.glasses} glasses, rough guide ${HYDRATION_GUIDE_LOW} to ${HYDRATION_GUIDE_HIGH}`}>
+          <span className="bar__fill" style={{ width: `${hydrationPercent}%` }} />
         </div>
-        <NoteField
-          label="Other drinks"
-          value={hydration?.extraFluidNote}
-          onChange={(value) => update({ hydration: { extraFluidNote: value } })}
-          placeholder="Tea, squash, anything else."
+        <Stepper
+          label="Glasses of water"
+          hint={`Rough guide ${HYDRATION_GUIDE_LOW}–${HYDRATION_GUIDE_HIGH}, not a rule.`}
+          value={hydration.glasses}
+          onChange={(value) => update({ hydration: { glasses: value ?? 0 } })}
+          min={0}
+          max={20}
+          unit="glasses"
         />
       </Section>
-
-      {/* --- Recovery -------------------------------------------------------- */}
 
       <Section
         title="Sleep and recovery"
         defaultOpen={false}
         summary={recovery?.sleepHours !== undefined ? `${recovery.sleepHours} hours` : undefined}
       >
-        <Stepper
+        <NumberField
           label="Sleep"
           value={recovery?.sleepHours}
           onChange={(value) => update({ recovery: { sleepHours: value } })}
+          min={0}
+          max={24}
           step={0.5}
-          max={16}
           unit="hours"
-          decimals={1}
+          placeholder="Not recorded"
         />
         <Scale
           label="Energy"
           value={recovery?.energy}
           onChange={(value) => update({ recovery: { energy: value } })}
-          min={1}
-          max={10}
-          lowLabel="flat"
-          highLabel="good"
+          lowLabel="low"
+          highLabel="high"
         />
-        <NumberField
-          label="Resting heart rate"
-          value={recovery?.restingHeartRateBpm}
-          onChange={(value) => update({ recovery: { restingHeartRateBpm: value } })}
-          unit="bpm"
-          min={20}
-          max={220}
-        />
-        <NumberField
-          label="HRV"
-          value={recovery?.hrvMs}
-          onChange={(value) => update({ recovery: { hrvMs: value } })}
-          unit="ms"
-          min={0}
-          max={300}
+        <Scale
+          label="Stress"
+          value={recovery?.stress}
+          onChange={(value) => update({ recovery: { stress: value } })}
+          lowLabel="low"
+          highLabel="high"
         />
         <NoteField
-          label="Note about how you slept"
+          label="Recovery note"
           value={recovery?.notes}
           onChange={(value) => update({ recovery: { notes: value } })}
+          placeholder="Anything worth noting."
         />
       </Section>
 
-      {/*
-        One insight, not a dashboard. It counts distinct days with something completed,
-        which is the number this product is actually about - showing up - rather than
-        how much of a form has been filled in.
-      */}
-      <p className="today__insight">
-        {activeDays === 0
-          ? 'Your first active day starts whenever you are ready.'
-          : `${activeDays} active ${activeDays === 1 ? 'day' : 'days'} so far.`}
+      <p className="today__disclaimer">
+        NinFit records what you enter. It does not diagnose symptoms or replace medical advice.
       </p>
 
-      {/*
-        NO DAILY COMPLETION SCORE. A "3 of 5 sections recorded" line used to sit here.
-
-        It was the last piece of scorekeeping left on Today, and it counted the wrong
-        thing: how much of a form had been filled in. A person who did their whole
-        session and wrote nothing down scored 1 of 5, and the only way to raise the
-        number was to type more - so the line quietly argued for admin over exercise
-        and got quieter the more honest the day had been. The insight above counts
-        showing up instead, which is the number this product is actually about.
-
-        This is a locked product rule, not a layout preference: reward showing up,
-        never score the day. It must not come back in another form - no ring, no
-        percentage, no "complete your day".
-      */}
-      <p className="today__disclaimer">
-        A personal record, not a medical assessment.
+      <p className="today__insight">
+        {activeDays === 0
+          ? 'Your history starts with the first day you complete something.'
+          : `${activeDays} active day${activeDays === 1 ? '' : 's'} in your history.`}
       </p>
     </Screen>
   );
