@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Map as MapLibreMap,
   type GeoJSONSource,
@@ -135,6 +135,7 @@ export function ActiveJourneyMap({ journey }: ActiveJourneyMapProps) {
   const loadedRef = useRef(false);
   const latestJourneyRef = useRef(journey);
   const lastCenteredAtRef = useRef<string | null>(null);
+  const [mapUnavailable, setMapUnavailable] = useState(false);
 
   latestJourneyRef.current = journey;
 
@@ -143,14 +144,20 @@ export function ActiveJourneyMap({ journey }: ActiveJourneyMapProps) {
     if (container === null) return undefined;
 
     const latest = journeyLatestTrustedPoint(latestJourneyRef.current);
-    const map = new MapLibreMap({
-      container,
-      style: baseStyle(),
-      center: latest === null ? [0, 20] : [latest.longitude, latest.latitude],
-      zoom: latest === null ? 1.5 : 15,
-      interactive: false,
-      attributionControl: {},
-    });
+    let map: MapLibreMap;
+    try {
+      map = new MapLibreMap({
+        container,
+        style: baseStyle(),
+        center: latest === null ? [0, 20] : [latest.longitude, latest.latitude],
+        zoom: latest === null ? 1.5 : 15,
+        interactive: false,
+        attributionControl: {},
+      });
+    } catch {
+      setMapUnavailable(true);
+      return undefined;
+    }
 
     mapRef.current = map;
 
@@ -198,6 +205,15 @@ export function ActiveJourneyMap({ journey }: ActiveJourneyMapProps) {
       });
     }
   }, [journey]);
+
+  if (mapUnavailable) {
+    return (
+      <div className="active-journey__map-unavailable" role="status" aria-live="polite">
+        <strong>Map unavailable</strong>
+        <span>Your Journey recording continues safely.</span>
+      </div>
+    );
+  }
 
   return (
     <div
