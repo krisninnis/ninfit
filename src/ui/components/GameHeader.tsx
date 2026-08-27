@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   EVOLUTION_STATUS_LABELS,
   MASCOT_STAGE_LABELS,
@@ -9,7 +10,10 @@ import type { GameSettings, GameState } from '../../domain/game/types';
 import { levelProgress } from '../../domain/game/xp';
 import { EggArt } from './EggArt';
 import { useHatchCinematic } from '../hooks/useHatchCinematic';
-import { companionReactionPresentation } from '../companionReactionPresentation';
+import {
+  companionReactionLifetime,
+  companionReactionPresentation,
+} from '../companionReactionPresentation';
 
 /**
  * The companion strip: "I'm progressing", not "this is what you came here to manage".
@@ -51,6 +55,8 @@ import { companionReactionPresentation } from '../companionReactionPresentation'
  * hatching and evolving.
  */
 
+export const COMPANION_MOMENT_DWELL_MS = 3200;
+
 interface GameHeaderProps {
   state: GameState;
   settings: GameSettings;
@@ -60,6 +66,11 @@ interface GameHeaderProps {
    * place the precedence between "you finished" and "welcome back" is written down.
    */
   context: MascotContext;
+  /**
+   * Identity of the freshly granted sync delta. Empty on repeat/reload.
+   * Presentation uses only freshness, never reward kinds or XP.
+   */
+  freshMomentKey: string;
   crackStage: number;
   onHatch: () => void;
   onEvolve: () => void;
@@ -69,6 +80,7 @@ export function GameHeader({
   state,
   settings,
   context,
+  freshMomentKey,
   crackStage,
   onHatch,
   onEvolve,
@@ -87,7 +99,26 @@ export function GameHeader({
   });
 
   const message = mascotMessage(context, settings.mascotPersonality);
-  const reactionPresentation = companionReactionPresentation(context);
+  const lifetime = companionReactionLifetime(context);
+  const [activeMomentKey, setActiveMomentKey] = useState(
+    lifetime === 'moment' ? freshMomentKey : '',
+  );
+
+  useEffect(() => {
+    if (lifetime !== 'moment' || freshMomentKey === '') {
+      setActiveMomentKey('');
+      return;
+    }
+
+    setActiveMomentKey(freshMomentKey);
+    const timer = setTimeout(() => setActiveMomentKey(''), COMPANION_MOMENT_DWELL_MS);
+    return () => clearTimeout(timer);
+  }, [freshMomentKey, lifetime]);
+
+  const reactionPresentation =
+    lifetime === 'moment' && activeMomentKey !== freshMomentKey
+      ? 'calm'
+      : companionReactionPresentation(context);
 
   const action =
     state.mascot.eggState === 'ready'
