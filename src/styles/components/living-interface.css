@@ -1,0 +1,89 @@
+/**
+ * Shared Living Interface foreground scrim.
+ *
+ * PageBackdrop remains responsible for global contrast and decorative artwork.
+ * This primitive sits ABOVE that safe backdrop and BELOW ordinary content, giving
+ * screens a consistent atmospheric transition without weakening the backdrop veil.
+ *
+ * No state lives here. No colour is invented here. No motion is required.
+ */
+
+@layer components {
+  .living-scrim {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border: 1px solid color-mix(in oklab, var(--ft-border-subtle) 72%, transparent);
+    border-radius: var(--ft-radius-xl);
+  }
+
+  .living-scrim::before,
+  .living-scrim::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+  }
+
+  /*
+   * The plate is intentionally stronger at the content edge than at the world edge.
+   * It sits on top of PageBackdrop's already-safe veil, so this is additive contrast,
+   * never a replacement for the global readability contract.
+   */
+  .living-scrim::before {
+    inset: 0;
+    z-index: -2;
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in oklab, var(--ft-surface-raised) 76%, transparent) 0%,
+        color-mix(in oklab, var(--ft-surface-raised) 88%, transparent) 44%,
+        color-mix(in oklab, var(--ft-surface-raised) 96%, transparent) 100%
+      );
+    backdrop-filter: blur(14px);
+  }
+
+  /*
+   * A faint horizon/light pool makes the layer feel connected to the world rather
+   * than like another rectangular card. It uses the current path accent token, so
+   * the visual reaction follows presentation state without learning fitness truth.
+   */
+  .living-scrim::after {
+    inset: 0 0 auto;
+    height: 38%;
+    z-index: -1;
+    background:
+      radial-gradient(
+        ellipse 72% 120% at 50% 0%,
+        color-mix(in oklab, var(--ft-accent) 15%, transparent),
+        transparent 72%
+      );
+  }
+
+  .living-scrim__content {
+    position: relative;
+    min-width: 0;
+  }
+
+  .living-scrim--hero {
+    padding: var(--ft-space-4);
+    box-shadow: var(--ft-shadow-raised);
+  }
+
+  .living-scrim--bridge {
+    padding: var(--ft-space-3);
+    border-radius: var(--ft-radius-lg);
+    box-shadow: var(--ft-shadow-card);
+  }
+
+  @media (min-width: 600px) {
+    .living-scrim--hero {
+      padding: var(--ft-space-5);
+    }
+  }
+
+  @media (prefers-reduced-data: reduce) {
+    .living-scrim::after {
+      display: none;
+    }
+  }
+}
