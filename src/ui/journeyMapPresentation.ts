@@ -1,6 +1,7 @@
 import type { FeatureCollection, LineString, Point } from 'geojson';
 import type { Journey, JourneyGpsPoint } from '../domain/journey';
 import { journeyTrustedRouteSegments } from '../domain/journeyRouteSegments';
+import { journeyPointGeoJson, journeySegmentsGeoJson } from './journeyMapGeometry';
 
 type JourneyWithRoute = Pick<Journey, 'route'>;
 
@@ -17,22 +18,7 @@ export function journeyLatestTrustedPoint(
 export function journeyRouteGeoJson(
   journey: JourneyWithRoute,
 ): FeatureCollection<LineString> {
-  const features = journeyTrustedRouteSegments(journey)
-    .filter((segment) => segment.length >= 2)
-    .map((segment, index) => ({
-      type: 'Feature' as const,
-      id: `journey-segment-${index}`,
-      properties: {},
-      geometry: {
-        type: 'LineString' as const,
-        coordinates: segment.map((point) => [point.longitude, point.latitude]),
-      },
-    }));
-
-  return {
-    type: 'FeatureCollection',
-    features,
-  };
+  return journeySegmentsGeoJson(journeyTrustedRouteSegments(journey));
 }
 
 export function journeyPositionGeoJson(
