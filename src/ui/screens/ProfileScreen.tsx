@@ -44,6 +44,7 @@ import {
   Toggle,
 } from "../components/Field";
 import { AttentionIcon } from "../components/Icon";
+import { LivingScrim } from "../components/LivingScrim";
 import { Screen } from "../components/Screen";
 import { formatShortDay } from "../format";
 import { useProfile, type ProfileSaveStatus } from "../hooks/useProfile";
@@ -631,7 +632,21 @@ function GameSection() {
 
   return (
     <>
-      <Section title="Your path and mascot" defaultOpen={false}>
+      <LivingScrim variant="hero" className="profile__living-identity">
+        <div className="profile__identity-head">
+          <div>
+            <p className="profile__identity-kicker">Your NinFit journey</p>
+            <h2 className="profile__identity-title">Path and companion</h2>
+          </div>
+          <button
+            type="button"
+            className="btn btn--secondary"
+            onClick={() => { window.location.hash = PASSPORT_HASH; }}
+          >
+            Open Passport
+          </button>
+        </div>
+
         <div className="stats">
           <div className="stat stat--row">
             <span className="stat__label">Path</span>
@@ -652,15 +667,9 @@ function GameSection() {
             </span>
           </div>
         </div>
+      </LivingScrim>
 
-        <button
-          type="button"
-          className="btn btn--secondary btn--block"
-          onClick={() => { window.location.hash = PASSPORT_HASH; }}
-        >
-          Open Passport
-        </button>
-
+      <Section title="Path settings" defaultOpen={false}>
         <SelectField
           label="Switch path"
           hint="You are never locked in. Progress already earned is kept."
