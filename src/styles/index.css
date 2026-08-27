@@ -29,6 +29,7 @@
 
 @import './components/typography.css';
 @import './components/backdrop.css';
+@import './components/living-interface.css';
 @import './components/card.css';
 @import './components/button.css';
 @import './components/field.css';
