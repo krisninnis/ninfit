@@ -11,8 +11,9 @@ import { levelProgress } from '../../domain/game/xp';
 import { EggArt } from './EggArt';
 import { useHatchCinematic } from '../hooks/useHatchCinematic';
 import {
+  COMPANION_MOMENT_DWELL_MS,
   companionReactionLifetime,
-  companionReactionPresentation,
+  companionReactionPresentationForLifetime,
 } from '../companionReactionPresentation';
 
 /**
@@ -54,8 +55,6 @@ import {
  * is the standing picture: level, bar, total, message, stage, and the controls for
  * hatching and evolving.
  */
-
-export const COMPANION_MOMENT_DWELL_MS = 3200;
 
 interface GameHeaderProps {
   state: GameState;
@@ -115,10 +114,12 @@ export function GameHeader({
     return () => clearTimeout(timer);
   }, [freshMomentKey, lifetime]);
 
-  const reactionPresentation =
-    lifetime === 'moment' && activeMomentKey !== freshMomentKey
-      ? 'calm'
-      : companionReactionPresentation(context);
+  const momentActive =
+    freshMomentKey !== '' && activeMomentKey === freshMomentKey;
+  const reactionPresentation = companionReactionPresentationForLifetime(
+    context,
+    momentActive,
+  );
 
   const action =
     state.mascot.eggState === 'ready'
