@@ -1,7 +1,7 @@
 import type { FeatureCollection, LineString, Point } from 'geojson';
 import type { Journey, JourneyGpsPoint } from '../domain/journey';
 import { journeyTrustedRouteSegments } from '../domain/journeyRouteSegments';
-import { journeyPointGeoJson, journeySegmentsGeoJson } from './journeyMapGeometry';
+import { journeySegmentsGeoJson } from './journeyMapGeometry';
 
 type JourneyWithRoute = Pick<Journey, 'route'>;
 
