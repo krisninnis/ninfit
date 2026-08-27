@@ -14,6 +14,7 @@ import type {
   SocialMode,
 } from "../../domain/game/types";
 import { useGame } from "../hooks/useGame";
+import { PASSPORT_HASH } from "../tabs";
 import { sortMeasurementsDescending } from "../../domain/measurement";
 import type {
   DisplayUnitPreferences,
@@ -651,6 +652,14 @@ function GameSection() {
             </span>
           </div>
         </div>
+
+        <button
+          type="button"
+          className="btn btn--secondary btn--block"
+          onClick={() => { window.location.hash = PASSPORT_HASH; }}
+        >
+          Open Passport
+        </button>
 
         <SelectField
           label="Switch path"
