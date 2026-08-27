@@ -38,6 +38,17 @@ export function createActiveJourneyGpsSession(
 ): ActiveJourneyGpsSession {
   let currentJourney = options.initialJourney;
   let stopped = false;
+  /*
+   * One session is one continuously observed run, so the marker is latched here and
+   * cleared only when something is actually accepted.
+   *
+   * Holding it across rejections is the point: a watcher that wakes up and offers two
+   * useless fixes before a good one has still only begun observing at the good one.
+   * Clearing it on the first *sample* would file the segment against a point the route
+   * never kept, and clearing it when the watcher starts would file an empty segment
+   * against a run that produced nothing.
+   */
+  let startsNewSegment = true;
   const startWatch = options.startWatch ?? startJourneyGeolocationWatch;
   let watch: JourneyGeolocationWatch | undefined;
   let stopWatchAfterStart = false;
@@ -55,8 +66,11 @@ export function createActiveJourneyGpsSession(
       if (stopped) return;
 
       try {
-        const result = options.runtimeController.ingest(currentJourney, sample);
+        const result = options.runtimeController.ingest(currentJourney, sample, {
+          startsNewSegment,
+        });
         if (!result.accepted) return;
+        startsNewSegment = false;
         currentJourney = result.journey;
         options.onJourneyChanged?.(currentJourney);
       } catch (cause) {

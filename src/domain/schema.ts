@@ -212,6 +212,48 @@ function validateJourneyPoints(
   });
 }
 
+/**
+ * Segment starts, when a file carries them.
+ *
+ * Every rule here exists because breaking it would let a map draw something the
+ * device never saw. An index outside the route points at nothing; a repeated or
+ * descending index describes overlapping or reversed runs, which cannot have
+ * happened; a fraction is not an index at all. Absence stays legal and means the
+ * file predates segmentation - see `JourneyRoute.segmentStarts`.
+ */
+function validateSegmentStarts(
+  value: unknown,
+  acceptedCount: number,
+  label: string,
+  errors: string[],
+): void {
+  if (value === undefined) return;
+
+  if (!Array.isArray(value)) {
+    errors.push(`${label} must be an array when present`);
+    return;
+  }
+
+  let previous = -1;
+  value.forEach((entry, index) => {
+    if (typeof entry !== 'number' || !Number.isInteger(entry) || entry < 0) {
+      errors.push(`${label}[${index}] must be a non-negative integer`);
+      return;
+    }
+    if (entry >= acceptedCount) {
+      errors.push(
+        `${label}[${index}] is ${entry}, which is outside the ${acceptedCount} accepted route points`,
+      );
+      return;
+    }
+    if (entry <= previous) {
+      errors.push(`${label} must increase strictly; ${entry} does not follow ${previous}`);
+      return;
+    }
+    previous = entry;
+  });
+}
+
 function validateJourney(
   value: unknown,
   label: string,
@@ -249,6 +291,12 @@ function validateJourney(
     } else {
       validateJourneyPoints(route['acceptedPoints'], `${label}.route.acceptedPoints`, errors);
       validateJourneyPoints(route['rawPoints'], `${label}.route.rawPoints`, errors);
+      validateSegmentStarts(
+        route['segmentStarts'],
+        Array.isArray(route['acceptedPoints']) ? route['acceptedPoints'].length : 0,
+        `${label}.route.segmentStarts`,
+        errors,
+      );
     }
   }
 }

@@ -1,6 +1,7 @@
 import type { Journey } from '../domain/journey';
 import {
   ingestJourneyGpsSample,
+  type JourneyGpsIngestOptions,
   type JourneyGpsRuntimeIds,
   type JourneyGpsRuntimeResult,
 } from '../domain/journeyGpsRuntime';
@@ -9,7 +10,11 @@ import type { StorageAdapter } from '../storage/StorageAdapter';
 import { saveActiveJourneySnapshot } from '../storage/activeJourneySnapshot';
 
 export interface JourneyGpsRuntimeController {
-  ingest(journey: Journey, sample: JourneyGpsSample): JourneyGpsRuntimeResult;
+  ingest(
+    journey: Journey,
+    sample: JourneyGpsSample,
+    options?: JourneyGpsIngestOptions,
+  ): JourneyGpsRuntimeResult;
 }
 
 /**
@@ -22,8 +27,8 @@ export function createJourneyGpsRuntimeController(
   ids: JourneyGpsRuntimeIds,
 ): JourneyGpsRuntimeController {
   return {
-    ingest(journey, sample) {
-      const result = ingestJourneyGpsSample(journey, sample, ids);
+    ingest(journey, sample, options) {
+      const result = ingestJourneyGpsSample(journey, sample, ids, options);
       if (result.accepted) {
         saveActiveJourneySnapshot(storage, result.journey, sample.recordedAt);
       }
