@@ -300,11 +300,6 @@ function validateJourney(
         errors.push(`${label}.privacy.${key} must be a boolean`);
       }
     }
-    if (privacy['preciseRouteCloudSync'] === true && visibility !== 'full_route') {
-      errors.push(
-        `${label}.privacy.preciseRouteCloudSync requires full_route visibility`,
-      );
-    }
   }
 
   const route = value['route'];
