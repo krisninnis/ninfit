@@ -55,7 +55,7 @@
 .game[data-companion-reaction='celebrate'] {
   border-color: color-mix(in oklab, var(--ft-accent-strong) 44%, var(--ft-border-subtle));
   background: color-mix(in oklab, var(--ft-accent-soft) 34%, var(--ft-surface-raised));
-  box-shadow: var(--ft-shadow-sm);
+  box-shadow: var(--ft-shadow-raised);
 }
 
 .game[data-companion-reaction='action'] {
