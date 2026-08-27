@@ -209,7 +209,7 @@ export function ActiveJourneyScreen({ onClose }: ActiveJourneyScreenProps) {
                 role="status"
                 aria-live="polite"
               >
-                Loading mapâ€¦
+                Loading map...
               </div>
             }
           >
