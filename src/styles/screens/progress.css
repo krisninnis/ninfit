@@ -5,10 +5,31 @@
 @layer screens {
 /* ---------- Progress ---------- */
 
+.progress__living-summary {
+  display: grid;
+  gap: var(--ft-space-4);
+}
+
+.progress__chapter-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--ft-space-3);
+}
+
+.progress__chapter-kicker {
+  margin: 0;
+  color: var(--ft-accent);
+  font-size: var(--ft-text-xs);
+  font-weight: var(--ft-weight-semibold);
+  letter-spacing: var(--ft-tracking-wide);
+  text-transform: uppercase;
+}
+
 .rangebar {
   display: flex;
   gap: var(--ft-space-2);
-  margin-top: calc(var(--ft-space-4) * -1);
+  min-width: min(100%, 240px);
 }
 
 .rangebar__option {
@@ -37,6 +58,27 @@
 @media (min-width: 600px) {
   .rangebar {
     max-width: 320px;
+  }
+}
+
+.progress__activity {
+  display: grid;
+  gap: var(--ft-space-3);
+}
+
+.progress__activity .progress__group,
+.progress__activity .footnote {
+  margin-top: 0;
+}
+
+@media (max-width: 430px) {
+  .progress__chapter-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .rangebar {
+    width: 100%;
   }
 }
 
