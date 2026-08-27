@@ -1,17 +1,22 @@
 /**
  * Week: a light seven-day trail above seven stacked day cards.
  *
- * The order of those two matters. The trail is drawn first because it orients,
- * and it is given no surface, no border and a single row of height because the
- * cards below it are the record. Weight, not position, is what keeps it secondary.
+ * The order of those two matters. The trail is drawn first because it orients.
+ * Living Interface v1 gives the intro + trail one shared bridge, while the trail
+ * itself remains surface-free and the day cards below remain the actual record.
+ * Weight, not position, keeps the orientation layer secondary.
  */
 
 @layer screens {
 /* ---------- Week ---------- */
 
+.week__living-journey {
+  display: grid;
+  gap: var(--ft-space-2);
+}
+
 .week__intro {
-  margin-top: calc(var(--ft-space-4) * -1);
-  margin-bottom: var(--ft-space-2);
+  margin: 0;
   color: var(--ft-text-secondary);
   font-size: var(--ft-text-sm);
 }
@@ -137,17 +142,16 @@
 /* ---------- The seven-day journey trail ---------- */
 
 /*
- * A strip, not a panel. No surface, no border, no card of its own: the trail is an
- * orientation device and the records below it are what the screen is for. Its whole
- * height budget is one row of small marks, which is what keeps "light" and
- * "secondary" true in the layout rather than only in the prose.
+ * A strip, not a panel. The shared Living bridge may surround it, but the trail has
+ * no surface, border or card of its own: it is an orientation device and the records
+ * below are what the screen is for. Its whole height budget remains one row of small
+ * marks, which keeps "light" and "secondary" true in the layout.
  */
 .weektrail {
   display: flex;
   align-items: center;
-  margin-top: calc(var(--ft-space-1) * -1);
-  margin-bottom: var(--ft-space-3);
-  padding: var(--ft-space-2) var(--ft-space-1);
+  margin: 0;
+  padding: var(--ft-space-2) var(--ft-space-1) 0;
 }
 
 /*

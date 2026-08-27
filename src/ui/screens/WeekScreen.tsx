@@ -2,6 +2,7 @@ import { trailNodeState } from '../../domain/week';
 import type { DayState, WeekDay, WeekSummary } from '../../domain/week';
 import { Section } from '../components/Field';
 import { AttentionIcon } from '../components/Icon';
+import { LivingScrim } from '../components/LivingScrim';
 import { Screen } from '../components/Screen';
 import { capitalise, formatCount, formatDateRange, formatShortDay } from '../format';
 import { useWeek } from '../hooks/useWeek';
@@ -97,9 +98,10 @@ function DayCard({ day }: { day: WeekDay }) {
  * The seven-day journey trail.
  *
  * An orientation strip, not a summary. It draws one node per day from states the
- * week has already decided, and it is deliberately the lightest thing on the screen:
- * the records below are what this screen is for, and a trail that competed with them
- * would repeat the mistake Today made when the companion card sat above the workout.
+ * week has already decided. The strip itself stays surface-free even when composed
+ * inside the shared Living Interface bridge: the records below are what this screen
+ * is for, and a trail that competed with them would repeat the mistake Today made
+ * when the companion card sat above the workout.
  *
  * IT IS DECORATIVE, AND `aria-hidden` FOR A REASON.
  *
@@ -227,15 +229,17 @@ export function WeekScreen() {
       title={`Week ${week.weekNumber}`}
       subtitle={formatDateRange(week.startDate, week.endDate)}
     >
-      <p className="week__intro">
-        {beforeProgramme
-          ? 'Your programme has not started yet. Here is what week 1 holds.'
-          : week.weekNumber === 1
-            ? 'Your first week is about consistency and seeing how your body responds.'
-            : 'A rolling seven days from your programme start date.'}
-      </p>
+      <LivingScrim variant="bridge" className="week__living-journey">
+        <p className="week__intro">
+          {beforeProgramme
+            ? 'Your programme has not started yet. Here is what week 1 holds.'
+            : week.weekNumber === 1
+              ? 'Your first week is about consistency and seeing how your body responds.'
+              : 'A rolling seven days from your programme start date.'}
+        </p>
 
-      <WeekTrail days={days} />
+        <WeekTrail days={days} />
+      </LivingScrim>
 
       {!week.hasPlan ? (
         <section className="card">
