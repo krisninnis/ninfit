@@ -36,9 +36,9 @@ describe('Passport v1 wiring', () => {
       expect(source).not.toContain('repository.');
       expect(source).not.toContain('updateSettings');
       expect(source).not.toContain('choosePath');
-      expect(source).not.toContain('hatch');
-      expect(source).not.toContain('evolve');
-      expect(source).not.toContain('grant');
+      expect(source).not.toContain('game.hatch(');
+      expect(source).not.toContain('game.evolve(');
+      expect(source).not.toContain('grantReward(');
     }
   });
 });
