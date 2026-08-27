@@ -8,6 +8,7 @@ import {
   hashForPrimaryNav,
   hashForTab,
   journeyDetailHash,
+  journeyPostcardHash,
   isTabId,
   parseRouteFromHash,
   parseTabFromHash,
@@ -80,6 +81,17 @@ describe('Journey routes', () => {
 
   it('fails malformed detail ids back to Journey Home', () => {
     expect(parseRouteFromHash('#/journey/detail/%E0%A4%A')).toEqual({ kind: 'journey-home' });
+  });
+
+  it('round-trips opaque Journey ids through the Postcard preview route', () => {
+    const id = 'Journey-MixedCase/1';
+    const hash = journeyPostcardHash(id);
+    expect(hash).toBe('#/journey/postcard/Journey-MixedCase%2F1');
+    expect(parseRouteFromHash(hash)).toEqual({ kind: 'journey-postcard', journeyId: id });
+  });
+
+  it('fails malformed Postcard ids back to Journey Home', () => {
+    expect(parseRouteFromHash('#/journey/postcard/%E0%A4%A')).toEqual({ kind: 'journey-home' });
   });
 });
 
