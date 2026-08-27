@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
 import { getAppContext } from '../../app/bootstrap';
 import { startForegroundJourneyGpsSession } from '../../app/foregroundJourneyGpsSession';
+const ActiveJourneyMap = lazy(async () => {
+  const module = await import('../components/ActiveJourneyMap');
+  return { default: module.ActiveJourneyMap };
+});
 import { journeyUsesPhoneGps } from '../../app/journeyLaunchController';
 import type { ActiveJourneyGpsSession } from '../../app/activeJourneyGpsSession';
 import { createJourneyRecoveryController } from '../../app/journeyRecoveryController';
@@ -133,6 +137,7 @@ export function ActiveJourneyScreen({ onClose }: ActiveJourneyScreenProps) {
   const activeSeconds = journeyActiveSeconds(journey, now);
   const isPaused = journey.status === 'paused';
   const isCompleted = journey.status === 'completed';
+  const usesPhoneGps = journeyUsesPhoneGps(journey.activityType);
   const statusClass = gpsState === 'live' ? 'receiving' : 'waiting';
 
   const pause = () => {
@@ -192,13 +197,34 @@ export function ActiveJourneyScreen({ onClose }: ActiveJourneyScreenProps) {
         </span>
       </header>
 
-      <div className="active-journey__world" aria-label="Journey world surface">
-        <div className="active-journey__horizon" aria-hidden="true" />
-        <div className="active-journey__distance" aria-live="polite">
-          <span className="active-journey__distance-value">{formatJourneyDistance(distanceM)}</span>
-          <span className="active-journey__distance-unit">km</span>
+      <div
+        className={`active-journey__world active-journey__world--${usesPhoneGps ? 'map' : 'fallback'}`}
+        aria-label="Journey world surface"
+      >
+        {usesPhoneGps ? (
+          <Suspense
+            fallback={
+              <div
+                className="active-journey__map-loading"
+                role="status"
+                aria-live="polite"
+              >
+                Loading mapâ€¦
+              </div>
+            }
+          >
+            <ActiveJourneyMap journey={journey} />
+          </Suspense>
+        ) : (
+          <div className="active-journey__horizon" aria-hidden="true" />
+        )}
+        <div className="active-journey__world-overlay">
+          <div className="active-journey__distance" aria-live="polite">
+            <span className="active-journey__distance-value">{formatJourneyDistance(distanceM)}</span>
+            <span className="active-journey__distance-unit">km</span>
+          </div>
+          <p className="active-journey__world-note">{journeyLiveGpsNote(gpsState)}</p>
         </div>
-        <p className="active-journey__world-note">{journeyLiveGpsNote(gpsState)}</p>
       </div>
 
       <div className="active-journey__metrics" aria-label="Live Journey metrics">

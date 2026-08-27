@@ -129,8 +129,8 @@
     box-shadow: var(--ft-shadow-reward);
   }
 
-  .active-journey__world::before,
-  .active-journey__world::after {
+  .active-journey__world--fallback::before,
+  .active-journey__world--fallback::after {
     content: '';
     position: absolute;
     inset-inline: -10%;
@@ -142,7 +142,7 @@
     transform: rotate(-4deg);
   }
 
-  .active-journey__world::after {
+  .active-journey__world--fallback::after {
     bottom: -38%;
     transform: rotate(5deg) scaleX(1.18);
     background: color-mix(in srgb, var(--ft-accent-soft) 34%, var(--ft-surface-sunken));
@@ -161,10 +161,65 @@
     );
   }
 
+  .active-journey__map {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+
+  .active-journey__map-loading {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    background: var(--ft-surface-page);
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-sm);
+  }
+
+  .active-journey__map .maplibregl-canvas {
+    outline: none;
+  }
+
+  .active-journey__map .maplibregl-ctrl-bottom-right {
+    margin: 0 var(--ft-space-2) var(--ft-space-2) 0;
+  }
+
+  .active-journey__map .maplibregl-ctrl-attrib {
+    border-radius: var(--ft-radius-sm);
+    background: color-mix(in srgb, var(--ft-surface-raised) 86%, transparent);
+    color: var(--ft-text-secondary);
+    font-size: 10px;
+  }
+
+  .active-journey__world-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: var(--ft-space-3);
+    padding: var(--ft-space-5);
+    pointer-events: none;
+    background:
+      radial-gradient(
+        circle at 50% 48%,
+        color-mix(in srgb, var(--ft-surface-page) 82%, transparent) 0%,
+        color-mix(in srgb, var(--ft-surface-page) 44%, transparent) 34%,
+        transparent 68%
+      );
+  }
+
   .active-journey__distance {
     display: flex;
     align-items: baseline;
     gap: var(--ft-space-2);
+    padding: var(--ft-space-2) var(--ft-space-4);
+    border-radius: var(--ft-radius-xl);
+    background: color-mix(in srgb, var(--ft-surface-raised) 62%, transparent);
+    backdrop-filter: blur(12px);
     font-variant-numeric: tabular-nums;
   }
 
@@ -183,8 +238,12 @@
   .active-journey__world-note {
     max-width: 30ch;
     margin: 0;
+    padding: var(--ft-space-2) var(--ft-space-3);
+    border-radius: var(--ft-radius-lg);
     text-align: center;
     color: var(--ft-text-secondary);
+    background: color-mix(in srgb, var(--ft-surface-raised) 72%, transparent);
+    backdrop-filter: blur(12px);
     font-size: var(--ft-text-sm);
   }
 
