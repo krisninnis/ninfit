@@ -14,6 +14,8 @@ import {
 
 interface ActiveJourneyMapProps {
   journey: Pick<Journey, 'route'>;
+  ariaLabel?: string;
+  unavailableMessage?: string;
 }
 
 const ROUTE_SOURCE = 'ninfit-journey-route';
@@ -129,7 +131,11 @@ function prefersReducedMotion(): boolean {
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-export function ActiveJourneyMap({ journey }: ActiveJourneyMapProps) {
+export function ActiveJourneyMap({
+  journey,
+  ariaLabel = 'Map of the trusted Journey route and latest trusted position',
+  unavailableMessage = 'Your Journey recording continues safely.',
+}: ActiveJourneyMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const loadedRef = useRef(false);
@@ -210,7 +216,7 @@ export function ActiveJourneyMap({ journey }: ActiveJourneyMapProps) {
     return (
       <div className="active-journey__map-unavailable" role="status" aria-live="polite">
         <strong>Map unavailable</strong>
-        <span>Your Journey recording continues safely.</span>
+        <span>{unavailableMessage}</span>
       </div>
     );
   }
@@ -220,7 +226,7 @@ export function ActiveJourneyMap({ journey }: ActiveJourneyMapProps) {
       ref={containerRef}
       className="active-journey__map"
       role="img"
-      aria-label="Map of the trusted Journey route and latest trusted position"
+      aria-label={ariaLabel}
     />
   );
 }
