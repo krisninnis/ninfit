@@ -16,6 +16,7 @@ interface ActiveJourneyMapProps {
   journey: Pick<Journey, 'route'>;
   ariaLabel?: string;
   unavailableMessage?: string;
+  view?: 'follow' | 'overview';
 }
 
 const ROUTE_SOURCE = 'ninfit-journey-route';
@@ -126,6 +127,33 @@ function updateJourneyData(map: MapLibreMap, journey: Pick<Journey, 'route'>): v
   position?.setData(journeyPositionGeoJson(journey));
 }
 
+function fitJourneyOverview(map: MapLibreMap, journey: Pick<Journey, 'route'>): void {
+  const coordinates = journeyRouteGeoJson(journey).features.flatMap(
+    (feature) => feature.geometry.coordinates,
+  );
+  if (coordinates.length === 0) return;
+
+  let minLon = coordinates[0]?.[0] ?? 0;
+  let maxLon = minLon;
+  let minLat = coordinates[0]?.[1] ?? 0;
+  let maxLat = minLat;
+
+  for (const coordinate of coordinates) {
+    const lon = coordinate[0];
+    const lat = coordinate[1];
+    if (lon === undefined || lat === undefined) continue;
+    minLon = Math.min(minLon, lon);
+    maxLon = Math.max(maxLon, lon);
+    minLat = Math.min(minLat, lat);
+    maxLat = Math.max(maxLat, lat);
+  }
+
+  map.fitBounds(
+    [[minLon, minLat], [maxLon, maxLat]],
+    { padding: 32, maxZoom: 16, duration: 0 },
+  );
+}
+
 function prefersReducedMotion(): boolean {
   return typeof window.matchMedia === 'function'
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -135,6 +163,7 @@ export function ActiveJourneyMap({
   journey,
   ariaLabel = 'Map of the trusted Journey route and latest trusted position',
   unavailableMessage = 'Your Journey recording continues safely.',
+  view = 'follow',
 }: ActiveJourneyMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -172,8 +201,12 @@ export function ActiveJourneyMap({
       loadedRef.current = true;
       updateJourneyData(map, latestJourneyRef.current);
 
-      const current = journeyLatestTrustedPoint(latestJourneyRef.current);
-      if (current !== null) lastCenteredAtRef.current = current.recordedAt;
+      if (view === 'overview') {
+        fitJourneyOverview(map, latestJourneyRef.current);
+      } else {
+        const current = journeyLatestTrustedPoint(latestJourneyRef.current);
+        if (current !== null) lastCenteredAtRef.current = current.recordedAt;
+      }
     };
 
     map.on('load', onLoad);
@@ -191,6 +224,11 @@ export function ActiveJourneyMap({
     if (map === null || !loadedRef.current) return;
 
     updateJourneyData(map, journey);
+
+    if (view === 'overview') {
+      fitJourneyOverview(map, journey);
+      return;
+    }
 
     const latest = journeyLatestTrustedPoint(journey);
     if (latest === null || latest.recordedAt === lastCenteredAtRef.current) return;
