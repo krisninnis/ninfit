@@ -5,6 +5,25 @@
 @layer screens {
 /* ---------- Today ---------- */
 
+.today__living-bridge {
+  margin-bottom: var(--ft-space-1);
+}
+
+.today__living-bridge .today__meta {
+  margin: 0 0 var(--ft-space-3);
+  padding-bottom: var(--ft-space-2);
+  border-bottom: 1px solid color-mix(in oklab, var(--ft-border-subtle) 72%, transparent);
+}
+
+.today__living-bridge .game {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .today__meta {
   display: flex;
   align-items: center;
