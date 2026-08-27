@@ -14,8 +14,11 @@ const css = read('styles', 'components', 'living-interface.css');
 describe('Living Interface scrim primitive', () => {
   it('is presentation-only and imports no fitness or game truth', () => {
     const executable = code(component);
-    expect(executable).not.toMatch(/domain\//);
-    expect(executable).not.toMatch(/useGame|useToday|Journey|Mascot|XP|reward/i);
+    const imports = executable.match(/^import[^\n]+$/gm) ?? [];
+
+    expect(imports).toEqual(["import type { ReactNode } from 'react';"]);
+    expect(executable).not.toMatch(/\buseGame\b|\buseToday\b/);
+    expect(executable).not.toMatch(/from ['"][^'"]*(domain|game|journey)[^'"]*['"]/i);
     expect(executable).toContain('children: ReactNode');
   });
 
