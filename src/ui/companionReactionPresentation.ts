@@ -16,6 +16,8 @@ export type CompanionReactionPresentation =
   | 'welcome'
   | 'celebrate';
 
+export type CompanionReactionLifetime = 'standing' | 'moment';
+
 export const COMPANION_REACTION_PRESENTATION: Readonly<
   Record<MascotContext, CompanionReactionPresentation>
 > = {
@@ -31,8 +33,29 @@ export const COMPANION_REACTION_PRESENTATION: Readonly<
   trophy: 'celebrate',
 };
 
+export const COMPANION_REACTION_LIFETIME: Readonly<
+  Record<MascotContext, CompanionReactionLifetime>
+> = {
+  egg_waiting: 'standing',
+  hatch_ready: 'standing',
+  just_hatched: 'moment',
+  session_complete: 'moment',
+  partial_complete: 'moment',
+  rest_day: 'standing',
+  returning: 'standing',
+  idle: 'standing',
+  evolution_ready: 'standing',
+  trophy: 'moment',
+};
+
 export function companionReactionPresentation(
   context: MascotContext,
 ): CompanionReactionPresentation {
   return COMPANION_REACTION_PRESENTATION[context];
+}
+
+export function companionReactionLifetime(
+  context: MascotContext,
+): CompanionReactionLifetime {
+  return COMPANION_REACTION_LIFETIME[context];
 }
