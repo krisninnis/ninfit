@@ -55,7 +55,7 @@ describe('Passport presentation', () => {
   });
 
   it('does not expose evolution percentages, rarity, prestige or lineage', () => {
-    const passport = passportPresentation(createInitialGameState({ now: NOW })) as Record<string, unknown>;
+    const passport = passportPresentation(createInitialGameState({ now: NOW })) as unknown as Record<string, unknown>;
 
     for (const forbidden of [
       'evolutionPercent',
