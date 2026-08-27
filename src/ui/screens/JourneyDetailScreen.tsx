@@ -20,13 +20,18 @@ const ActiveJourneyMap = lazy(async () => {
 interface JourneyDetailScreenProps {
   journeyId: string;
   onClose(): void;
+  onPreviewPostcard(): void;
 }
 
 function completedDate(journey: { startedAt: string; endedAt?: string }): Date {
   return new Date(journey.endedAt ?? journey.startedAt);
 }
 
-export function JourneyDetailScreen({ journeyId, onClose }: JourneyDetailScreenProps) {
+export function JourneyDetailScreen({
+  journeyId,
+  onClose,
+  onPreviewPostcard,
+}: JourneyDetailScreenProps) {
   const storage = useMemo(() => getAppContext().adapter, []);
   const journey = useMemo(
     () => loadJourneyHistory(storage).find((item) => item.id === journeyId) ?? null,
@@ -131,6 +136,13 @@ export function JourneyDetailScreen({ journeyId, onClose }: JourneyDetailScreenP
           This exact route is visible only inside your private local Journey record. Any later disclosure must use the saved privacy rules.
         </p>
       </section>
+
+      <div className="journey-detail__postcard-action">
+        <button type="button" className="btn btn--primary" onClick={onPreviewPostcard}>
+          Preview Journey Postcard
+        </button>
+        <p>Uses this Journey's saved privacy settings. Sharing is not enabled yet.</p>
+      </div>
 
       <section className="journey-detail__facts" aria-label="Journey details">
         <div>

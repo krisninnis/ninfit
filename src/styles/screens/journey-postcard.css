@@ -1,0 +1,196 @@
+@layer screens {
+  .journey-postcard {
+    display: grid;
+    gap: var(--ft-space-6);
+    padding-bottom: var(--ft-space-7);
+  }
+
+  .journey-postcard__header {
+    display: grid;
+    gap: var(--ft-space-4);
+  }
+
+  .journey-postcard__header h1,
+  .journey-postcard__missing-panel h1 {
+    margin: 0;
+  }
+
+  .journey-postcard__back {
+    width: fit-content;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ft-space-2);
+    min-height: var(--ft-control-md);
+    padding: 0 var(--ft-space-3);
+    border: 0;
+    border-radius: var(--ft-radius-lg);
+    background: color-mix(in srgb, var(--ft-surface-raised) 70%, transparent);
+    color: var(--ft-text-primary);
+    cursor: pointer;
+  }
+
+  .journey-postcard__eyebrow {
+    margin: 0 0 var(--ft-space-1);
+    color: var(--ft-accent);
+    font-size: var(--ft-text-xs);
+    font-weight: var(--ft-weight-semibold);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .journey-postcard__intro,
+  .journey-postcard__privacy-note {
+    margin: var(--ft-space-2) 0 0;
+    max-width: 58ch;
+    color: var(--ft-text-secondary);
+  }
+
+  .journey-postcard__card {
+    width: min(100%, 760px);
+    justify-self: center;
+    display: grid;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--ft-border-subtle) 72%, transparent);
+    border-radius: calc(var(--ft-radius-xl) + var(--ft-space-1));
+    background:
+      linear-gradient(
+        160deg,
+        color-mix(in srgb, var(--ft-surface-raised) 94%, var(--ft-accent) 6%),
+        color-mix(in srgb, var(--ft-surface-page) 88%, var(--ft-accent) 12%)
+      );
+    box-shadow: var(--ft-shadow-overlay);
+  }
+
+  .journey-postcard__identity {
+    display: grid;
+    gap: var(--ft-space-1);
+    padding: var(--ft-space-5);
+  }
+
+  .journey-postcard__identity span {
+    color: var(--ft-accent);
+    font-size: var(--ft-text-xs);
+    font-weight: var(--ft-weight-semibold);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .journey-postcard__identity strong {
+    font-size: clamp(2rem, 9vw, 4rem);
+    line-height: 1;
+  }
+
+  .journey-postcard__route {
+    position: relative;
+    min-height: clamp(260px, 56vw, 430px);
+    overflow: hidden;
+    border-block: 1px solid color-mix(in srgb, var(--ft-border-subtle) 66%, transparent);
+    background:
+      radial-gradient(
+        circle at 35% 30%,
+        color-mix(in srgb, var(--ft-accent) 18%, transparent),
+        transparent 48%
+      ),
+      var(--ft-surface-page);
+  }
+
+  .journey-postcard__route-message {
+    min-height: inherit;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: var(--ft-space-2);
+    padding: var(--ft-space-5);
+    text-align: center;
+    color: var(--ft-text-secondary);
+  }
+
+  .journey-postcard__route-message strong {
+    color: var(--ft-text-primary);
+    font-size: var(--ft-text-lg);
+  }
+
+  .journey-postcard__route-mark {
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--ft-accent) 18%, transparent);
+    color: var(--ft-accent-strong);
+    font-weight: var(--ft-weight-bold);
+  }
+
+  .journey-postcard__stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--ft-space-3);
+    padding: var(--ft-space-5);
+  }
+
+  .journey-postcard__stats > div {
+    display: grid;
+    gap: var(--ft-space-1);
+    min-width: 0;
+  }
+
+  .journey-postcard__stats span,
+  .journey-postcard__footer {
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-xs);
+  }
+
+  .journey-postcard__stats strong {
+    overflow-wrap: anywhere;
+    font-size: clamp(1.25rem, 5vw, 2rem);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .journey-postcard__footer {
+    display: grid;
+    gap: var(--ft-space-2);
+    padding: 0 var(--ft-space-5) var(--ft-space-5);
+  }
+
+  .journey-postcard__footer span:last-child {
+    max-width: 52ch;
+  }
+
+  .journey-postcard__privacy-note {
+    justify-self: center;
+    text-align: center;
+    font-size: var(--ft-text-sm);
+  }
+
+  .journey-postcard--missing {
+    min-height: 60vh;
+    align-content: center;
+  }
+
+  .journey-postcard__missing-panel {
+    display: grid;
+    gap: var(--ft-space-3);
+    max-width: 34rem;
+    padding: var(--ft-space-5);
+    border: 1px solid color-mix(in srgb, var(--ft-border-subtle) 72%, transparent);
+    border-radius: var(--ft-radius-xl);
+    background: color-mix(in srgb, var(--ft-surface-raised) 80%, transparent);
+  }
+
+  .journey-postcard__missing-panel p {
+    margin: 0;
+    color: var(--ft-text-secondary);
+  }
+
+  @media (min-width: 640px) {
+    .journey-postcard__footer {
+      grid-template-columns: auto 1fr;
+      justify-content: space-between;
+      gap: var(--ft-space-5);
+    }
+
+    .journey-postcard__footer span:last-child {
+      text-align: right;
+    }
+  }
+}

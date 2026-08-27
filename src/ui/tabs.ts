@@ -63,6 +63,7 @@ export type AppRoute =
   | { readonly kind: 'journey-home' }
   | { readonly kind: 'journey-active' }
   | { readonly kind: 'journey-detail'; readonly journeyId: string }
+  | { readonly kind: 'journey-postcard'; readonly journeyId: string }
   | { readonly kind: 'tab'; readonly tab: TabId };
 
 const AUTH_FRAGMENT = /(^|[#&?])(access_token|refresh_token|error_code|error_description)=/;
@@ -82,6 +83,18 @@ export function parseRouteFromHash(hash: string): AppRoute {
     if (encodedId.length > 0) {
       try {
         return { kind: 'journey-detail', journeyId: decodeURIComponent(encodedId) };
+      } catch {
+        return { kind: 'journey-home' };
+      }
+    }
+  }
+
+  const postcardPrefix = 'journey/postcard/';
+  if (normalised.startsWith(postcardPrefix)) {
+    const encodedId = path.slice(postcardPrefix.length);
+    if (encodedId.length > 0) {
+      try {
+        return { kind: 'journey-postcard', journeyId: decodeURIComponent(encodedId) };
       } catch {
         return { kind: 'journey-home' };
       }
@@ -114,6 +127,10 @@ export function hashForPrimaryNav(id: PrimaryNavId): string {
 
 export function journeyDetailHash(journeyId: string): string {
   return `#/journey/detail/${encodeURIComponent(journeyId)}`;
+}
+
+export function journeyPostcardHash(journeyId: string): string {
+  return `#/journey/postcard/${encodeURIComponent(journeyId)}`;
 }
 
 export function tabDefinition(id: TabId): TabDefinition {
