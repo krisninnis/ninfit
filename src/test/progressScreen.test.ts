@@ -371,7 +371,7 @@ describe('a trend row answers "where am I now" before "what changed"', () => {
   });
 
   it('names the group of activity stats so the screen can be scanned', () => {
-    expect(code).toMatch(/className="progress__group">Activity</);
+    expect(code).toMatch(/className="progress__group"(?:\s+id="[^"]+")?>Activity</);
   });
 
   it('still refuses to grade anything', () => {
