@@ -9,6 +9,7 @@ import type { GameSettings, GameState } from '../../domain/game/types';
 import { levelProgress } from '../../domain/game/xp';
 import { EggArt } from './EggArt';
 import { useHatchCinematic } from '../hooks/useHatchCinematic';
+import { companionReactionPresentation } from '../companionReactionPresentation';
 
 /**
  * The companion strip: "I'm progressing", not "this is what you came here to manage".
@@ -86,6 +87,7 @@ export function GameHeader({
   });
 
   const message = mascotMessage(context, settings.mascotPersonality);
+  const reactionPresentation = companionReactionPresentation(context);
 
   const action =
     state.mascot.eggState === 'ready'
@@ -99,7 +101,11 @@ export function GameHeader({
         : undefined;
 
   return (
-    <section className="game" aria-label="Your companion">
+    <section
+      className="game"
+      aria-label="Your companion"
+      data-companion-reaction={reactionPresentation}
+    >
       <div
         className={`game__art${hatch.isRunning ? ` egg-hatch--${hatch.phase}` : ''}`}
       >

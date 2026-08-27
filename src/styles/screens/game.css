@@ -30,6 +30,49 @@
   margin-bottom: var(--ft-space-4);
 }
 
+/*
+ * Contextual reaction treatment.
+ *
+ * The domain has already decided the context before this CSS ever sees it. These
+ * states change atmosphere only: no text, count, score, progress or meaning is
+ * encoded here, and none of them relies on motion to be understood.
+ */
+.game[data-companion-reaction='warm'] {
+  border-color: color-mix(in oklab, var(--ft-accent) 34%, var(--ft-border-subtle));
+  background: color-mix(in oklab, var(--ft-accent-soft) 26%, var(--ft-surface-raised));
+}
+
+.game[data-companion-reaction='rest'] {
+  border-color: color-mix(in oklab, var(--ft-text-secondary) 28%, var(--ft-border-subtle));
+  background: color-mix(in oklab, var(--ft-surface-sunken) 38%, var(--ft-surface-raised));
+}
+
+.game[data-companion-reaction='welcome'] {
+  border-color: color-mix(in oklab, var(--ft-accent) 24%, var(--ft-border-subtle));
+  background: color-mix(in oklab, var(--ft-accent-soft) 16%, var(--ft-surface-raised));
+}
+
+.game[data-companion-reaction='celebrate'] {
+  border-color: color-mix(in oklab, var(--ft-accent-strong) 44%, var(--ft-border-subtle));
+  background: color-mix(in oklab, var(--ft-accent-soft) 34%, var(--ft-surface-raised));
+  box-shadow: var(--ft-shadow-raised);
+}
+
+.game[data-companion-reaction='action'] {
+  border-color: color-mix(in oklab, var(--ft-accent) 36%, var(--ft-border-subtle));
+}
+
+.game[data-companion-reaction='warm'] .mascot,
+.game[data-companion-reaction='welcome'] .mascot,
+.game[data-companion-reaction='celebrate'] .mascot {
+  background: color-mix(in oklab, var(--ft-accent-soft) 34%, var(--ft-surface-raised));
+}
+
+.game[data-companion-reaction='rest'] .mascot {
+  border-color: color-mix(in oklab, var(--ft-text-secondary) 44%, var(--ft-border-subtle));
+  color: var(--ft-text-secondary);
+}
+
 .game__art {
   display: grid;
   place-items: center;
