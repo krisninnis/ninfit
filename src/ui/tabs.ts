@@ -57,6 +57,7 @@ export const JOURNEY_HASH = '#/journey';
 export const JOURNEY_ACTIVE_HASH = '#/journey/active';
 export const ACCOUNT_HASH = '#/account';
 export const ACCOUNT_CONFIRMED_HASH = '#/account/confirmed';
+export const PASSPORT_HASH = '#/passport';
 
 export type AppRoute =
   | { readonly kind: 'account'; readonly confirmed: boolean }
@@ -64,6 +65,7 @@ export type AppRoute =
   | { readonly kind: 'journey-active' }
   | { readonly kind: 'journey-detail'; readonly journeyId: string }
   | { readonly kind: 'journey-postcard'; readonly journeyId: string }
+  | { readonly kind: 'passport' }
   | { readonly kind: 'tab'; readonly tab: TabId };
 
 const AUTH_FRAGMENT = /(^|[#&?])(access_token|refresh_token|error_code|error_description)=/;
@@ -105,6 +107,7 @@ export function parseRouteFromHash(hash: string): AppRoute {
   if (normalised === 'journey/active') return { kind: 'journey-active' };
   if (normalised === 'account') return { kind: 'account', confirmed: false };
   if (normalised === 'account/confirmed') return { kind: 'account', confirmed: true };
+  if (normalised === 'passport') return { kind: 'passport' };
 
   if (looksLikeAuthReturn(hash)) return { kind: 'account', confirmed: true };
 
