@@ -66,7 +66,7 @@ describe('Journey Live Map truth boundary', () => {
     expect(map).toContain('Your Journey recording continues safely.');
   });
 
-  it('loads the heavyweight map presentation only when Active Journey needs it', () => {
+  it('loads the heavyweight map presentation lazily from Active Journey', () => {
     expect(screen).toContain("lazy(async () =>");
     expect(screen).toContain("import('../components/ActiveJourneyMap')");
     expect(screen).toContain('<Suspense');
