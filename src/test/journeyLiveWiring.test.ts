@@ -35,7 +35,9 @@ describe('Journey product ownership', () => {
     expect(app).toContain("route.kind === 'journey-home'");
     expect(app).toContain("route.kind === 'journey-active'");
     expect(app).toContain('<JourneyScreen />');
-    expect(app).toContain("<ActiveJourneyScreen onClose={() => navigate(JOURNEY_HASH)} />");
+    expect(app).toContain('<ActiveJourneyScreen');
+    expect(app).toContain('onClose={() => navigate(JOURNEY_HASH)}');
+    expect(app).toContain('onCompleted={(journeyId) => navigate(journeyDetailHash(journeyId))}');
     expect(app).not.toContain('JourneyLauncher');
   });
 
