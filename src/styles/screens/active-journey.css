@@ -167,7 +167,8 @@
     z-index: 1;
   }
 
-  .active-journey__map-loading {
+  .active-journey__map-loading,
+  .active-journey__map-unavailable {
     position: absolute;
     inset: 0;
     z-index: 1;
@@ -176,6 +177,17 @@
     background: var(--ft-surface-page);
     color: var(--ft-text-secondary);
     font-size: var(--ft-text-sm);
+  }
+
+  .active-journey__map-unavailable {
+    align-content: center;
+    gap: var(--ft-space-2);
+    padding: var(--ft-space-5);
+    text-align: center;
+  }
+
+  .active-journey__map-unavailable strong {
+    color: var(--ft-text-primary);
   }
 
   .active-journey__map .maplibregl-canvas {
