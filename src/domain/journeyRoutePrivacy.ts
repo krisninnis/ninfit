@@ -1,4 +1,5 @@
 import type { Journey, JourneyGpsPoint, JourneyPrivacy } from './journey';
+import { journeyTrustedRouteSegments } from './journeyRouteSegments';
 
 export const DEFAULT_JOURNEY_ROUTE_MASK_RADIUS_M = 200;
 
@@ -24,33 +25,6 @@ function distanceBetweenM(a: JourneyGpsPoint, b: JourneyGpsPoint): number {
   const sinLon = Math.sin(deltaLon / 2);
   const h = sinLat * sinLat + Math.cos(lat1) * Math.cos(lat2) * sinLon * sinLon;
   return 2 * earthRadiusM * Math.asin(Math.min(1, Math.sqrt(h)));
-}
-
-function validSegmentStarts(
-  points: readonly JourneyGpsPoint[],
-  starts: readonly number[] | undefined,
-): readonly number[] | null {
-  if (starts === undefined || starts.length === 0) return null;
-
-  let previous = -1;
-  for (const start of starts) {
-    if (!Number.isInteger(start) || start < 0 || start >= points.length || start <= previous) {
-      return null;
-    }
-    previous = start;
-  }
-  return starts;
-}
-
-function trustedSegments(journey: Pick<Journey, 'route'>): JourneyGpsPoint[][] {
-  const points = journey.route?.acceptedPoints ?? [];
-  const starts = validSegmentStarts(points, journey.route?.segmentStarts);
-  if (starts === null) return [];
-
-  return starts.map((start, index) => {
-    const end = starts[index + 1] ?? points.length;
-    return points.slice(start, end);
-  });
 }
 
 function routeMayBeDisclosed(privacy: JourneyPrivacy): boolean {
@@ -79,7 +53,7 @@ export function projectJourneyRouteForDisclosure(
     return { segments: [], masked: false, hiddenPointCount: 0 };
   }
 
-  const segments = trustedSegments(journey);
+  const segments = journeyTrustedRouteSegments(journey);
   if (!shouldMask(journey.privacy)) {
     return { segments, masked: false, hiddenPointCount: 0 };
   }
