@@ -109,7 +109,7 @@ describe('Journey route privacy projection', () => {
       { segmentStarts: [0] },
     );
 
-    expect(projectJourneyRouteForDisclosure(value).segments).toEqual([[away1, away2], [away3]]);
+    expect(projectJourneyRouteForDisclosure(value).segments).toEqual([[away1, away2]]);
   });
 
   it('does not disclose isolated one-point remnants', () => {
