@@ -21,6 +21,7 @@ import {
 
 interface ActiveJourneyScreenProps {
   onClose(): void;
+  onCompleted?(journeyId: string): void;
 }
 
 function nowIso(): ISODateTime {
@@ -52,7 +53,7 @@ function initialGpsState(journey: Journey | null): JourneyLiveGpsState {
   return 'connecting';
 }
 
-export function ActiveJourneyScreen({ onClose }: ActiveJourneyScreenProps) {
+export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScreenProps) {
   const store = useMemo(() => getAppContext().adapter, []);
   const recovery = useMemo(() => createJourneyRecoveryController(store), [store]);
   const [journey, setJourney] = useState<Journey | null>(() => recovery.load());
@@ -170,6 +171,7 @@ export function ActiveJourneyScreen({ onClose }: ActiveJourneyScreenProps) {
     setJourney(next);
     setGpsState('finished');
     setNow(changedAt);
+    onCompleted?.(next.id);
   };
 
   const leave = () => {
