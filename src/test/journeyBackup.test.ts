@@ -349,6 +349,15 @@ describe('a malformed Journey block is refused, never partly trusted', () => {
     ['a route point has no timestamp', {
       history: [{ ...completedJourney(), route: { rawPoints: [], acceptedPoints: [{ latitude: 51.5, longitude: -3.5 }] } }],
     }],
+    ['privacy is missing', {
+      history: [{ ...completedJourney(), privacy: undefined }],
+    }],
+    ['privacy visibility is unknown', {
+      history: [{ ...completedJourney(), privacy: { ...completedJourney().privacy, visibility: 'public' } }],
+    }],
+    ['a privacy flag is not boolean', {
+      history: [{ ...completedJourney(), privacy: { ...completedJourney().privacy, maskSensitiveStartEnd: 'yes' } }],
+    }],
     ['the active slot holds a completed Journey', {
       history: [],
       active: { savedAt: '2026-08-26T10:15:00.000Z', journey: completedJourney() },
