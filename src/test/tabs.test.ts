@@ -7,6 +7,7 @@ import {
   TABS,
   hashForPrimaryNav,
   hashForTab,
+  journeyDetailHash,
   isTabId,
   parseRouteFromHash,
   parseTabFromHash,
@@ -68,6 +69,17 @@ describe('Journey routes', () => {
 
   it('keeps ordinary tab routing unchanged', () => {
     expect(parseRouteFromHash('#/week')).toEqual({ kind: 'tab', tab: 'week' });
+  });
+
+  it('preserves opaque Journey ids exactly, including case and encoded characters', () => {
+    const id = 'Journey-MixedCase/1';
+    const hash = journeyDetailHash(id);
+    expect(hash).toBe('#/journey/detail/Journey-MixedCase%2F1');
+    expect(parseRouteFromHash(hash)).toEqual({ kind: 'journey-detail', journeyId: id });
+  });
+
+  it('fails malformed detail ids back to Journey Home', () => {
+    expect(parseRouteFromHash('#/journey/detail/%E0%A4%A')).toEqual({ kind: 'journey-home' });
   });
 });
 
