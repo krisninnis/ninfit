@@ -5,15 +5,18 @@ import { describe, expect, it } from 'vitest';
 
 const SRC = fileURLToPath(new URL('..', import.meta.url));
 const read = (...parts: string[]) => readFileSync(join(SRC, ...parts), 'utf8');
+const code = (source: string) =>
+  source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
 
 const component = read('ui', 'components', 'LivingScrim.tsx');
 const css = read('styles', 'components', 'living-interface.css');
 
 describe('Living Interface scrim primitive', () => {
   it('is presentation-only and imports no fitness or game truth', () => {
-    expect(component).not.toMatch(/domain\//);
-    expect(component).not.toMatch(/useGame|useToday|Journey|Mascot|XP|reward/i);
-    expect(component).toContain('children: ReactNode');
+    const executable = code(component);
+    expect(executable).not.toMatch(/domain\//);
+    expect(executable).not.toMatch(/useGame|useToday|Journey|Mascot|XP|reward/i);
+    expect(executable).toContain('children: ReactNode');
   });
 
   it('offers a small closed set of reusable presentation variants', () => {
