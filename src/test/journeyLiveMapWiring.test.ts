@@ -35,9 +35,10 @@ describe('Journey Live Map truth boundary', () => {
     }
   });
 
-  it('consumes only accepted points plus explicit segment starts for route lines', () => {
+  it('consumes trusted route segments rather than re-implementing segmentation in presentation', () => {
     expect(presentation).toContain("journey.route?.acceptedPoints");
-    expect(presentation).toContain("journey.route?.segmentStarts");
+    expect(presentation).toContain("journeyTrustedRouteSegments");
+    expect(presentation).not.toContain("journey.route?.segmentStarts");
     expect(presentation).not.toContain('rawPoints');
   });
 
