@@ -9,6 +9,7 @@ import { TodayScreen } from './ui/screens/TodayScreen';
 import { WeekScreen } from './ui/screens/WeekScreen';
 import { JourneyScreen } from './ui/screens/JourneyScreen';
 import { ActiveJourneyScreen } from './ui/screens/ActiveJourneyScreen';
+import { JourneyDetailScreen } from './ui/screens/JourneyDetailScreen';
 import { PageBackdrop } from './ui/components/PageBackdrop';
 import { StartupCinematic } from './ui/screens/StartupCinematic';
 import { BACKDROP_FOR_TAB } from './ui/backgrounds/registry';
@@ -21,6 +22,7 @@ import {
   JOURNEY_HASH,
   hashForPrimaryNav,
   hashForTab,
+  journeyDetailHash,
   parseRouteFromHash,
   routeAfterHashChange,
   type AppRoute,
@@ -106,9 +108,10 @@ export default function App() {
   const showNinFitId = route.kind === 'account';
   const showJourneyHome = route.kind === 'journey-home';
   const showActiveJourney = route.kind === 'journey-active';
+  const showJourneyDetail = route.kind === 'journey-detail';
   const screenTab: TabId = route.kind === 'tab' ? route.tab : 'today';
   const CurrentScreen = SCREENS[screenTab];
-  const tab: PrimaryNavId = showJourneyHome ? 'journey' : screenTab;
+  const tab: PrimaryNavId = showJourneyHome || showJourneyDetail ? 'journey' : screenTab;
   const showPrimaryNav = route.kind === 'tab' || showJourneyHome;
   const backdropId = tab === 'journey' ? 'journey-wall' : BACKDROP_FOR_TAB[tab];
 
@@ -124,7 +127,15 @@ export default function App() {
               onSkip={() => navigate(hashForTab('today'))}
             />
           ) : showActiveJourney ? (
-            <ActiveJourneyScreen onClose={() => navigate(JOURNEY_HASH)} />
+            <ActiveJourneyScreen
+              onClose={() => navigate(JOURNEY_HASH)}
+              onCompleted={(journeyId) => navigate(journeyDetailHash(journeyId))}
+            />
+          ) : showJourneyDetail ? (
+            <JourneyDetailScreen
+              journeyId={route.journeyId}
+              onClose={() => navigate(JOURNEY_HASH)}
+            />
           ) : showJourneyHome ? (
             <JourneyScreen />
           ) : (
