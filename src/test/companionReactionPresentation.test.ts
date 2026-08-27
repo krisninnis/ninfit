@@ -59,10 +59,8 @@ describe('companion reaction presentation', () => {
 
 describe('GameHeader reaction wiring', () => {
   it('renders the already-decided context as presentation state', () => {
-    expect(component).toContain(
-      "import { companionReactionPresentation } from '../companionReactionPresentation';",
-    );
-    expect(component).toContain('const reactionPresentation = companionReactionPresentation(context);');
+    expect(component).toContain("from '../companionReactionPresentation';");
+    expect(component).toContain('companionReactionPresentationForLifetime(');
     expect(component).toContain('data-companion-reaction={reactionPresentation}');
   });
 
