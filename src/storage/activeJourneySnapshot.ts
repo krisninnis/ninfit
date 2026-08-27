@@ -58,6 +58,25 @@ export function clearActiveJourneySnapshot(storage: StorageAdapter): void {
   storage.remove(ACTIVE_JOURNEY_KEY);
 }
 
+/**
+ * Write a snapshot that came from a backup rather than from a live recording.
+ *
+ * Same validation as a live save - only a recording or paused Journey may occupy the
+ * slot - but it takes the `savedAt` from the file, so a restored Journey keeps the age
+ * it actually has instead of appearing to have been saved at import time.
+ *
+ * It writes recovery evidence and nothing else. No watcher is created here; GPS starts
+ * only when the person opens the Active Journey screen and the status is still
+ * `recording`, which is a deliberate act on their part rather than a side effect of
+ * restoring a file.
+ */
+export function restoreActiveJourneySnapshot(
+  storage: StorageAdapter,
+  snapshot: ActiveJourneySnapshot,
+): ActiveJourneySnapshot {
+  return saveActiveJourneySnapshot(storage, snapshot.journey, snapshot.savedAt);
+}
+
 export function activeJourneySnapshotKey(): string {
   return ACTIVE_JOURNEY_KEY;
 }

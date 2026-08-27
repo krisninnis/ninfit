@@ -1,4 +1,5 @@
 import type { Journey } from '../domain/journey';
+import { QUARANTINE_KEY_PREFIX } from './repository';
 import type { StorageAdapter } from './StorageAdapter';
 
 const JOURNEY_HISTORY_KEY = 'ninfit:journey:history:v1';
@@ -34,6 +35,89 @@ export function loadJourneyHistory(storage: StorageAdapter): Journey[] {
   const raw = storage.get(JOURNEY_HISTORY_KEY);
   if (raw === null) return [];
   return parseHistory(raw).journeys;
+}
+
+/**
+ * Why this exists alongside `loadJourneyHistory`.
+ *
+ * `loadJourneyHistory` answers "what can I show?" and degrades an unreadable value to
+ * an empty list, which is the right answer for a screen. A backup asks a different
+ * question - "is this everything?" - and there the same degradation is dangerous: a
+ * corrupt history would be exported as `history: []`, and restoring that file later
+ * would turn a recoverable corruption into a permanent, deliberate-looking deletion.
+ *
+ * So the backup path reads through here instead. It reports corruption rather than
+ * hiding it, and copies the unreadable value to a quarantine key first, following the
+ * rule the repository already sets: nothing is ever destroyed.
+ */
+export type JourneyHistoryRead =
+  | { ok: true; journeys: Journey[] }
+  | { ok: false; detail: string; quarantinedAs?: string };
+
+export function readJourneyHistoryForBackup(
+  storage: StorageAdapter,
+  options: { now?: () => string } = {},
+): JourneyHistoryRead {
+  const raw = storage.get(JOURNEY_HISTORY_KEY);
+  if (raw === null) return { ok: true, journeys: [] };
+
+  let candidate: Partial<JourneyHistoryEnvelope>;
+  try {
+    candidate = JSON.parse(raw) as Partial<JourneyHistoryEnvelope>;
+  } catch (error) {
+    return quarantineHistory(storage, raw, `Journey history is not valid JSON: ${String(error)}`, options);
+  }
+
+  if (candidate.schemaVersion !== 1) {
+    return quarantineHistory(
+      storage,
+      raw,
+      `Journey history uses schema version ${JSON.stringify(candidate.schemaVersion)}`,
+      options,
+    );
+  }
+
+  if (!Array.isArray(candidate.journeys)) {
+    return quarantineHistory(storage, raw, 'Journey history is not a list of Journeys', options);
+  }
+
+  return {
+    ok: true,
+    journeys: candidate.journeys.filter((journey): journey is Journey =>
+      Boolean(journey && isPersistableJourney(journey as Journey)),
+    ),
+  };
+}
+
+function quarantineHistory(
+  storage: StorageAdapter,
+  raw: string,
+  detail: string,
+  options: { now?: () => string },
+): JourneyHistoryRead {
+  const stamp = options.now?.() ?? new Date().toISOString();
+  const quarantinedAs = `${QUARANTINE_KEY_PREFIX}${JOURNEY_HISTORY_KEY}:${stamp}`;
+  try {
+    storage.set(quarantinedAs, raw);
+    return { ok: false, detail, quarantinedAs };
+  } catch {
+    // If even the copy fails the original is still where it was. Report without it.
+    return { ok: false, detail };
+  }
+}
+
+/**
+ * Replace the whole history, for a restore.
+ *
+ * Deliberately not an upsert: a restore is "this device now holds what the backup
+ * held", not "merge two devices". `saveJourneyToHistory` remains the upsert used by
+ * normal recording.
+ */
+export function replaceJourneyHistory(storage: StorageAdapter, journeys: Journey[]): Journey[] {
+  const persistable = journeys.filter(isPersistableJourney);
+  const envelope: JourneyHistoryEnvelope = { schemaVersion: 1, journeys: persistable };
+  storage.set(JOURNEY_HISTORY_KEY, JSON.stringify(envelope));
+  return persistable;
 }
 
 /**

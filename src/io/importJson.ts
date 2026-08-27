@@ -7,6 +7,13 @@ import {
   validateExportEnvelope,
   type ExportEnvelope,
 } from '../domain/schema';
+import {
+  clearActiveJourneySnapshot,
+  restoreActiveJourneySnapshot,
+} from '../storage/activeJourneySnapshot';
+import { replaceJourneyHistory } from '../storage/journeyHistory';
+import type { ExportJourneyBlock } from '../domain/schema';
+import type { StorageAdapter } from '../storage/StorageAdapter';
 import type { AppData, ISODate, ISODateTime } from '../domain/types';
 import type { Repository } from '../storage/repository';
 import { summariseBackup, type BackupSummary } from './exportJson';
@@ -43,6 +50,8 @@ export interface PreparedImport {
   envelope: ExportEnvelope;
   data: AppData;
   game: { state: GameState; settings: GameSettings } | undefined;
+  /** Undefined when the file predates Journey backup support - see `restoreJourneys`. */
+  journey: ExportJourneyBlock | undefined;
   summary: BackupSummary;
 }
 
@@ -88,6 +97,7 @@ export function prepareImport(text: string): PrepareResult {
       envelope,
       data,
       game: envelope.game === undefined ? undefined : { ...envelope.game },
+      journey: envelope.journey === undefined ? undefined : { ...envelope.journey },
       summary: summariseBackup(envelope),
     },
   };
@@ -121,10 +131,17 @@ export interface CommitOptions {
    * saved: a failure here aborts the import before anything is written.
    */
   backupCurrentData: () => boolean;
+  /**
+   * The raw store, needed because Journeys live outside the repository.
+   *
+   * Optional so existing callers are unaffected. When it is absent no Journey state is
+   * touched at all, which is the same thing the code did before Journey backup existed.
+   */
+  storage?: StorageAdapter;
 }
 
 export type CommitResult =
-  | { ok: true; dailyLogsWritten: number; dailyLogsRemoved: number }
+  | { ok: true; dailyLogsWritten: number; dailyLogsRemoved: number; journeysRestored?: number; activeJourneyRestored?: boolean }
   | { ok: false; errors: string[]; phase: 'backup' | 'write' | 'verify' };
 
 /**
@@ -141,6 +158,7 @@ export function commitImport(
   options: CommitOptions,
 ): CommitResult {
   const timestamp = options.now ?? nowTimestamp();
+  let journeyOutcome: JourneyRestoreOutcome = { restored: 0, active: false, touched: false };
 
   // 1. Back up what is here now. No backup, no import.
   try {
@@ -178,6 +196,7 @@ export function commitImport(
 
     repository.saveGameState(resolveGameState(prepared, data, timestamp));
     repository.saveGameSettings(prepared.game?.settings ?? createDefaultGameSettings());
+    journeyOutcome = restoreJourneys(prepared, options.storage);
   } catch (error) {
     return {
       ok: false,
@@ -205,7 +224,68 @@ export function commitImport(
 
   repository.updateMeta({});
 
-  return { ok: true, dailyLogsWritten: data.dailyLogs.length, dailyLogsRemoved: removed };
+  const result: CommitResult = {
+    ok: true,
+    dailyLogsWritten: data.dailyLogs.length,
+    dailyLogsRemoved: removed,
+  };
+  if (journeyOutcome.touched) {
+    result.journeysRestored = journeyOutcome.restored;
+    result.activeJourneyRestored = journeyOutcome.active;
+  }
+  return result;
+}
+
+interface JourneyRestoreOutcome {
+  restored: number;
+  active: boolean;
+  /** False when the file said nothing about Journeys, so nothing was changed. */
+  touched: boolean;
+}
+
+/**
+ * Restore Journeys, or deliberately leave them alone.
+ *
+ * THE RULE, AND WHY IT IS THIS WAY ROUND:
+ *
+ * A backup with NO journey block predates Journey backup support. It is not a
+ * statement that the device had no Journeys - it is a file that could not have
+ * carried them. Wiping history on the strength of it would destroy real recordings
+ * because of the file's age, so this leaves existing Journey state exactly as it is.
+ * The cost is honest and small: the restored device keeps its own Journeys alongside
+ * the imported fitness records, and the Data screen says so.
+ *
+ * A backup WITH a journey block is authoritative, including when its history is
+ * empty. That is the case that fixes cross-device mixing: restoring device A's backup
+ * onto device B replaces B's Journeys with A's rather than leaving both present. The
+ * active slot follows the same rule - restored when the file carries one, cleared when
+ * it does not, so a stale half-finished recording cannot outlive the restore.
+ */
+function restoreJourneys(
+  prepared: PreparedImport,
+  storage: StorageAdapter | undefined,
+): JourneyRestoreOutcome {
+  if (storage === undefined || prepared.journey === undefined) {
+    return { restored: 0, active: false, touched: false };
+  }
+
+  const restored = replaceJourneyHistory(storage, prepared.journey.history);
+
+  if (prepared.journey.active !== undefined) {
+    restoreActiveJourneySnapshot(storage, {
+      schemaVersion: 1,
+      savedAt: prepared.journey.active.savedAt,
+      journey: prepared.journey.active.journey,
+    });
+  } else {
+    clearActiveJourneySnapshot(storage);
+  }
+
+  return {
+    restored: restored.length,
+    active: prepared.journey.active !== undefined,
+    touched: true,
+  };
 }
 
 /**

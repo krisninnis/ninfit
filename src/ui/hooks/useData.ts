@@ -43,6 +43,9 @@ export interface DataState {
 export function useData(): DataState {
   const context = useMemo(() => getAppContext(), []);
   const repository = context.repository;
+  // Journeys live under their own keys, outside the repository, so backup and restore
+  // both need the raw store as well.
+  const adapter = context.adapter;
 
   const [status, setStatus] = useState<DataStatus>({ kind: 'idle' });
   const [pending, setPending] = useState<PreparedImport | undefined>(undefined);
@@ -61,7 +64,7 @@ export function useData(): DataState {
   const exportBackup = useCallback(() => {
     setStatus({ kind: 'working' });
     try {
-      const backup = buildBackup(repository);
+      const backup = buildBackup(repository, { storage: adapter });
       downloadFile(backup);
       // Only now is it true that a backup exists.
       repository.updateMeta({ lastExportedAt: nowTimestamp() });
@@ -70,7 +73,7 @@ export function useData(): DataState {
     } catch (error) {
       setStatus({ kind: 'error', messages: [`The backup could not be saved. ${String(error)}`] });
     }
-  }, [repository]);
+  }, [repository, adapter]);
 
   const exportCsv = useCallback(() => {
     setStatus({ kind: 'working' });
@@ -106,9 +109,10 @@ export function useData(): DataState {
     setStatus({ kind: 'working' });
 
     const result = commitImport(repository, pending, {
+      storage: adapter,
       backupCurrentData: () => {
         if (!isDownloadSupported()) return false;
-        downloadFile(buildBackup(repository));
+        downloadFile(buildBackup(repository, { storage: adapter }));
         return true;
       },
     });
@@ -120,7 +124,7 @@ export function useData(): DataState {
 
     setPending(undefined);
     setStatus({ kind: 'imported', written: result.dailyLogsWritten, removed: result.dailyLogsRemoved });
-  }, [pending, repository]);
+  }, [pending, repository, adapter]);
 
   return {
     meta,

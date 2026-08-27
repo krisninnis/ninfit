@@ -1,5 +1,6 @@
 import { isValidISODate, isValidISODateTime, nowTimestamp } from './dates';
 import type { GameSettings, GameState } from './game/types';
+import type { Journey } from './journey';
 import type { AppData, ISODateTime } from './types';
 
 /**
@@ -46,6 +47,40 @@ export interface ExportGameBlock {
   settings: GameSettings;
 }
 
+/**
+ * The unfinished Journey, if the device was mid-recording when the backup was taken.
+ *
+ * Shaped like the storage snapshot but declared here, in the domain, so `schema.ts`
+ * keeps importing nothing from `src/storage`. The storage layer maps between the two.
+ */
+export interface ExportActiveJourney {
+  savedAt: ISODateTime;
+  journey: Journey;
+}
+
+/**
+ * Journeys, carried as a third sibling block beside `data` and `game`.
+ *
+ * WHY A SIBLING KEY, AGAIN:
+ * the same reason `game` is one. A Journey is neither a fitness record in the
+ * `DailyLog` sense nor game state; it is its own aggregate with its own storage keys,
+ * and folding it into `AppData` would blur a boundary that is currently clean.
+ *
+ * WHY ABSENT AND EMPTY MEAN DIFFERENT THINGS:
+ * this is the load-bearing decision of the whole block. `journey: undefined` means
+ * "this file predates Journey backup support and therefore says nothing about
+ * Journeys". `journey: { history: [] }` means "this device had none". The first must
+ * never be allowed to delete history the file could not have contained; the second
+ * must. Collapsing the two would either strand stale Journeys forever or destroy real
+ * ones on the first restore from an old file.
+ */
+export interface ExportJourneyBlock {
+  /** Completed and imported Journeys. Order is preserved as written. */
+  history: Journey[];
+  /** Present only when a recording or paused Journey existed at export time. */
+  active?: ExportActiveJourney;
+}
+
 export interface ExportEnvelope {
   app: typeof APP_ID;
   appVersion: string;
@@ -54,6 +89,8 @@ export interface ExportEnvelope {
   data: AppData;
   /** Absent in exports written before the game layer existed. */
   game?: ExportGameBlock;
+  /** Absent in exports written before Journey backup support existed. */
+  journey?: ExportJourneyBlock;
 }
 
 export function isSupportedSchemaVersion(version: unknown): version is number {
@@ -62,7 +99,11 @@ export function isSupportedSchemaVersion(version: unknown): version is number {
 
 export function createExportEnvelope(
   data: AppData,
-  options: { exportedAt?: ISODateTime; game?: ExportGameBlock } = {},
+  options: {
+    exportedAt?: ISODateTime;
+    game?: ExportGameBlock;
+    journey?: ExportJourneyBlock;
+  } = {},
 ): ExportEnvelope {
   const envelope: ExportEnvelope = {
     app: APP_ID,
@@ -72,6 +113,7 @@ export function createExportEnvelope(
     data,
   };
   if (options.game !== undefined) envelope.game = options.game;
+  if (options.journey !== undefined) envelope.journey = options.journey;
   return envelope;
 }
 
@@ -132,6 +174,116 @@ function validateAppData(value: unknown, errors: string[]): void {
 }
 
 /**
+ * The Journey block, if the file carries one.
+ *
+ * Refused rather than repaired. A partially trusted Journey block is the worst
+ * outcome available here: it would restore some routes and silently drop others,
+ * and the user would have no way to tell which. Every problem below fails the whole
+ * import, exactly as an unreadable `game` block does.
+ *
+ * Journeys themselves are checked for the fields the rest of the app relies on - an
+ * id, a status that belongs in the block it was found in, and a start time. Route
+ * points are checked to be an array of objects carrying finite coordinates, because
+ * a route is the one part of a Journey that cannot be re-derived from anything else.
+ */
+function validateJourneyPoints(
+  points: unknown,
+  label: string,
+  errors: string[],
+): void {
+  if (points === undefined) return;
+  if (!Array.isArray(points)) {
+    errors.push(`${label} must be an array when present`);
+    return;
+  }
+  points.forEach((point, index) => {
+    if (!isRecord(point)) {
+      errors.push(`${label}[${index}] must be an object`);
+      return;
+    }
+    for (const axis of ['latitude', 'longitude'] as const) {
+      if (typeof point[axis] !== 'number' || !Number.isFinite(point[axis])) {
+        errors.push(`${label}[${index}].${axis} must be a finite number`);
+      }
+    }
+    if (!isValidISODateTime(point['recordedAt'])) {
+      errors.push(`${label}[${index}].recordedAt must be an ISO timestamp`);
+    }
+  });
+}
+
+function validateJourney(
+  value: unknown,
+  label: string,
+  allowedStatuses: readonly string[],
+  errors: string[],
+): void {
+  if (!isRecord(value)) {
+    errors.push(`${label} must be an object`);
+    return;
+  }
+
+  if (typeof value['id'] !== 'string' || value['id'].length === 0) {
+    errors.push(`${label}.id must be a non-empty string`);
+  }
+
+  const status = value['status'];
+  if (typeof status !== 'string' || !allowedStatuses.includes(status)) {
+    errors.push(
+      `${label}.status must be one of ${allowedStatuses.join(', ')}, found ${JSON.stringify(status)}`,
+    );
+  }
+
+  if (!isValidISODateTime(value['startedAt'])) {
+    errors.push(`${label}.startedAt must be an ISO timestamp`);
+  }
+
+  for (const key of ['metrics', 'sources', 'pauses'] as const) {
+    if (!Array.isArray(value[key])) errors.push(`${label}.${key} must be an array`);
+  }
+
+  const route = value['route'];
+  if (route !== undefined) {
+    if (!isRecord(route)) {
+      errors.push(`${label}.route must be an object when present`);
+    } else {
+      validateJourneyPoints(route['acceptedPoints'], `${label}.route.acceptedPoints`, errors);
+      validateJourneyPoints(route['rawPoints'], `${label}.route.rawPoints`, errors);
+    }
+  }
+}
+
+function validateJourneyBlock(value: unknown, errors: string[]): void {
+  if (value === undefined) return;
+
+  if (!isRecord(value)) {
+    errors.push('journey must be an object when present');
+    return;
+  }
+
+  const history = value['history'];
+  if (!Array.isArray(history)) {
+    errors.push('journey.history must be an array');
+  } else {
+    history.forEach((journey, index) => {
+      validateJourney(journey, `journey.history[${index}]`, ['completed', 'imported'], errors);
+    });
+  }
+
+  const active = value['active'];
+  if (active !== undefined) {
+    if (!isRecord(active)) {
+      errors.push('journey.active must be an object when present');
+    } else {
+      if (!isValidISODateTime(active['savedAt'])) {
+        errors.push('journey.active.savedAt must be an ISO timestamp');
+      }
+      validateJourney(active['journey'], 'journey.active.journey', ['recording', 'paused'], errors);
+    }
+  }
+}
+
+/**
  * Structural validation of something claiming to be one of our exports.
  *
  * Deliberately shallow: it checks identity, version and shape so a wrong or
@@ -177,6 +329,8 @@ export function validateExportEnvelope(value: unknown): SchemaValidationResult {
       if (!isRecord(game['settings'])) errors.push('game.settings must be an object');
     }
   }
+
+  validateJourneyBlock(value['journey'], errors);
 
   if (errors.length > 0) return { ok: false, errors };
   return { ok: true, envelope: value as unknown as ExportEnvelope };
