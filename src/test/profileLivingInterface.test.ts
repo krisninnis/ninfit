@@ -49,12 +49,17 @@ describe('Profile Living Interface v1', () => {
   });
 
   it('keeps trophies, settings and account outside the identity hero', () => {
-    const end = screen.indexOf('</LivingScrim>');
-    const after = screen.slice(end);
+    const start = screen.indexOf('<LivingScrim variant="hero"');
+    const end = screen.indexOf('</LivingScrim>', start);
+    const hero = screen.slice(start, end);
 
-    expect(after).toContain('<Section title="Trophies" defaultOpen={false}>');
-    expect(after).toContain('<SettingsSection');
-    expect(after).toContain('<AccountSection />');
+    expect(hero).not.toContain('Trophies');
+    expect(hero).not.toContain('<SettingsSection');
+    expect(hero).not.toContain('<AccountSection />');
+
+    expect(screen).toContain('<Section title="Trophies" defaultOpen={false}>');
+    expect(screen).toContain('<SettingsSection');
+    expect(screen).toContain('<AccountSection />');
   });
 
   it('adds no new game calculation or persistence ownership', () => {
