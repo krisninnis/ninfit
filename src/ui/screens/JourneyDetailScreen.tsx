@@ -115,6 +115,7 @@ export function JourneyDetailScreen({ journeyId, onClose }: JourneyDetailScreenP
                 journey={journey}
                 ariaLabel="Map of this saved Journey's private trusted route"
                 unavailableMessage="The saved Journey is still available without the map."
+                view="overview"
               />
             </Suspense>
           </div>
