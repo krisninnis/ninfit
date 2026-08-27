@@ -53,6 +53,12 @@ describe('Journey Live Map truth boundary', () => {
     expect(screen).not.toContain('â');
   });
 
+  it('contains map-renderer startup failure so recording UI can stay alive', () => {
+    expect(map).toContain('try {');
+    expect(map).toContain('setMapUnavailable(true)');
+    expect(map).toContain('Your Journey recording continues safely.');
+  });
+
   it('loads the heavyweight map presentation only when Active Journey needs it', () => {
     expect(screen).toContain("lazy(async () =>");
     expect(screen).toContain("import('../components/ActiveJourneyMap')");
