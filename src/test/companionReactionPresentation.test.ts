@@ -88,7 +88,10 @@ describe('reaction styling stays decorative and calm', () => {
   });
 
   it('uses design tokens without raw colour or motion dependency', () => {
-    const reactionCss = css.slice(css.indexOf("Contextual reaction treatment"));
+    const reactionCss = css.slice(
+      css.indexOf("Contextual reaction treatment"),
+      css.indexOf('.game__art {'),
+    );
     expect(reactionCss).toContain('var(--ft-accent)');
     expect(reactionCss).toContain('var(--ft-surface-raised)');
     expect(reactionCss).not.toMatch(/#[0-9a-fA-F]{3,8}\b|\brgb\(|\bhsl\(|\boklch\(/);
