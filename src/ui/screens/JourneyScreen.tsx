@@ -4,7 +4,7 @@ import { createJourneyLaunchController } from '../../app/journeyLaunchController
 import type { Journey, JourneyActivityType } from '../../domain/journey';
 import type { ISODateTime } from '../../domain/types';
 import { loadJourneyHistory } from '../../storage/journeyHistory';
-import { JOURNEY_ACTIVE_HASH } from '../tabs';
+import { JOURNEY_ACTIVE_HASH, journeyDetailHash } from '../tabs';
 import { formatJourneyDistance, journeyDistanceM } from '../journeyPresentation';
 
 const PRIMARY_ACTIVITIES: ReadonlyArray<{
@@ -36,11 +36,17 @@ function RecentJourney({ journey }: { journey: Journey }) {
   const date = new Date(journey.endedAt ?? journey.startedAt);
   return (
     <li className="journey-home__recent-item">
-      <div>
-        <strong>{activityLabel(journey.activityType)}</strong>
-        <span>{date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
-      </div>
-      <span>{distance > 0 ? `${formatJourneyDistance(distance)} km` : 'Completed'}</span>
+      <button
+        type="button"
+        className="journey-home__recent-link"
+        onClick={() => { window.location.hash = journeyDetailHash(journey.id); }}
+      >
+        <span className="journey-home__recent-copy">
+          <strong>{activityLabel(journey.activityType)}</strong>
+          <span>{date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
+        </span>
+        <span>{distance > 0 ? `${formatJourneyDistance(distance)} km` : 'Completed'}</span>
+      </button>
     </li>
   );
 }
