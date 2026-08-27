@@ -2,6 +2,7 @@ import { differenceInDays } from '../dates';
 import type { ISODate } from '../types';
 import type { SessionCompletionStatus } from '../weeklyPlan';
 import { RETURNING_AFTER_DAYS, type MascotContext } from './messages';
+import { fitnessCompanionReaction } from './fitnessCompanionReaction';
 import type { EggState, RewardKind } from './types';
 
 /**
@@ -140,14 +141,18 @@ export function isReturning(today: ISODate, lastActiveDate: ISODate | undefined)
 export function todayCompanionContext(input: TodayCompanionInput): MascotContext {
   if (input.eggState === 'ready') return 'hatch_ready';
   if (input.evolutionReady) return 'evolution_ready';
-  if (input.grantedKinds.includes('trophy_unlocked')) return 'trophy';
 
-  if (input.completion === 'complete') return 'session_complete';
-  if (input.completion === 'rest') return 'rest_day';
-  if (input.completion === 'partial') return 'partial_complete';
+  const fitnessReaction = fitnessCompanionReaction(
+    {
+      completion: input.completion,
+      grantedKinds: input.grantedKinds,
+      today: input.today,
+      lastActiveDate: input.lastActiveDate,
+    },
+    isReturning,
+  );
+  if (fitnessReaction !== 'none') return fitnessReaction;
 
-  if (isReturning(input.today, input.lastActiveDate)) return 'returning';
   if (input.eggState === 'unhatched') return 'egg_waiting';
-
   return 'idle';
 }
