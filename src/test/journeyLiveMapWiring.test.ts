@@ -43,9 +43,14 @@ describe('Journey Live Map truth boundary', () => {
 
   it('uses an open, no-key basemap with visible OpenStreetMap attribution', () => {
     expect(map).toContain("https://tile.openstreetmap.org/{z}/{x}/{y}.png");
-    expect(map).toContain('Â© OpenStreetMap contributors');
+    expect(map).toContain('&copy; OpenStreetMap contributors');
     expect(map).toContain('VITE_MAP_TILE_URL');
     expect(map).toContain('interactive: false');
+  });
+
+  it('keeps map-facing source text encoding-safe', () => {
+    expect(map).not.toContain('Â');
+    expect(screen).not.toContain('â');
   });
 
   it('loads the heavyweight map presentation only when Active Journey needs it', () => {
