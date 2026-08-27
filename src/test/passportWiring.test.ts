@@ -30,7 +30,7 @@ describe('Passport v1 wiring', () => {
   });
 
   it('uses the Profile world while remaining a focused sub-route', () => {
-    expect(app).toContain("showPassport ? 'profile'");
+    expect(app).toMatch(/showPassport\s*\?\s*'profile'/);
     expect(app).toContain("const showPrimaryNav = route.kind === 'tab' || showJourneyHome");
   });
 
