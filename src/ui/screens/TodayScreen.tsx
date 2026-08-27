@@ -187,6 +187,8 @@ export function TodayScreen() {
   */
   const crackStage = game.state.mascot.eggState === 'unhatched' ? 0 : MAX_CRACK_STAGE;
 
+  const companionMomentKey = game.granted.map((event) => event.id).join('|');
+
   const companionContext = todayCompanionContext({
     eggState: game.state.mascot.eggState,
     evolutionReady: game.state.mascot.evolutionReady,
@@ -232,6 +234,7 @@ export function TodayScreen() {
         state={game.state}
         settings={game.settings}
         context={companionContext}
+        freshMomentKey={companionMomentKey}
         crackStage={crackStage}
         onHatch={game.hatch}
         onEvolve={game.evolve}
