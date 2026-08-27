@@ -4,6 +4,7 @@ import type { DisplayUnitPreferences } from '../../domain/types';
 import { formatLength, formatWeight, roundTo } from '../../domain/units';
 import { Section } from '../components/Field';
 import { AttentionIcon } from '../components/Icon';
+import { LivingScrim } from '../components/LivingScrim';
 import { Screen } from '../components/Screen';
 import { Sparkline } from '../components/Sparkline';
 import { formatCount, formatShortDay } from '../format';
@@ -155,19 +156,38 @@ export function ProgressScreen() {
 
   return (
     <Screen title="Progress" subtitle="Your own recorded numbers over time.">
-      <div className="rangebar" role="group" aria-label="Time range">
-        {RANGES.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            className={`rangebar__option${range === option.id ? ' rangebar__option--selected' : ''}`}
-            aria-pressed={range === option.id}
-            onClick={() => setRange(option.id)}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
+      <LivingScrim variant="hero" className="progress__living-summary">
+        <div className="progress__chapter-head">
+          <p className="progress__chapter-kicker">Recorded chapter</p>
+          <div className="rangebar" role="group" aria-label="Time range">
+            {RANGES.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={`rangebar__option${range === option.id ? ' rangebar__option--selected' : ''}`}
+                aria-pressed={range === option.id}
+                onClick={() => setRange(option.id)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <section className="progress__activity" aria-labelledby="progress-activity-title">
+          <p className="progress__group" id="progress-activity-title">Activity</p>
+          <div className="statgrid">
+            {overviewStats(summary).map(([label, value, note]) => (
+              <Stat key={label} label={label} value={value} note={note} />
+            ))}
+          </div>
+          <p className="footnote">
+            {summary.daysLogged === 0
+              ? 'Nothing recorded in this range yet.'
+              : `${summary.daysLogged} day${summary.daysLogged === 1 ? '' : 's'} with something recorded.`}
+          </p>
+        </section>
+      </LivingScrim>
 
       {hasStorageIssues ? (
         <section className="card card--attention">
@@ -175,20 +195,6 @@ export function ProgressScreen() {
           <p>Some stored data could not be read, so parts of this may be incomplete.</p>
         </section>
       ) : null}
-
-      <section className="card">
-        <p className="progress__group">Activity</p>
-        <div className="statgrid">
-          {overviewStats(summary).map(([label, value, note]) => (
-            <Stat key={label} label={label} value={value} note={note} />
-          ))}
-        </div>
-        <p className="footnote">
-          {summary.daysLogged === 0
-            ? 'Nothing recorded in this range yet.'
-            : `${summary.daysLogged} day${summary.daysLogged === 1 ? '' : 's'} with something recorded.`}
-        </p>
-      </section>
 
       <Section title="Body">
         <Trend
