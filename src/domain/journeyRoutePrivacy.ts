@@ -55,7 +55,11 @@ export function projectJourneyRouteForDisclosure(
 
   const segments = journeyTrustedRouteSegments(journey);
   if (!shouldMask(journey.privacy)) {
-    return { segments, masked: false, hiddenPointCount: 0 };
+    return {
+      segments: segments.filter((segment) => segment.length >= 2),
+      masked: false,
+      hiddenPointCount: 0,
+    };
   }
 
   if (!Number.isFinite(radiusM) || radiusM <= 0) {
@@ -90,7 +94,7 @@ export function projectJourneyRouteForDisclosure(
   }
 
   return {
-    segments: visibleSegments,
+    segments: visibleSegments.filter((segment) => segment.length >= 2),
     masked: true,
     hiddenPointCount,
   };
