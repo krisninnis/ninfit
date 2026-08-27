@@ -5,6 +5,50 @@
 @layer screens {
 /* ---------- Profile ---------- */
 
+/* ---------- Profile Living Interface identity ---------- */
+
+.profile__living-identity {
+  display: grid;
+  gap: var(--ft-space-4);
+}
+
+.profile__identity-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ft-space-3);
+}
+
+.profile__identity-kicker {
+  margin: 0 0 var(--ft-space-1);
+  color: var(--ft-accent);
+  font-size: var(--ft-text-xs);
+  font-weight: var(--ft-weight-semibold);
+  letter-spacing: var(--ft-tracking-wide);
+  text-transform: uppercase;
+}
+
+.profile__identity-title {
+  margin: 0;
+  font-size: var(--ft-text-xl);
+  line-height: var(--ft-leading-snug);
+}
+
+.profile__living-identity .stats {
+  margin: 0;
+}
+
+@media (max-width: 430px) {
+  .profile__identity-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .profile__identity-head .btn {
+    width: 100%;
+  }
+}
+
 .pairfield {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
