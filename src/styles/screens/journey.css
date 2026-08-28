@@ -210,6 +210,41 @@
     font-weight: var(--ft-weight-bold);
   }
 
+  /*
+   * THE ACTIVITY MEDALLION.
+   *
+   * A door that has reviewed artwork wears it, at a size that reads as a picture
+   * rather than as an icon, and stops there. It is the small rehearsal of the large
+   * medallion on the launch screen, so entering Walk/Run feels like stepping into the
+   * same space rather than arriving somewhere new - which is the whole reason it is
+   * bigger than the letter it replaces.
+   *
+   * It does NOT get its own ring, tint or shadow. The reviewed art is a finished
+   * circular composition carrying its own edge, and the placeholder's accent disc
+   * behind it would be a frame around a frame. Same decision as the launch screen.
+   *
+   * `max-width` and `aspect-ratio` rather than a fixed square: the medallion can never
+   * be wider than the tile it sits in, at any width, so no combination of paddings and
+   * gaps lets the artwork push the page sideways.
+   *
+   * No transition and no animation are declared here on purpose. The tile's existing
+   * hover and press already answer the finger, and a picture that moves on its own
+   * would be exactly the arcade treatment this interface is not.
+   */
+  .journey-home__activity-mark[data-art='true'] {
+    width: 72px;
+    height: auto;
+    max-width: 100%;
+    aspect-ratio: 1;
+    background: none;
+  }
+
+  .journey-home__activity-mark > img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
   .journey-home__activity span:last-child {
     display: grid;
     gap: var(--ft-space-1);
@@ -405,6 +440,11 @@
     .journey-home__activity {
       min-height: 168px;
       padding: var(--ft-space-5);
+    }
+
+    /* The tile is wider and already taller here, so the picture takes the room. */
+    .journey-home__activity-mark[data-art='true'] {
+      width: 88px;
     }
   }
 

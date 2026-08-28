@@ -12,6 +12,7 @@ import {
   journeyActivityLabel,
   type JourneyActivityFamily,
 } from '../journeyActivityFamilies';
+import { mascotActivityArt } from '../mascotActivityArt';
 import { JourneyCompanion } from '../components/JourneyCompanion';
 import { journeyCompanionPresence } from '../journeyCompanionPresentation';
 import { formatJourneyDistance, journeyDistanceM } from '../journeyPresentation';
@@ -80,8 +81,13 @@ export function JourneyScreen() {
    */
   const gameState = repository.getGameState();
   const settings = repository.getGameSettings() ?? createDefaultGameSettings();
+  /*
+   * Hoisted only so the doors below can ask the art boundary about the same species
+   * the companion strip is already showing. Still one plain read, still no sync.
+   */
+  const mascot = gameState === undefined ? undefined : visibleMascotFamily(gameState.mascot);
   const companion = journeyCompanionPresence(
-    gameState === undefined ? undefined : visibleMascotFamily(gameState.mascot),
+    mascot,
     { hasActiveJourney: active !== null, hasCompletedJourney: history.length > 0 },
   );
 
@@ -147,21 +153,51 @@ export function JourneyScreen() {
         </button>
       ) : (
         <div className="journey-home__activities" aria-label="Start a Journey">
-          {JOURNEY_ACTIVITY_FAMILIES.map((family) => (
-            <button
-              key={family.id}
-              type="button"
-              className="journey-home__activity"
-              data-launch={family.launch}
-              onClick={() => open(family)}
-            >
-              <span className="journey-home__activity-mark" aria-hidden="true">{family.mark}</span>
-              <span>
-                <strong>{family.label}</strong>
-                <small>{family.note}</small>
-              </span>
-            </button>
-          ))}
+          {JOURNEY_ACTIVITY_FAMILIES.map((family) => {
+            /*
+             * THE MEDALLION: THE DOOR WEARS THE PICTURE BEHIND IT.
+             *
+             * The same species, the same activity family and the same boundary the
+             * launch screen asks, so the small picture here and the large one there
+             * cannot drift apart or be answered by two different registries. This
+             * screen never learns a filename, which is what lets the next four
+             * species arrive without touching it.
+             *
+             * `undefined` stays the ordinary answer - fourteen of the fifteen keys
+             * have no reviewed art - and it keeps the letter this tile always had.
+             */
+            const art = mascot === undefined
+              ? undefined
+              : mascotActivityArt(mascot.id, family.id);
+
+            return (
+              <button
+                key={family.id}
+                type="button"
+                className="journey-home__activity"
+                data-launch={family.launch}
+                onClick={() => open(family)}
+              >
+                {/*
+                  Decorative, and deliberately so. The tile's name and note are its
+                  accessible label; a picture of a tortoise on a trail must never be
+                  what tells someone this button records a walk, and it states
+                  nothing about what they have done or earned.
+                */}
+                <span
+                  className="journey-home__activity-mark"
+                  data-art={art !== undefined ? 'true' : 'false'}
+                  aria-hidden="true"
+                >
+                  {art !== undefined ? <img src={art.src} alt="" /> : family.mark}
+                </span>
+                <span>
+                  <strong>{family.label}</strong>
+                  <small>{family.note}</small>
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
 
