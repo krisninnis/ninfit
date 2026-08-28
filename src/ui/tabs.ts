@@ -1,3 +1,9 @@
+import {
+  isJourneyActivityFamilyId,
+  journeyActivityFamily,
+  type JourneyActivityFamilyId,
+} from './journeyActivityFamilies';
+
 /**
  * NinFit's primary destinations and hash-routing rules.
  *
@@ -63,6 +69,11 @@ export type AppRoute =
   | { readonly kind: 'account'; readonly confirmed: boolean }
   | { readonly kind: 'journey-home' }
   | { readonly kind: 'journey-active' }
+  /**
+   * The companion launch screen for one activity family. It chooses an activity type
+   * and then hands off to the existing recorder; it starts nothing by itself.
+   */
+  | { readonly kind: 'journey-launch'; readonly family: JourneyActivityFamilyId }
   | { readonly kind: 'journey-detail'; readonly journeyId: string }
   | { readonly kind: 'journey-postcard'; readonly journeyId: string }
   | { readonly kind: 'passport' }
@@ -103,6 +114,24 @@ export function parseRouteFromHash(hash: string): AppRoute {
     }
   }
 
+  /*
+   * A family only gets a launch route if it actually HAS a companion launch screen.
+   * `#/journey/launch/cycle` is a URL somebody can type, and answering it with a
+   * Walk/Run screen would be the one mistake this route must not make - so anything
+   * without a companion flow falls back to Journey Home rather than improvising.
+   */
+  const launchPrefix = 'journey/launch/';
+  if (normalised === 'journey/launch' || normalised.startsWith(launchPrefix)) {
+    const family = normalised.slice(launchPrefix.length);
+    if (
+      isJourneyActivityFamilyId(family)
+      && journeyActivityFamily(family)?.launch === 'companion'
+    ) {
+      return { kind: 'journey-launch', family };
+    }
+    return { kind: 'journey-home' };
+  }
+
   if (normalised === 'journey') return { kind: 'journey-home' };
   if (normalised === 'journey/active') return { kind: 'journey-active' };
   if (normalised === 'account') return { kind: 'account', confirmed: false };
@@ -126,6 +155,10 @@ export function hashForTab(id: TabId): string {
 
 export function hashForPrimaryNav(id: PrimaryNavId): string {
   return id === 'journey' ? JOURNEY_HASH : hashForTab(id);
+}
+
+export function journeyLaunchHash(family: JourneyActivityFamilyId): string {
+  return `#/journey/launch/${family}`;
 }
 
 export function journeyDetailHash(journeyId: string): string {

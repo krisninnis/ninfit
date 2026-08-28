@@ -7,6 +7,8 @@ const SRC = fileURLToPath(new URL('..', import.meta.url));
 const read = (...parts: string[]) => readFileSync(join(SRC, ...parts), 'utf8');
 const app = read('App.tsx');
 const home = read('ui', 'screens', 'JourneyScreen.tsx');
+const launch = read('ui', 'screens', 'JourneyLaunchScreen.tsx');
+const families = read('ui', 'journeyActivityFamilies.ts');
 const screen = read('ui', 'screens', 'ActiveJourneyScreen.tsx');
 
 function between(source: string, start: string, end: string): string {
@@ -41,16 +43,30 @@ describe('Journey product ownership', () => {
     expect(app).not.toContain('JourneyLauncher');
   });
 
-  it('starts activities through the launch controller from Journey Home, not Today', () => {
-    expect(home).toContain('createJourneyLaunchController');
-    expect(home).toContain('PRIMARY_ACTIVITIES');
-    expect(home).toContain("'walk'");
-    expect(home).toContain("'run'");
-    expect(home).toContain("'cycle'");
-    expect(home).toContain("'swim'");
+  it('starts activities through the launch controller, never by building a Journey', () => {
+    /*
+     * RE-POINTED, NOT WEAKENED. The four activity tiles became three activity-family
+     * doors, and Walk/Run now chooses its type on the companion launch screen - so the
+     * property is asserted across BOTH screens instead of one. What it protects is
+     * unchanged and is the important part: all four activity types are still offered,
+     * and neither screen ever constructs a Journey, a recording status or a GPS source
+     * for itself.
+     */
+    for (const [name, source] of [['Journey Home', home], ['launch screen', launch]] as const) {
+      expect(source, name).toContain('createJourneyLaunchController');
+      expect(source, name).not.toContain("status: 'recording'");
+      expect(source, name).not.toContain("kind: 'ninfit_phone_gps'");
+    }
+
+    // Journey Home starts the single-type families directly, exactly as it always has.
     expect(home).toContain('launch.start(activityType, nowIso())');
-    expect(home).not.toContain("status: 'recording'");
-    expect(home).not.toContain("kind: 'ninfit_phone_gps'");
+    // The launch screen starts the type the user chose, and only that.
+    expect(launch).toContain('launch.start(selected, nowIso())');
+
+    // All four activity types remain reachable, and remain four.
+    for (const activityType of ["'walk'", "'run'", "'cycle'", "'swim'"]) {
+      expect(families, activityType).toContain(activityType);
+    }
   });
 });
 

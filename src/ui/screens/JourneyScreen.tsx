@@ -6,30 +6,32 @@ import { visibleMascotFamily } from '../../domain/game/mascot';
 import type { Journey, JourneyActivityType } from '../../domain/journey';
 import type { ISODateTime } from '../../domain/types';
 import { loadJourneyHistory } from '../../storage/journeyHistory';
-import { JOURNEY_ACTIVE_HASH, journeyDetailHash } from '../tabs';
+import { JOURNEY_ACTIVE_HASH, journeyDetailHash, journeyLaunchHash } from '../tabs';
+import {
+  JOURNEY_ACTIVITY_FAMILIES,
+  journeyActivityLabel,
+  type JourneyActivityFamily,
+} from '../journeyActivityFamilies';
 import { JourneyCompanion } from '../components/JourneyCompanion';
 import { journeyCompanionPresence } from '../journeyCompanionPresentation';
 import { formatJourneyDistance, journeyDistanceM } from '../journeyPresentation';
 
-const PRIMARY_ACTIVITIES: ReadonlyArray<{
-  type: Extract<JourneyActivityType, 'walk' | 'run' | 'cycle' | 'swim'>;
-  label: string;
-  note: string;
-  mark: string;
-}> = [
-  { type: 'walk', label: 'Walk', note: 'GPS route and distance', mark: 'W' },
-  { type: 'run', label: 'Run', note: 'GPS route and distance', mark: 'R' },
-  { type: 'cycle', label: 'Cycle', note: 'GPS route and distance', mark: 'C' },
-  { type: 'swim', label: 'Swim', note: 'Pool or wearable distance later', mark: 'S' },
-];
-
+/*
+ * THE DOORS ARE FAMILIES; WHAT GETS RECORDED IS STILL AN ACTIVITY TYPE.
+ *
+ * Walk and Run share one door because that is one decision - am I going out on foot -
+ * and two answers. They do NOT share a type: the launch screen behind that door asks
+ * which, and a walk is recorded as a walk. Nothing here merges them, and nothing
+ * downstream may either.
+ *
+ * Cycle and Swim keep the one-tap start they have always had. They record today, so
+ * dressing them as "coming later" would be a lie in the other direction.
+ */
 function nowIso(): ISODateTime {
   return new Date().toISOString();
 }
 
-function activityLabel(activityType: JourneyActivityType): string {
-  return activityType.charAt(0).toUpperCase() + activityType.slice(1);
-}
+const activityLabel = journeyActivityLabel;
 
 function openActiveJourney() {
   window.location.hash = JOURNEY_ACTIVE_HASH;
@@ -88,6 +90,20 @@ export function JourneyScreen() {
     openActiveJourney();
   };
 
+  /*
+   * A family with a companion screen goes THERE to choose its activity type. A family
+   * without one starts exactly as it did before, with its single type. Journey Home
+   * never picks between walk and run on the user's behalf - it only opens the door.
+   */
+  const open = (family: JourneyActivityFamily) => {
+    if (family.launch === 'companion') {
+      window.location.hash = journeyLaunchHash(family.id);
+      return;
+    }
+    const [only] = family.activityTypes;
+    if (only !== undefined) start(only);
+  };
+
   return (
     <section className="journey-home" aria-labelledby="journey-home-title">
       <header className="journey-home__header">
@@ -131,17 +147,18 @@ export function JourneyScreen() {
         </button>
       ) : (
         <div className="journey-home__activities" aria-label="Start a Journey">
-          {PRIMARY_ACTIVITIES.map((activity) => (
+          {JOURNEY_ACTIVITY_FAMILIES.map((family) => (
             <button
-              key={activity.type}
+              key={family.id}
               type="button"
               className="journey-home__activity"
-              onClick={() => start(activity.type)}
+              data-launch={family.launch}
+              onClick={() => open(family)}
             >
-              <span className="journey-home__activity-mark" aria-hidden="true">{activity.mark}</span>
+              <span className="journey-home__activity-mark" aria-hidden="true">{family.mark}</span>
               <span>
-                <strong>{activity.label}</strong>
-                <small>{activity.note}</small>
+                <strong>{family.label}</strong>
+                <small>{family.note}</small>
               </span>
             </button>
           ))}

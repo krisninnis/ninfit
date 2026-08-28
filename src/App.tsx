@@ -8,6 +8,7 @@ import { ProgressScreen } from './ui/screens/ProgressScreen';
 import { TodayScreen } from './ui/screens/TodayScreen';
 import { WeekScreen } from './ui/screens/WeekScreen';
 import { JourneyScreen } from './ui/screens/JourneyScreen';
+import { JourneyLaunchScreen } from './ui/screens/JourneyLaunchScreen';
 import { ActiveJourneyScreen } from './ui/screens/ActiveJourneyScreen';
 import { JourneyDetailScreen } from './ui/screens/JourneyDetailScreen';
 import { JourneyPostcardScreen } from './ui/screens/JourneyPostcardScreen';
@@ -111,12 +112,14 @@ export default function App() {
   const showNinFitId = route.kind === 'account';
   const showJourneyHome = route.kind === 'journey-home';
   const showActiveJourney = route.kind === 'journey-active';
+  const showJourneyLaunch = route.kind === 'journey-launch';
   const showJourneyDetail = route.kind === 'journey-detail';
   const showJourneyPostcard = route.kind === 'journey-postcard';
   const showPassport = route.kind === 'passport';
   const screenTab: TabId = route.kind === 'tab' ? route.tab : 'today';
   const CurrentScreen = SCREENS[screenTab];
   const tab: PrimaryNavId = showJourneyHome || showJourneyDetail || showJourneyPostcard
+    || showJourneyLaunch
     ? 'journey'
     : showPassport
       ? 'profile'
@@ -150,6 +153,11 @@ export default function App() {
             <JourneyPostcardScreen
               journeyId={route.journeyId}
               onClose={() => navigate(journeyDetailHash(route.journeyId))}
+            />
+          ) : showJourneyLaunch ? (
+            <JourneyLaunchScreen
+              family={route.family}
+              onClose={() => navigate(JOURNEY_HASH)}
             />
           ) : showJourneyHome ? (
             <JourneyScreen />
