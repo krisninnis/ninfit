@@ -57,6 +57,22 @@ export function JourneyLaunchScreen({ family, onClose }: JourneyLaunchScreenProp
   const choices = activityTypesForFamily(family);
 
   /*
+   * A DOOR WITH ONE ROOM BEHIND IT.
+   *
+   * Walk/Run offers two activity types and must ask which - see the header comment;
+   * a default there would be a guess about someone's activity written into their
+   * permanent fitness history. Cycle offers one, and asking "cycle or cycle?" would
+   * not be honesty, it would be a stile. So the single-activity case takes its type
+   * from the door itself, which the user chose on Journey Home a moment ago.
+   *
+   * This reads `activityTypes` rather than naming a family, so it is the shape of the
+   * family that decides, not a list of exceptions. Swim will behave the same way on
+   * the day it gets a screen, and a family that ever grows a second type starts
+   * asking again automatically.
+   */
+  const sole = choices.length === 1 ? choices[0] : undefined;
+
+  /*
    * Read, never synced - the same rule Journey Home follows. `useGame()` would call
    * `syncGame`, which grants rewards, and a screen about heading out for a walk has no
    * business granting anything.
@@ -65,14 +81,20 @@ export function JourneyLaunchScreen({ family, onClose }: JourneyLaunchScreenProp
   const mascot = gameState === undefined ? undefined : visibleMascotFamily(gameState.mascot);
   const art = mascot === undefined ? undefined : mascotActivityArt(mascot.id, family);
 
+  /*
+   * What Start would record. For a one-activity door that is the door's own type; for
+   * Walk/Run it stays `undefined` until the user says which, and Start stays disabled.
+   */
+  const chosen = sole ?? selected;
+
   const start = () => {
-    if (selected === undefined) return;
+    if (chosen === undefined) return;
     /*
      * The existing controller, unchanged. It is also the reason this screen needs no
      * opinion about an interrupted recording: `start` returns the unfinished Journey
      * rather than overwriting it, so recovery evidence survives a stray tap here.
      */
-    launch.start(selected, nowIso());
+    launch.start(chosen, nowIso());
     window.location.hash = JOURNEY_ACTIVE_HASH;
   };
 
@@ -121,6 +143,7 @@ export function JourneyLaunchScreen({ family, onClose }: JourneyLaunchScreenProp
         ) : null}
       </div>
 
+      {sole === undefined ? (
       <fieldset className="journey-launch__choice">
         <legend className="journey-launch__choice-legend">Choose your activity</legend>
         {choices.map((activityType) => (
@@ -140,14 +163,17 @@ export function JourneyLaunchScreen({ family, onClose }: JourneyLaunchScreenProp
           </label>
         ))}
       </fieldset>
+      ) : null}
 
       <button
         type="button"
         className="btn btn--primary btn--block journey-launch__start"
         onClick={start}
-        disabled={selected === undefined}
+        disabled={chosen === undefined}
       >
-        {selected === undefined ? 'Choose walk or run' : `Start ${journeyActivityLabel(selected)}`}
+        {chosen === undefined
+          ? `Choose ${choices.map(journeyActivityLabel).join(' or ').toLowerCase()}`
+          : `Start ${journeyActivityLabel(chosen)}`}
       </button>
 
       {/*

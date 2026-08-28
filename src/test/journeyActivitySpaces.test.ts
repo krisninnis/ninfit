@@ -145,16 +145,41 @@ describe('the chosen activity is the recorded activity', () => {
 
   it('passes the user\'s choice through untouched, with nothing in between', () => {
     // The screen holds one selection and hands exactly it to the shared controller.
-    expect(strip(launchScreen)).toContain('launch.start(selected, nowIso())');
+    expect(strip(launchScreen)).toContain('launch.start(chosen, nowIso())');
     expect(strip(launchScreen)).toContain("useState<JourneyActivityType | undefined>(undefined)");
   });
 
-  it('requires an explicit choice before anything can start', () => {
+  it('requires an explicit choice on any door that offers more than one activity', () => {
+    /*
+     * RE-POINTED, NOT WEAKENED. `chosen` is the selection for a door with two
+     * activities and the door's own single type for a door with one. The rule this
+     * protects is unchanged and is asserted below against the real families: no door
+     * may start something the user did not choose, and Walk/Run still starts nothing
+     * until they say which.
+     */
     const code = strip(launchScreen);
-    // No default selection, and Start cannot fire without one.
-    expect(code).toContain('if (selected === undefined) return;');
-    expect(code).toContain('disabled={selected === undefined}');
-    expect(code).not.toMatch(/useState<[^>]*>\(\s*'walk'|useState\(\s*'walk'|useState\(\s*'run'/);
+    expect(code).toContain('if (chosen === undefined) return;');
+    expect(code).toContain('disabled={chosen === undefined}');
+    expect(code).toContain('const sole = choices.length === 1 ? choices[0] : undefined');
+    expect(code).toContain('const chosen = sole ?? selected');
+    // Still no seeded selection of any kind.
+    expect(code).toContain("useState<JourneyActivityType | undefined>(undefined)");
+    expect(code).not.toMatch(/useState<[^>]*>\(\s*'walk'|useState\(\s*'walk'|useState\(\s*'run'|useState\(\s*'cycle'/);
+  });
+
+  it('leaves a two-activity door unstartable until the user picks, and only those', () => {
+    // The rule is the family's shape, never a list of exceptions.
+    expect(activityTypesForFamily('walk-run')).toHaveLength(2);
+    expect(activityTypesForFamily('cycle')).toEqual(['cycle']);
+    expect(activityTypesForFamily('swim')).toEqual(['swim']);
+
+    // So `sole` is undefined for Walk/Run - Start stays disabled - and defined for a
+    // one-activity door, where the door itself was the choice.
+    for (const family of JOURNEY_ACTIVITY_FAMILIES) {
+      const types = activityTypesForFamily(family.id);
+      const soleIsDefined = types.length === 1;
+      expect(soleIsDefined, family.id).toBe(family.id !== 'walk-run');
+    }
   });
 });
 
@@ -210,11 +235,30 @@ describe('a family cannot launch an activity it does not own', () => {
     });
   });
 
+  it('routes Cycle to its own companion screen, now that it has one', () => {
+    expect(parseRouteFromHash('#/journey/launch/cycle')).toEqual({
+      kind: 'journey-launch',
+      family: 'cycle',
+    });
+  });
+
   it('sends a family with no companion screen back to Journey Home', () => {
-    // Cycle and Swim launch directly today. A typed URL must not conjure a Walk/Run
-    // screen for them, and must not crash either.
-    expect(parseRouteFromHash('#/journey/launch/cycle')).toEqual({ kind: 'journey-home' });
+    // Swim still launches directly. A typed URL must not conjure a screen it does
+    // not have, and must not crash either.
+    expect(journeyActivityFamily('swim')?.launch).toBe('direct');
     expect(parseRouteFromHash('#/journey/launch/swim')).toEqual({ kind: 'journey-home' });
+  });
+
+  it('gates the launch route on the family actually having a screen', () => {
+    // Not on a hard-coded list of ids. Every family agrees with its own `launch`.
+    for (const family of JOURNEY_ACTIVITY_FAMILIES) {
+      const route = parseRouteFromHash(journeyLaunchHash(family.id));
+      expect(route, family.id).toEqual(
+        family.launch === 'companion'
+          ? { kind: 'journey-launch', family: family.id }
+          : { kind: 'journey-home' },
+      );
+    }
   });
 
   it('sends an unknown or empty family back to Journey Home', () => {
@@ -267,8 +311,10 @@ describe('nothing infers walk versus run', () => {
     const startAt = code.indexOf('const start = () => {');
     const startBody = code.slice(startAt, code.indexOf('};', startAt));
     expect(startAt).toBeGreaterThan(-1);
-    expect(startBody).toContain('launch.start(selected, nowIso())');
+    expect(startBody).toContain('launch.start(chosen, nowIso())');
     expect(startBody).not.toMatch(/\bart\b|mascot|glyph|species|familyId/);
+    // And nothing in the whole screen derives an activity from speed or position.
+    expect(code).not.toMatch(/speed|pace|velocity|coords|latitude|longitude|geolocation/i);
 
     // And selection is only ever set by the user's own change handler.
     expect(code.match(/setSelected\(/g) ?? []).toHaveLength(1);
@@ -289,9 +335,22 @@ describe('nothing existing was taken away', () => {
   });
 
   it('keeps cycle and swim startable rather than disabling working behaviour', () => {
-    expect(journeyActivityFamily('cycle')?.launch).toBe('direct');
+    /*
+     * Cycle gained a companion screen; it did not lose the ability to record. One tap
+     * became two and the second is Start. Swim is untouched and still starts from
+     * Journey Home in one tap, which is why the direct branch must still exist.
+     */
+    expect(journeyActivityFamily('cycle')?.launch).toBe('companion');
     expect(journeyActivityFamily('swim')?.launch).toBe('direct');
     expect(strip(home)).toContain('launch.start(activityType, nowIso())');
+
+    // Both still record their own type, through the same controller as always.
+    for (const activityType of ['cycle', 'swim'] as const) {
+      const store = createMemoryStorageAdapter();
+      const started = createJourneyLaunchController(store, sequentialIdFactory('c'))
+        .start(activityType, NOW);
+      expect(started.journey.activityType, activityType).toBe(activityType);
+    }
   });
 
   it('keeps the continue-in-progress affordance', () => {
@@ -332,7 +391,8 @@ describe('mascot artwork has one boundary, not scattered paths', () => {
     // The tortoise on the Walk/Run door is the one reviewed asset. Every other key is
     // still absent, and this test is the thing that notices if a species quietly
     // acquires a manifest entry without a file behind it.
-    expect(Object.keys(MASCOT_ACTIVITY_ART).sort()).toEqual(['tortoise:walk-run']);
+    expect(Object.keys(MASCOT_ACTIVITY_ART).sort())
+      .toEqual(['tortoise:cycle', 'tortoise:walk-run']);
   });
 
   it('writes the intended location down once, keyed by species and family', () => {
@@ -433,12 +493,14 @@ describe('the tortoise Walk/Run artwork', () => {
   });
 
   it('does not let the tortoise having art weaken the fallback for anyone else', () => {
-    // Every other species on the same door.
+    // Every other species, on every door.
     for (const species of ['bear', 'fox', 'otter', 'wolf'] as const) {
-      expect(mascotActivityArt(species, 'walk-run'), species).toBeUndefined();
+      for (const family of JOURNEY_ACTIVITY_FAMILIES) {
+        expect(mascotActivityArt(species, family.id), `${species}:${family.id}`)
+          .toBeUndefined();
+      }
     }
-    // And the tortoise's own doors that have no art yet.
-    expect(mascotActivityArt('tortoise', 'cycle')).toBeUndefined();
+    // And the tortoise's own door that has no art yet.
     expect(mascotActivityArt('tortoise', 'swim')).toBeUndefined();
 
     // The screen still has both branches, and the letter is still the other one.
@@ -532,7 +594,6 @@ describe('Journey Home shows the activity medallion through the same boundary', 
   });
 
   it('keeps the letter for every door with no reviewed art', () => {
-    expect(mascotActivityArt('tortoise', 'cycle')).toBeUndefined();
     expect(mascotActivityArt('tortoise', 'swim')).toBeUndefined();
 
     // The branch that draws it still exists, and still draws the family's own mark.
@@ -541,15 +602,29 @@ describe('Journey Home shows the activity medallion through the same boundary', 
     expect(code).toContain('journey-home__activity-mark');
   });
 
-  it('never lends the Walk/Run artwork to Cycle or to Swim', () => {
+  it('never lends one door\'s artwork to another', () => {
+    /*
+     * Cycle has its own reviewed picture now, which makes this guard MORE important
+     * rather than less: the failure it exists to catch is a door showing the wrong
+     * activity's art, and there are now two real pictures that could be swapped.
+     */
     const walkRun = mascotActivityArt('tortoise', 'walk-run')?.src;
+    const cycle = mascotActivityArt('tortoise', 'cycle')?.src;
     expect(walkRun).toBeDefined();
+    expect(cycle).toBeDefined();
+    expect(cycle).not.toBe(walkRun);
 
-    for (const family of ['cycle', 'swim'] as const) {
-      const resolved = mascotActivityArt('tortoise', family);
-      expect(resolved, family).toBeUndefined();
-      expect(resolved?.src, family).not.toBe(walkRun);
-    }
+    // Each names its own family in its own file, so neither can quietly be the other.
+    expect(walkRun).toContain('walk-run');
+    expect(cycle).toContain('cycle');
+    expect(walkRun).not.toContain('journey-cycle');
+    expect(cycle).not.toContain('journey-walk-run');
+
+    // And the door with no reviewed art borrows from neither.
+    const swim = mascotActivityArt('tortoise', 'swim');
+    expect(swim).toBeUndefined();
+    expect(swim?.src).not.toBe(walkRun);
+    expect(swim?.src).not.toBe(cycle);
   });
 
   it('never lends the tortoise artwork to another species', () => {

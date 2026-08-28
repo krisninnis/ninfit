@@ -66,10 +66,16 @@ describe('Journey product ownership', () => {
       expect(source, name).not.toContain("kind: 'ninfit_phone_gps'");
     }
 
-    // Journey Home starts the single-type families directly, exactly as it always has.
+    // Journey Home still starts a direct-launch family in one tap, exactly as it has
+    // since before families existed. Swim is the one that still uses this path.
     expect(home).toContain('launch.start(activityType, nowIso())');
-    // The launch screen starts the type the user chose, and only that.
-    expect(launch).toContain('launch.start(selected, nowIso())');
+    /*
+     * The launch screen starts the chosen type, and only that. `chosen` is the user's
+     * selection on a two-activity door and the door's own single type on a one-
+     * activity door - never an inference, and never a seeded default.
+     */
+    expect(launch).toContain('launch.start(chosen, nowIso())');
+    expect(launch).toContain('const chosen = sole ?? selected');
 
     // All four activity types remain reachable, and remain four.
     for (const activityType of ["'walk'", "'run'", "'cycle'", "'swim'"]) {
