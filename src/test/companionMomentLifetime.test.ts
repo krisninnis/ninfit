@@ -18,6 +18,7 @@ const code = (source: string) =>
 const header = read('ui', 'components', 'GameHeader.tsx');
 const today = read('ui', 'screens', 'TodayScreen.tsx');
 const presentation = read('ui', 'companionReactionPresentation.ts');
+const delivery = read('ui', 'rewardDeliveryPresentation.ts');
 
 const CONTEXTS: readonly MascotContext[] = [
   'egg_waiting',
@@ -88,11 +89,27 @@ describe('companion moment lifetime policy', () => {
 });
 
 describe('freshness wiring', () => {
-  it('derives only an opaque batch identity from newly granted event ids', () => {
-    expect(today).toContain(
-      "const companionMomentKey = game.granted.map((event) => event.id).join('|');",
-    );
-    expect(today).toContain('freshMomentKey={companionMomentKey}');
+  it('derives only an opaque batch identity from the presented event ids', () => {
+    /*
+     * RE-POINTED, NOT WEAKENED. Freshness used to come from `game.granted`, the
+     * transient delta of whichever useGame instance rendered first - which is exactly
+     * why a cold-load trophy never made the companion react. It now comes from the
+     * durable batch actually being presented. The property under guard is unchanged:
+     * an OPAQUE identity built from event ids and nothing else.
+     */
+    expect(today).toContain('const delivery = useRewardDelivery(game.state);');
+    expect(today).toContain('freshMomentKey={delivery.batchKey}');
+
+    // The key itself: ids joined, and no other field of a RewardEvent anywhere near it.
+    expect(delivery).toContain("return batch.map((event) => event.id).join('|');");
+    const keyFn = delivery.slice(delivery.indexOf('export function rewardBatchKey'));
+    expect(keyFn).not.toMatch(/\.kind|\.xp|\.label|\.skillXp|\.awardedAt|\.key\b/);
+  });
+
+  it('no longer routes reward delivery through the transient granted delta', () => {
+    // Comments stripped: TodayScreen's docstring explains what it moved away from.
+    expect(code(today)).not.toMatch(/game\.granted/);
+    expect(code(read('ui', 'hooks', 'useGame.ts'))).not.toMatch(/^\s*granted:/m);
   });
 
   it('does not pass reward kinds or reward fields into GameHeader lifetime logic', () => {

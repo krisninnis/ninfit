@@ -39,6 +39,22 @@ import type { RewardEvent, RewardKind } from '../../domain/game/types';
  * The plan moves down while it is present and back when it leaves. An overlay would
  * avoid that shift by obscuring the session, which is the wrong trade on a screen
  * whose job is the session.
+ *
+ * WHERE THE EVENTS COME FROM NOW, AND WHY IT MATTERS.
+ *
+ * These used to be `GameHook.granted` - the delta of whichever `useGame()` instance
+ * happened to render first. On a cold load that was App, so Today received an empty
+ * array and a user could earn XP and a trophy and be told nothing at all. The events
+ * now come from the durable queue instead, so a reward waits until there is somewhere
+ * to say it rather than being lost to whoever synced first.
+ *
+ * ACKNOWLEDGEMENT HAPPENS WHEN THE DWELL COMPLETES, AND ONLY THEN.
+ *
+ * Not on mount, not on render, not when an animation starts or ends, not on cleanup,
+ * and not on unmount. Leaving before the dwell finishes must leave the reward exactly
+ * where it was - which is why the cleanup below cancels the timer and does nothing
+ * else. That single line is the difference between "you were shown this" and "this was
+ * on screen for a moment while you navigated away", and the whole design rests on it.
  */
 
 export type RewardTier = 'standard' | 'reward';
@@ -112,11 +128,23 @@ export function acknowledgementTier(granted: readonly RewardEvent[]): RewardTier
 }
 
 export interface RewardAcknowledgementProps {
-  /** The newly granted delta, straight from `GameHook.granted`. Empty on a repeat. */
+  /**
+   * The durable pending batch chosen for this moment, in domain order. Empty when
+   * nothing is owed. Selection and freshness policy belong to the caller; this
+   * component renders what it is handed and never asks for more.
+   */
   granted: readonly RewardEvent[];
+  /**
+   * Called once, with the ids actually shown, after their full dwell has elapsed.
+   * Never called on cleanup, unmount or navigation - see the note above.
+   */
+  onAcknowledged: (ids: readonly string[]) => void;
 }
 
-export function RewardAcknowledgement({ granted }: RewardAcknowledgementProps) {
+export function RewardAcknowledgement({
+  granted,
+  onAcknowledged,
+}: RewardAcknowledgementProps) {
   const batchKey = granted.map((event) => event.id).join('|');
   const [batch, setBatch] = useState<readonly RewardEvent[]>([]);
 
@@ -132,7 +160,16 @@ export function RewardAcknowledgement({ granted }: RewardAcknowledgementProps) {
   useEffect(() => {
     if (batchKey === '') return;
     setBatch(granted);
-    const timer = setTimeout(() => setBatch([]), rewardDwellMs(granted.length));
+
+    // Captured here, so the timer can only ever acknowledge the batch it displayed.
+    // A batch arriving later gets its own effect run, its own timer and its own ids.
+    const shown = granted.map((event) => event.id);
+    const timer = setTimeout(() => {
+      setBatch([]);
+      onAcknowledged(shown);
+    }, rewardDwellMs(granted.length));
+
+    // Cancels the timer and NOTHING ELSE. Leaving early leaves the reward pending.
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [batchKey]);

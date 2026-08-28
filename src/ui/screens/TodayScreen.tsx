@@ -9,6 +9,7 @@ import { GameHeader } from '../components/GameHeader';
 import { LivingScrim } from '../components/LivingScrim';
 import { RewardAcknowledgement } from '../components/RewardAcknowledgement';
 import { useGame } from '../hooks/useGame';
+import { useRewardDelivery } from '../hooks/useRewardDelivery';
 import { todayCompanionContext } from '../../domain/game/todayContext';
 import { MAX_CRACK_STAGE } from '../../domain/game/egg';
 import { todaySessionCompletion } from '../../domain/today';
@@ -187,13 +188,24 @@ export function TodayScreen() {
   */
   const crackStage = game.state.mascot.eggState === 'unhatched' ? 0 : MAX_CRACK_STAGE;
 
-  const companionMomentKey = game.granted.map((event) => event.id).join('|');
+  /*
+   * ONE MOMENT, TWO REACTIONS.
+   *
+   * The acknowledgement and the companion both respond to a reward arriving, and they
+   * must respond to the SAME one. They used to share `game.granted` and so agreed by
+   * accident; on a cold load that array was empty here, and both of them said nothing
+   * about XP the user had just been given. They now share the durable batch instead -
+   * chosen once, in one place - so they cannot drift apart and neither can be lost to
+   * whichever `useGame()` instance happened to sync first.
+   */
+  const delivery = useRewardDelivery(game.state);
 
   const companionContext = todayCompanionContext({
     eggState: game.state.mascot.eggState,
     evolutionReady: game.state.mascot.evolutionReady,
     completion: sessionCompletion.status,
-    grantedKinds: game.granted.map((event) => event.kind),
+    // What is being said right now, not what some earlier sync happened to return.
+    grantedKinds: delivery.batch.map((event) => event.kind),
     today: date,
     lastActiveDate: game.facts.lastActiveDate,
   });
@@ -234,7 +246,7 @@ export function TodayScreen() {
         state={game.state}
         settings={game.settings}
         context={companionContext}
-        freshMomentKey={companionMomentKey}
+        freshMomentKey={delivery.batchKey}
         crackStage={crackStage}
         onHatch={game.hatch}
         onEvolve={game.evolve}
@@ -249,7 +261,10 @@ export function TodayScreen() {
         the plan shifting down for a couple of seconds, at the cost of covering the
         session, and this screen exists for the session.
       */}
-      <RewardAcknowledgement granted={game.granted} />
+      <RewardAcknowledgement
+        granted={delivery.batch}
+        onAcknowledged={delivery.acknowledge}
+      />
 
       {!isPersistent ? (
         <section className="card card--attention">

@@ -651,15 +651,44 @@ describe('slice boundaries', () => {
     eager: true,
   }) as Record<string, string>;
 
-  it('no presentation code consumes the queue yet', () => {
-    // Slice 2 owns delivery consumption and acknowledgement. Until then, nothing in
-    // the UI may know the queue exists.
+  /*
+   * Slice 1 asserted that NOTHING in the UI knew the queue existed. Slice 2 is the
+   * slice that changes that, so the guard is inverted rather than deleted: exactly two
+   * presentation modules may reach the queue, and both must actually do so - otherwise
+   * this passes vacuously the day someone renames one of them.
+   */
+  const DELIVERY_CONSUMERS = ['hooks/useRewardDelivery.ts', 'screens/TodayScreen.tsx'];
+
+  it('lets only the sanctioned presentation modules reach the queue', () => {
     expect(Object.keys(uiSources).length).toBeGreaterThan(20);
+
+    // Comments stripped: `useGame` documents at length what it moved away from, and a
+    // sentence about the queue is not a dependency on it.
+    const executable = (source: string) =>
+      source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+
+    const consumers: string[] = [];
     for (const [path, source] of Object.entries(uiSources)) {
-      expect(source, `${path} reaches the delivery queue`).not.toMatch(
-        /pendingRewardDeliveries|rewardDelivery|partitionPendingRewardDeliveries/,
-      );
+      const sanctioned = DELIVERY_CONSUMERS.some((name) => path.endsWith(name));
+      const reaches = /pendingRewardDeliveries|rewardDelivery|useRewardDelivery/
+        .test(executable(source));
+      if (reaches) consumers.push(path);
+      if (!sanctioned) {
+        expect(reaches, `${path} reaches the delivery queue`).toBe(false);
+      }
     }
+
+    expect(consumers).toHaveLength(DELIVERY_CONSUMERS.length);
+  });
+
+  it('keeps the acknowledgement component itself unaware of the queue', () => {
+    const component = Object.entries(uiSources).find(([path]) =>
+      path.endsWith('components/RewardAcknowledgement.tsx'));
+    if (component === undefined) throw new Error('expected RewardAcknowledgement');
+    // It renders what it is handed and reports what it showed. It never asks.
+    expect(component[1]).not.toMatch(
+      /pendingRewardDeliveries|rewardDelivery|getAppContext|repository/,
+    );
   });
 
   it('the delivery module creates no reward and reads no fitness truth', () => {
