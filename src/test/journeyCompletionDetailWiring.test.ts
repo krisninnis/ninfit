@@ -12,9 +12,13 @@ const detail = read('ui', 'screens', 'JourneyDetailScreen.tsx');
 const home = read('ui', 'screens', 'JourneyScreen.tsx');
 
 describe('Journey completion/detail wiring', () => {
-  it('navigates a completed Journey to its durable history detail', () => {
+  it('navigates a completed Journey to the completion moment, then to its durable detail', () => {
+    // Finish still hands over one id and nothing else.
     expect(active).toContain('onCompleted?.(next.id)');
-    expect(app).toContain('journeyDetailHash(journeyId)');
+    // Which now opens the completion moment...
+    expect(app).toContain('navigate(journeyCompleteHash(journeyId))');
+    // ...whose only forward route is the durable history record, by the same id.
+    expect(app).toContain('onViewJourney={() => navigate(journeyDetailHash(route.journeyId))}');
   });
 
   it('opens recent Journey history through stable ids', () => {

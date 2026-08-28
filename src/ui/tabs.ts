@@ -74,6 +74,14 @@ export type AppRoute =
    * and then hands off to the existing recorder; it starts nothing by itself.
    */
   | { readonly kind: 'journey-launch'; readonly family: JourneyActivityFamilyId }
+  /**
+   * The completion moment for one Journey that is already durably recorded.
+   *
+   * It carries an id rather than a "just finished" flag because it is a URL: someone
+   * can reach it again tomorrow. Everything it shows must therefore be true of that
+   * Journey whenever it is opened, never true only in the seconds after Finish.
+   */
+  | { readonly kind: 'journey-complete'; readonly journeyId: string }
   | { readonly kind: 'journey-detail'; readonly journeyId: string }
   | { readonly kind: 'journey-postcard'; readonly journeyId: string }
   | { readonly kind: 'passport' }
@@ -89,6 +97,18 @@ export function looksLikeAuthReturn(hash: string): boolean {
 export function parseRouteFromHash(hash: string): AppRoute {
   const path = pathFromHash(hash);
   const normalised = path.toLowerCase();
+
+  const completePrefix = 'journey/complete/';
+  if (normalised.startsWith(completePrefix)) {
+    const encodedId = path.slice(completePrefix.length);
+    if (encodedId.length > 0) {
+      try {
+        return { kind: 'journey-complete', journeyId: decodeURIComponent(encodedId) };
+      } catch {
+        return { kind: 'journey-home' };
+      }
+    }
+  }
 
   const detailPrefix = 'journey/detail/';
   if (normalised.startsWith(detailPrefix)) {
@@ -159,6 +179,10 @@ export function hashForPrimaryNav(id: PrimaryNavId): string {
 
 export function journeyLaunchHash(family: JourneyActivityFamilyId): string {
   return `#/journey/launch/${family}`;
+}
+
+export function journeyCompleteHash(journeyId: string): string {
+  return `#/journey/complete/${encodeURIComponent(journeyId)}`;
 }
 
 export function journeyDetailHash(journeyId: string): string {

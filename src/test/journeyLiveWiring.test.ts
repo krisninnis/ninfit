@@ -39,7 +39,15 @@ describe('Journey product ownership', () => {
     expect(app).toContain('<JourneyScreen />');
     expect(app).toContain('<ActiveJourneyScreen');
     expect(app).toContain('onClose={() => navigate(JOURNEY_HASH)}');
-    expect(app).toContain('onCompleted={(journeyId) => navigate(journeyDetailHash(journeyId))}');
+    /*
+     * RE-POINTED, NOT WEAKENED. Finish now lands on the completion moment rather than
+     * straight on the durable record. Both are read-only views of the same completed
+     * Journey, and the id is still the only thing that crosses - so what this guards
+     * is unchanged: completion navigates by stable id and never by carrying a Journey
+     * object through the router. The completion screen's own onward route back to the
+     * detail record is pinned in `journeyCompletionDetailWiring.test.ts`.
+     */
+    expect(app).toContain('onCompleted={(journeyId) => navigate(journeyCompleteHash(journeyId))}');
     expect(app).not.toContain('JourneyLauncher');
   });
 

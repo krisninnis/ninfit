@@ -10,6 +10,7 @@ import { WeekScreen } from './ui/screens/WeekScreen';
 import { JourneyScreen } from './ui/screens/JourneyScreen';
 import { JourneyLaunchScreen } from './ui/screens/JourneyLaunchScreen';
 import { ActiveJourneyScreen } from './ui/screens/ActiveJourneyScreen';
+import { JourneyCompletionScreen } from './ui/screens/JourneyCompletionScreen';
 import { JourneyDetailScreen } from './ui/screens/JourneyDetailScreen';
 import { JourneyPostcardScreen } from './ui/screens/JourneyPostcardScreen';
 import { PassportScreen } from './ui/screens/PassportScreen';
@@ -25,6 +26,7 @@ import {
   JOURNEY_HASH,
   hashForPrimaryNav,
   hashForTab,
+  journeyCompleteHash,
   journeyDetailHash,
   journeyPostcardHash,
   parseRouteFromHash,
@@ -113,13 +115,14 @@ export default function App() {
   const showJourneyHome = route.kind === 'journey-home';
   const showActiveJourney = route.kind === 'journey-active';
   const showJourneyLaunch = route.kind === 'journey-launch';
+  const showJourneyComplete = route.kind === 'journey-complete';
   const showJourneyDetail = route.kind === 'journey-detail';
   const showJourneyPostcard = route.kind === 'journey-postcard';
   const showPassport = route.kind === 'passport';
   const screenTab: TabId = route.kind === 'tab' ? route.tab : 'today';
   const CurrentScreen = SCREENS[screenTab];
   const tab: PrimaryNavId = showJourneyHome || showJourneyDetail || showJourneyPostcard
-    || showJourneyLaunch
+    || showJourneyLaunch || showJourneyComplete
     ? 'journey'
     : showPassport
       ? 'profile'
@@ -141,7 +144,13 @@ export default function App() {
           ) : showActiveJourney ? (
             <ActiveJourneyScreen
               onClose={() => navigate(JOURNEY_HASH)}
-              onCompleted={(journeyId) => navigate(journeyDetailHash(journeyId))}
+              onCompleted={(journeyId) => navigate(journeyCompleteHash(journeyId))}
+            />
+          ) : showJourneyComplete ? (
+            <JourneyCompletionScreen
+              journeyId={route.journeyId}
+              onViewJourney={() => navigate(journeyDetailHash(route.journeyId))}
+              onClose={() => navigate(JOURNEY_HASH)}
             />
           ) : showJourneyDetail ? (
             <JourneyDetailScreen
