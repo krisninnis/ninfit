@@ -1,0 +1,181 @@
+/**
+ * The Walk/Run launch screen - the moment before setting off.
+ *
+ * ONE THING IS BIG HERE, AND IT IS THE COMPANION. This screen exists to make heading
+ * out feel like heading out with someone, so the portrait carries the weight and
+ * everything else is quiet around it: a choice, a button, two truthful lines. No
+ * statistics, no counters, no badges. Nothing on this screen tells the user how they
+ * are doing, because they have not gone yet.
+ *
+ * The same translucent-and-blurred language as the rest of Journey, so the veiled world
+ * behind still reads through and the screen sits in it rather than over it.
+ */
+
+@layer screens {
+  .journey-launch {
+    display: grid;
+    gap: var(--ft-space-5);
+    padding-bottom: var(--ft-space-6);
+  }
+
+  .journey-launch__back {
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ft-space-2);
+    min-height: var(--ft-control-sm);
+    padding: var(--ft-space-1) var(--ft-space-2);
+    border: 0;
+    background: none;
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-sm);
+    cursor: pointer;
+  }
+
+  .journey-launch__back:hover {
+    color: var(--ft-text-primary);
+  }
+
+  .journey-launch__header {
+    display: grid;
+    gap: var(--ft-space-2);
+  }
+
+  .journey-launch__header h1 {
+    margin: 0;
+  }
+
+  .journey-launch__eyebrow {
+    margin: 0;
+    color: var(--ft-accent);
+    font-size: var(--ft-text-xs);
+    font-weight: var(--ft-weight-semibold);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* --- The companion ------------------------------------------------------ */
+
+  .journey-launch__companion {
+    display: grid;
+    justify-items: center;
+    gap: var(--ft-space-3);
+    padding: var(--ft-space-5) var(--ft-space-4);
+    border: 1px solid var(--ft-border-subtle);
+    border-radius: var(--ft-radius-xl);
+    background: color-mix(in srgb, var(--ft-surface-raised) 76%, transparent);
+    backdrop-filter: blur(20px);
+  }
+
+  /*
+   * THE ARTWORK SLOT.
+   *
+   * Sized here rather than in tokens: it is this screen's one dimension, not a scale
+   * the app needs. Real artwork drops in as the contents of this element and needs no
+   * re-layout - which is the whole reason it is a container rather than a styled letter.
+   */
+  .journey-launch__portrait {
+    --journey-portrait-size: 176px;
+
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    width: var(--journey-portrait-size);
+    height: var(--journey-portrait-size);
+    border: 1px solid color-mix(in oklab, var(--ft-accent) 24%, var(--ft-border-subtle));
+    border-radius: var(--ft-radius-circle);
+    background: color-mix(in srgb, var(--ft-accent-soft) 26%, var(--ft-surface-sunken));
+  }
+
+  .journey-launch__portrait > img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  /*
+   * TEMPORARY PRESENTATION FALLBACK - not mascot artwork, and not to be refined.
+   * It stands in until a reviewed asset is placed; see `src/ui/mascotActivityArt.ts`.
+   */
+  .journey-launch__portrait-mark {
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-xl);
+    font-weight: var(--ft-weight-bold);
+    line-height: 1;
+  }
+
+  .journey-launch__companion-name {
+    margin: 0;
+    font-size: var(--ft-text-lg);
+    font-weight: var(--ft-weight-medium);
+    color: var(--ft-text-primary);
+    text-wrap: balance;
+  }
+
+  /* --- The choice --------------------------------------------------------- */
+
+  .journey-launch__choice {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--ft-space-3);
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .journey-launch__choice-legend {
+    grid-column: 1 / -1;
+    padding: 0;
+    margin-bottom: var(--ft-space-2);
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-sm);
+  }
+
+  /*
+   * The radio itself stays in the accessibility tree and stays operable; it is simply
+   * not the thing being looked at. Selection is carried by border, surface AND the
+   * control's own state - never by colour alone.
+   */
+  .journey-launch__option {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ft-space-2);
+    min-height: var(--ft-control-lg);
+    padding: var(--ft-space-3) var(--ft-space-4);
+    border: 1px solid var(--ft-border-subtle);
+    border-radius: var(--ft-radius-lg);
+    background: color-mix(in srgb, var(--ft-surface-raised) 72%, transparent);
+    backdrop-filter: blur(16px);
+    font-size: var(--ft-text-lg);
+    font-weight: var(--ft-weight-medium);
+    color: var(--ft-text-primary);
+    cursor: pointer;
+  }
+
+  .journey-launch__option[data-selected='true'] {
+    border-color: color-mix(in oklab, var(--ft-accent) 52%, var(--ft-border-subtle));
+    background: color-mix(in srgb, var(--ft-accent-soft) 30%, var(--ft-surface-raised) 72%);
+    box-shadow: var(--ft-shadow-card);
+  }
+
+  .journey-launch__start {
+    margin-top: var(--ft-space-1);
+  }
+
+  .journey-launch__note {
+    margin: 0;
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-sm);
+  }
+
+  @media (min-width: 768px) {
+    .journey-launch {
+      max-width: 34rem;
+    }
+
+    .journey-launch__portrait {
+      --journey-portrait-size: 220px;
+    }
+  }
+}
