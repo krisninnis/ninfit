@@ -492,3 +492,176 @@ describe('the tortoise Walk/Run artwork', () => {
     }
   });
 });
+
+// --- 13. The Journey Home activity medallion --------------------------------
+
+/**
+ * The small door, wearing the picture behind it.
+ *
+ * Journey Home now shows the same artwork the launch screen shows, at doorway size.
+ * The risk this creates is not that the picture is wrong - it is that Journey Home
+ * learns where pictures live, or that one species' art starts appearing on another
+ * species' door or another activity's. These guard the boundary, not the pixels.
+ */
+describe('Journey Home shows the activity medallion through the same boundary', () => {
+  const homeCss = readFileSync(
+    join(SRC, 'styles', 'screens', 'journey.css'),
+    'utf8',
+  );
+
+  it('asks the central art boundary, keyed by species and family', () => {
+    const code = strip(home);
+    expect(code).toContain("from '../mascotActivityArt'");
+    expect(code).toContain('mascotActivityArt(mascot.id, family.id)');
+  });
+
+  it('never names a species, a file or an asset folder', () => {
+    const code = strip(home);
+    expect(code).not.toContain('tortoise');
+    expect(code).not.toContain('.webp');
+    expect(code).not.toContain('/mascots/');
+    expect(code).not.toContain('docs/');
+  });
+
+  it('renders the real artwork for tortoise on the Walk/Run door', () => {
+    // The screen resolves `art` per family from this manifest; the manifest is what
+    // decides. Both halves are asserted so neither can drift alone.
+    expect(mascotActivityArt('tortoise', 'walk-run')?.src)
+      .toBe(mascotActivityArtPath('tortoise', 'walk-run'));
+    expect(strip(home)).toContain('art !== undefined ?');
+  });
+
+  it('keeps the letter for every door with no reviewed art', () => {
+    expect(mascotActivityArt('tortoise', 'cycle')).toBeUndefined();
+    expect(mascotActivityArt('tortoise', 'swim')).toBeUndefined();
+
+    // The branch that draws it still exists, and still draws the family's own mark.
+    const code = strip(home);
+    expect(code).toContain('family.mark');
+    expect(code).toContain('journey-home__activity-mark');
+  });
+
+  it('never lends the Walk/Run artwork to Cycle or to Swim', () => {
+    const walkRun = mascotActivityArt('tortoise', 'walk-run')?.src;
+    expect(walkRun).toBeDefined();
+
+    for (const family of ['cycle', 'swim'] as const) {
+      const resolved = mascotActivityArt('tortoise', family);
+      expect(resolved, family).toBeUndefined();
+      expect(resolved?.src, family).not.toBe(walkRun);
+    }
+  });
+
+  it('never lends the tortoise artwork to another species', () => {
+    const tortoise = mascotActivityArt('tortoise', 'walk-run')?.src;
+    for (const species of ['bear', 'fox', 'otter', 'wolf'] as const) {
+      for (const family of JOURNEY_ACTIVITY_FAMILIES) {
+        const resolved = mascotActivityArt(species, family.id);
+        expect(resolved, `${species}:${family.id}`).toBeUndefined();
+        expect(resolved?.src, `${species}:${family.id}`).not.toBe(tortoise);
+      }
+    }
+  });
+
+  it('still only opens the door, and starts nothing on the way through', () => {
+    // The whole of what the tile's click handler does.
+    const code = strip(home);
+    const openAt = code.indexOf('const open = (family: JourneyActivityFamily) => {');
+    expect(openAt).toBeGreaterThan(-1);
+    const openBody = code.slice(openAt, code.indexOf('\n  };', openAt));
+
+    // A companion family navigates. It does not start, and it never reads the art.
+    expect(openBody).toContain('journeyLaunchHash(family.id)');
+    expect(openBody).not.toMatch(/\bart\b|mascotActivityArt|\.src|glyph/);
+
+    // And the route it navigates to is the existing launch route, unchanged.
+    expect(parseRouteFromHash(journeyLaunchHash('walk-run')))
+      .toEqual({ kind: 'journey-launch', family: 'walk-run' });
+  });
+
+  it('leaves the Walk/Run door with no way to record anything itself', () => {
+    /*
+     * The companion branch, on its own.
+     *
+     * Checking the whole of `open` is not enough, and a mutation proved it: a branch
+     * that starts a walk AND THEN navigates satisfies every "does it navigate?"
+     * assertion while quietly writing a Journey nobody chose. `open` legitimately
+     * calls `start` for Cycle and Swim, so the only honest guard is to read the
+     * companion branch alone and require that it does nothing but navigate.
+     */
+    expect(journeyActivityFamily('walk-run')?.launch).toBe('companion');
+
+    const code = strip(home);
+    const openAt = code.indexOf('const open = (family: JourneyActivityFamily) => {');
+    expect(openAt).toBeGreaterThan(-1);
+    const openBody = code.slice(openAt, code.indexOf('\n  };', openAt));
+
+    const branchAt = openBody.indexOf("if (family.launch === 'companion') {");
+    expect(branchAt, 'the companion branch has gone').toBeGreaterThan(-1);
+    const branch = openBody.slice(branchAt, openBody.indexOf('\n    }', branchAt));
+
+    // What it must do.
+    expect(branch).toContain('window.location.hash = journeyLaunchHash(family.id)');
+    expect(branch).toContain('return;');
+
+    // And the whole of what it must not: no recording, no timestamp to record with,
+    // no reward or game write on the way through a door.
+    expect(branch).not.toMatch(/start\s*\(|nowIso|loadActive|saveJourney|grantRewards|syncGame/);
+  });
+
+  it('moves no recorder, privacy, schema or reward truth into Journey Home', () => {
+    const code = strip(home);
+    expect(code).not.toMatch(
+      /geolocation|watchPosition|GpsSession|acceptedPoints|rawPoints|segmentStarts/i,
+    );
+    expect(code).not.toMatch(/maskSensitiveStartEnd|preciseRouteCloudSync|schemaVersion/i);
+    expect(code).not.toMatch(/\bxp\b|grantRewards|deriveRewards|syncGame|useGame|trophy|prestige/i);
+    // Reads, never syncs - the rule this screen already followed.
+    expect(code).toContain('repository.getGameState()');
+  });
+
+  /** Just the medallion rules, so neighbouring CSS cannot satisfy these by accident. */
+  const MEDALLION_FROM = homeCss.indexOf(".journey-home__activity-mark[data-art='true']");
+  const MEDALLION_TO = homeCss.indexOf('.journey-home__activity span:last-child');
+  const medallionCss = MEDALLION_FROM === -1 || MEDALLION_TO <= MEDALLION_FROM
+    ? ''
+    : homeCss.slice(MEDALLION_FROM, MEDALLION_TO);
+
+  it('has a medallion rule at all, so the guards below cannot pass by vacuum', () => {
+    expect(MEDALLION_FROM, 'medallion rule missing from journey.css').toBeGreaterThan(-1);
+    expect(medallionCss.length).toBeGreaterThan(0);
+  });
+
+  it('cannot push the page sideways at any width', () => {
+    // The medallion is capped by the tile rather than by a fixed square, so there is
+    // no viewport at which it can be wider than the space it was given.
+    expect(medallionCss).toContain('max-width: 100%');
+    expect(medallionCss).toContain('aspect-ratio: 1');
+    // And the artwork letterboxes inside that square rather than stretching to it.
+    expect(medallionCss).toContain('object-fit: contain');
+  });
+
+  it('adds no motion of its own, and leaves the global reduced-motion rule intact', () => {
+    // The tile's existing hover and press are the whole interaction language. A
+    // medallion that animated by itself would be the arcade treatment this is not.
+    expect(medallionCss).not.toMatch(/animation|transition|@keyframes/);
+
+    // And the press affordance is still cancelled for anyone who asked for less.
+    expect(homeCss).toContain('prefers-reduced-motion: reduce');
+    const reduced = homeCss.slice(homeCss.indexOf('prefers-reduced-motion: reduce'));
+    expect(reduced).toContain('transform: none');
+  });
+
+  it('keeps the medallion decorative and the door itself labelled', () => {
+    const code = strip(home);
+    // The picture is hidden from assistive tech and carries no text of its own.
+    expect(code).toContain('aria-hidden="true"');
+    expect(code).toContain('alt=""');
+    // The door's name and note are what actually label it.
+    expect(code).toContain('{family.label}');
+    expect(code).toContain('{family.note}');
+    // And nothing here claims the user did, earned or achieved anything.
+    expect(mascotActivityArt('tortoise', 'walk-run')?.alt ?? '')
+      .not.toMatch(/walked|ran|completed|earned|achieved|well done|congratulat/i);
+  });
+});
