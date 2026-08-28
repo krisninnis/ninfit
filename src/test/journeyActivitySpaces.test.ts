@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createJourneyLaunchController } from '../app/journeyLaunchController';
@@ -328,11 +328,11 @@ describe('mascot artwork has one boundary, not scattered paths', () => {
     expect(mascotActivityArt('bear', 'walk-run', manifest)).toBeUndefined();
   });
 
-  it('declares no artwork today, because none has been reviewed', () => {
-    expect(Object.keys(MASCOT_ACTIVITY_ART)).toEqual([]);
-    for (const family of JOURNEY_ACTIVITY_FAMILIES) {
-      expect(mascotActivityArt('tortoise', family.id)).toBeUndefined();
-    }
+  it('declares exactly the artwork that has been reviewed, and no more', () => {
+    // The tortoise on the Walk/Run door is the one reviewed asset. Every other key is
+    // still absent, and this test is the thing that notices if a species quietly
+    // acquires a manifest entry without a file behind it.
+    expect(Object.keys(MASCOT_ACTIVITY_ART).sort()).toEqual(['tortoise:walk-run']);
   });
 
   it('writes the intended location down once, keyed by species and family', () => {
@@ -361,5 +361,134 @@ describe('mascot artwork has one boundary, not scattered paths', () => {
     const code = strip(launchScreen);
     expect(code).toContain('art !== undefined');
     expect(code).toContain('mascot?.glyph');
+  });
+});
+
+// --- 12. The tortoise Walk/Run asset is real, and reached through the boundary ---
+
+/**
+ * The first real Journey mascot asset.
+ *
+ * These guard two different failures. One is the manifest claiming a file that is not
+ * there, which shows every tortoise user a broken image. The other is the screen
+ * learning the path - which would work perfectly today and make the next four species
+ * impossible to add without editing a component.
+ */
+describe('the tortoise Walk/Run artwork', () => {
+  const ROOT = fileURLToPath(new URL('../..', import.meta.url));
+  const PRODUCTION_SRC = '/mascots/tortoise/tortoise-journey-walk-run.webp';
+
+  it('resolves for tortoise on the Walk/Run door', () => {
+    const resolved = mascotActivityArt('tortoise', 'walk-run');
+    expect(resolved?.src).toBe(PRODUCTION_SRC);
+    expect(resolved?.alt.length).toBeGreaterThan(0);
+  });
+
+  it('sits at the location the path helper names, not somewhere near it', () => {
+    // If these two ever drift, the README's contract is a lie and the next species
+    // gets filed in the wrong place.
+    expect(mascotActivityArt('tortoise', 'walk-run')?.src)
+      .toBe(mascotActivityArtPath('tortoise', 'walk-run'));
+  });
+
+  it('points at a file that actually exists, and is actually a WebP', () => {
+    const file = join(ROOT, 'public', PRODUCTION_SRC.replace(/^\//, ''));
+    expect(existsSync(file), `${PRODUCTION_SRC} is declared but missing from public/`)
+      .toBe(true);
+
+    // Extension is a claim; the magic bytes are the fact. A PNG renamed to .webp
+    // would pass an existence check and still be the wrong thing to ship.
+    const head = readFileSync(file, 'latin1').slice(0, 12);
+    expect(head.slice(0, 4)).toBe('RIFF');
+    expect(head.slice(8, 12)).toBe('WEBP');
+
+    // Well inside the per-image budget the asset pipeline sets for production art.
+    expect(statSync(file).size).toBeLessThan(250 * 1024);
+    expect(statSync(file).size).toBeGreaterThan(0);
+  });
+
+  it('is production art, served from public/ and never from the reference library', () => {
+    for (const entry of Object.values(MASCOT_ACTIVITY_ART)) {
+      expect(entry?.src).toMatch(/^\/mascots\//);
+      expect(entry?.src).not.toMatch(/docs\/|reference|concept|sheet|\.verify/i);
+    }
+  });
+
+  it('keeps its reviewed source in docs/, out of the runtime path', () => {
+    const source = join(
+      ROOT,
+      'docs',
+      'brand',
+      'reference',
+      'mascots',
+      'ninfit-tortoise-journey-walk-run-reference-v1.png',
+    );
+    expect(existsSync(source), 'the reviewed source sheet should be preserved').toBe(true);
+  });
+
+  it('says who is pictured without claiming what the user is about to do', () => {
+    // The alt text must not decide the activity. The user decides the activity.
+    const alt = mascotActivityArt('tortoise', 'walk-run')?.alt ?? '';
+    expect(alt).not.toMatch(/\b(walk|walking|run|running|jog|jogging|your)\b/i);
+  });
+
+  it('does not let the tortoise having art weaken the fallback for anyone else', () => {
+    // Every other species on the same door.
+    for (const species of ['bear', 'fox', 'otter', 'wolf'] as const) {
+      expect(mascotActivityArt(species, 'walk-run'), species).toBeUndefined();
+    }
+    // And the tortoise's own doors that have no art yet.
+    expect(mascotActivityArt('tortoise', 'cycle')).toBeUndefined();
+    expect(mascotActivityArt('tortoise', 'swim')).toBeUndefined();
+
+    // The screen still has both branches, and the letter is still the other one.
+    const code = strip(launchScreen);
+    expect(code).toContain('art !== undefined');
+    expect(code).toContain('journey-launch__portrait-mark');
+  });
+
+  it('is never named by the screen that shows it', () => {
+    const code = strip(launchScreen);
+    expect(code).not.toContain('tortoise');
+    expect(code).not.toContain('.webp');
+    expect(code).not.toContain('/mascots/');
+    // It asks the boundary instead.
+    expect(code).toContain('mascotActivityArt(mascot.id, family)');
+  });
+
+  it('changed presentation only, and left the two activity truths alone', () => {
+    // Walk and Run remain separate types behind one door, exactly as before the art.
+    expect(activityTypesForFamily('walk-run')).toEqual(['walk', 'run']);
+    expect(familyOffersActivityType('walk-run', 'walk')).toBe(true);
+    expect(familyOffersActivityType('walk-run', 'run')).toBe(true);
+    expect(familyOffersActivityType('walk-run', 'cycle')).toBe(false);
+
+    // Recording still yields the chosen type, not a merged one.
+    for (const activityType of ['walk', 'run'] as const) {
+      const store = createMemoryStorageAdapter();
+      const started = createJourneyLaunchController(store, sequentialIdFactory('a'))
+        .start(activityType, NOW);
+      expect(started.journey.activityType).toBe(activityType);
+    }
+
+    // And the art layer keys on the DOOR, never on the two activities behind it, so
+    // no picture can ever become the thing that decides what got recorded.
+    for (const key of Object.keys(MASCOT_ACTIVITY_ART)) {
+      const family = key.split(':')[1] ?? '';
+      expect(isJourneyActivityFamilyId(family), key).toBe(true);
+    }
+    expect(strip(art)).not.toMatch(/activityType|'walk'|'run'|personalBest/);
+  });
+
+  it('moved no recorder, privacy or schema concern into the presentation layer', () => {
+    for (const [name, source] of [
+      ['mascot art', strip(art)],
+      ['launch screen', strip(launchScreen)],
+    ] as const) {
+      expect(source, name).not.toMatch(
+        /geolocation|watchPosition|GpsSession|recorder|recovery|schemaVersion|SCHEMA_VERSION/i,
+      );
+      expect(source, name).not.toMatch(/\bxp\b|grantRewards|deriveRewards|trophy|prestige/i);
+    }
   });
 });

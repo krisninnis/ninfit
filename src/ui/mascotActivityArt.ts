@@ -10,20 +10,18 @@ import type { JourneyActivityFamilyId } from './journeyActivityFamilies';
  * an image path typed into a screen. Screens ask this module; it is the only place
  * that knows a mascot has artwork at all.
  *
- * WHY THE MANIFEST IS EMPTY.
+ * WHAT IS DECLARED TODAY. One entry: the tortoise on the Walk/Run door. It went
+ * through the pipeline in `skills/ninfit-visual-asset-pipeline/SKILL.md` - a reviewed
+ * source sheet kept in `docs/brand/reference/mascots/`, converted once to a canonical
+ * WebP under `public/`, and named for its species and family rather than for whatever
+ * the generator called it. Reference is still not production: the runtime URL below
+ * points at `public/`, never at `docs/`.
  *
- * Because no reviewed mascot artwork exists in this repository yet. NinFit's asset
- * pipeline is explicit that generated art is reference material until a human has
- * reviewed it, that only canonical assets are wired into runtime code, and that raw
- * generated filenames are never referenced directly - see
- * `skills/ninfit-visual-asset-pipeline/SKILL.md`. `docs/brand/reference/mascots/`
- * holds a tortoise reference PNG; reference is not production, and pointing runtime
- * code at it would break exactly the rule the pipeline exists to enforce.
- *
- * So this resolves to `undefined` for every species and every family today, and every
- * caller falls back to the same temporary letter treatment the rest of the app already
- * uses. When a reviewed asset is placed, it becomes one line here and nothing else
- * changes anywhere.
+ * EVERYTHING ELSE IS STILL `undefined`, AND THAT IS NOT A GAP TO PATCH. Four species
+ * and two more families have no reviewed art, so they keep the same temporary letter
+ * treatment the rest of the app uses. The tortoise having a picture changes nothing
+ * about how a bear is handled - callers must go on treating `undefined` as ordinary,
+ * because it is still the answer fourteen times out of fifteen.
  *
  * WHERE THE FILES GO. `public/mascots/<familyId>/<familyId>-journey-<activityFamily>.webp`,
  * referenced by URL rather than imported - the same reasoning the backgrounds registry
@@ -45,11 +43,21 @@ export type MascotActivityArtManifest = Readonly<
 /**
  * Reviewed, canonical mascot activity artwork.
  *
- * Deliberately empty. An entry here is a statement that a real reviewed file exists at
- * that URL, so adding one before the file lands would produce a broken image for every
- * user of that species - which is worse than the letter.
+ * An entry here is a statement that a real reviewed file exists at that URL, so adding
+ * one before the file lands would produce a broken image for every user of that
+ * species - which is worse than the letter. Add the file first, then the line.
  */
-export const MASCOT_ACTIVITY_ART: MascotActivityArtManifest = {};
+export const MASCOT_ACTIVITY_ART: MascotActivityArtManifest = {
+  'tortoise:walk-run': {
+    src: '/mascots/tortoise/tortoise-journey-walk-run.webp',
+    /*
+     * Who is pictured, and nothing else. Not "ready for your run" - the picture does
+     * not know whether this person is about to walk or run, and the screen must not
+     * let it look as though it does. That choice is made by the user, explicitly.
+     */
+    alt: 'Tortoise in a vest and trainers, out on a trail',
+  },
+};
 
 /**
  * The intended home for a species/family asset, for whoever places the real file.
