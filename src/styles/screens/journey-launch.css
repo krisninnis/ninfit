@@ -94,6 +94,29 @@
   }
 
   /*
+   * WITH REAL ARTWORK, THE SLOT GETS OUT OF THE WAY.
+   *
+   * The reviewed mascot art is a finished circular composition that carries its own
+   * edge, so the placeholder's ring and tinted disc would be a frame around a frame -
+   * exactly the kind of unnecessary box this screen is meant not to have. The border
+   * goes transparent rather than away so the box keeps its measured size, and the
+   * picture grows, because it is the one thing here that is meant to be looked at.
+   *
+   * `max-width` plus `aspect-ratio` rather than a viewport unit: the slot can never be
+   * wider than the space it was given, at any width, on any device, so there is no
+   * arrangement of paddings that lets the companion push the page sideways.
+   */
+  .journey-launch__portrait[data-art='true'] {
+    --journey-portrait-size: 248px;
+
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    border-color: transparent;
+    background: none;
+  }
+
+  /*
    * TEMPORARY PRESENTATION FALLBACK - not mascot artwork, and not to be refined.
    * It stands in until a reviewed asset is placed; see `src/ui/mascotActivityArt.ts`.
    */
@@ -176,6 +199,10 @@
 
     .journey-launch__portrait {
       --journey-portrait-size: 220px;
+    }
+
+    .journey-launch__portrait[data-art='true'] {
+      --journey-portrait-size: 300px;
     }
   }
 }

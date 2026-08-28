@@ -1,5 +1,5 @@
 /**
- * A minimal ambient declaration for the two Node APIs the CSS integrity guard uses.
+ * A minimal ambient declaration for the handful of Node APIs the source guards use.
  *
  * WHY THIS EXISTS RATHER THAN @types/node:
  * The guard has to read CSS *source*, and Vite cannot provide it - `?raw` and
@@ -12,7 +12,18 @@
  * typed and honest, with no install and no `any`.
  */
 declare module 'node:fs' {
-  export function readFileSync(path: string, encoding: 'utf8'): string;
+  /**
+   * `latin1` is here for the asset guards, not for text. It maps each byte to one
+   * character, so a file's magic bytes can be checked as a string without pulling
+   * `Buffer` - and therefore all of `@types/node` - into this project.
+   */
+  export function readFileSync(path: string, encoding: 'utf8' | 'latin1'): string;
+
+  /** Used to prove a declared production asset is actually on disk. */
+  export function existsSync(path: string): boolean;
+
+  /** Only `size` is declared, because only the asset size budget is checked. */
+  export function statSync(path: string): { size: number };
 
   export interface DirEntry {
     name: string;

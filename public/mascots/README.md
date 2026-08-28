@@ -57,5 +57,15 @@ reference PNG — that is source material and must not be wired into runtime cod
 
 ## Current status
 
-Empty. No reviewed mascot activity artwork exists yet, and the manifest is
-correspondingly empty.
+One reviewed asset: `tortoise/tortoise-journey-walk-run.webp`, declared in the
+manifest and shown on the Walk/Run launch screen.
+
+Its reviewed source sheet is kept at
+`docs/brand/reference/mascots/ninfit-tortoise-journey-walk-run-reference-v1.png`,
+as the visual asset pipeline requires. That PNG is reference material and must
+never be referenced by runtime code.
+
+Everything else is still undeclared — four species, and Cycle and Swim for the
+tortoise — and those all fall back to the temporary letter. That is the normal
+state, not a gap: fourteen of the fifteen keys have no reviewed art, so the
+`undefined` path is the common one and must stay correct.

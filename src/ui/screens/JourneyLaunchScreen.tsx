@@ -91,13 +91,25 @@ export function JourneyLaunchScreen({ family, onClose }: JourneyLaunchScreenProp
       {/*
         THE COMPANION, AT THE SIZE THIS MOMENT DESERVES.
 
-        `mascotActivityArt` answers `undefined` until reviewed artwork exists, and the
-        letter below is the same temporary fallback the rest of the app uses. It is a
-        placeholder to be replaced, not refined - and it is aria-hidden, because the
-        name beside it is the real answer to "who is this".
+        `mascotActivityArt` answers `undefined` for every species and family without
+        reviewed artwork, which is still almost all of them, and the letter below is
+        the same temporary fallback the rest of the app uses. The tortoise having a
+        picture does not make that branch dead code - it is what a bear still gets.
+        Both are aria-hidden, because the name beside them is the real answer to
+        "who is this".
       */}
       <div className="journey-launch__companion">
-        <div className="journey-launch__portrait" aria-hidden="true">
+        {/*
+          `data-art` is presentation only: it tells the stylesheet whether it is
+          framing a finished picture or standing in for one. It is NOT a second way of
+          asking whether artwork exists - `art` above is the only one - and nothing
+          behavioural reads it.
+        */}
+        <div
+          className="journey-launch__portrait"
+          data-art={art !== undefined ? 'true' : 'false'}
+          aria-hidden="true"
+        >
           {art !== undefined ? (
             <img src={art.src} alt="" />
           ) : (
