@@ -10,6 +10,7 @@ import type { DailyLog, ISODate, ISODateTime, PlannedActivity, WeeklyPlan } from
 import { isRestDay, resolveSessionForDate, summariseSessionCompletion } from '../weeklyPlan';
 import { consistencyProgress } from './consistency';
 import { evaluateMascot } from './mascot';
+import { appendPendingRewardDeliveries, pendingRewardDeliveriesOf } from './rewardDelivery';
 import { earnedTrophies, type TrophyFacts } from './trophies';
 import type {
   GameSettings,
@@ -323,16 +324,50 @@ export function grantRewards(
     level,
   });
 
+  /*
+   * THE DELIVERY QUEUE IS BUILT FROM A COPY, AND THE COPY IS TAKEN HERE ON PURPOSE.
+   *
+   * `recentEvents` below is built from `granted.reverse()`, which reverses IN PLACE.
+   * By the time that expression has finished, `granted` itself is no longer in the
+   * order the domain derived it. History wants newest first and delivery wants oldest
+   * first, and one array cannot honestly serve both orderings at once.
+   *
+   * Taking the copy above that line is what makes delivery order correct today -
+   * whether or not the reversal is ever changed. The reversal is a known defect with
+   * its own slice, and it is deliberately not fixed here; this copy is what keeps the
+   * two slices independent, and a test pins it.
+   */
+  const inGrantOrder = [...granted];
+
+  const next: GameState = {
+    ...state,
+    xp: { total: xpTotal, level },
+    skills,
+    trophies,
+    mascot,
+    awardedKeys: [...awarded],
+    recentEvents: [...granted.reverse(), ...state.recentEvents].slice(0, MAX_RECENT_EVENTS),
+  };
+
+  /*
+   * Deliberately computed AFTER `next`, not before it.
+   *
+   * By this line `granted` has already been reversed in place by `recentEvents` above,
+   * so the copy taken at the top is the only thing standing between the delivery queue
+   * and the wrong order. Written this way round so that deleting that copy fails a
+   * test instead of passing quietly on an accident of evaluation order.
+   */
+  const pendingDeliveries = appendPendingRewardDeliveries(
+    pendingRewardDeliveriesOf(state),
+    inGrantOrder,
+  );
+
   return {
-    state: {
-      ...state,
-      xp: { total: xpTotal, level },
-      skills,
-      trophies,
-      mascot,
-      awardedKeys: [...awarded],
-      recentEvents: [...granted.reverse(), ...state.recentEvents].slice(0, MAX_RECENT_EVENTS),
-    },
+    // Absent and empty mean the same thing, so an empty queue is left off the saved
+    // state entirely rather than written as [] into every record.
+    state: pendingDeliveries.length > 0
+      ? { ...next, pendingRewardDeliveries: pendingDeliveries }
+      : next,
     granted,
   };
 }

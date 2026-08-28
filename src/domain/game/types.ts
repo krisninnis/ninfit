@@ -263,5 +263,22 @@ export interface GameState {
   awardedKeys: string[];
   /** Most recent first, capped. Used only to show what just happened. */
   recentEvents: RewardEvent[];
+  /**
+   * Rewards granted but not yet shown to the user. OLDEST FIRST.
+   *
+   * A delivery queue, not a history: presence means pending, removal means
+   * acknowledged, and the order is the order things happened. Absent and empty mean
+   * the same thing - nothing to present - and no consumer may read a difference into
+   * them, which is why the field is optional rather than defaulted.
+   *
+   * NOT `recentEvents`. That is capped history, newest first, and dropping its oldest
+   * entry is correct behaviour for it. Dropping an entry from HERE before it has been
+   * presented is the bug this field exists to prevent, which is why the two are
+   * separate structures with opposite orderings, lifecycles and import rules.
+   *
+   * See `docs/architecture/ninfit-durable-reward-delivery-v1.md` and
+   * `src/domain/game/rewardDelivery.ts`.
+   */
+  pendingRewardDeliveries?: RewardEvent[];
   cosmetics: CosmeticInventory;
 }

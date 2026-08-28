@@ -1,5 +1,6 @@
 import { nowTimestamp } from '../domain/dates';
 import { createDefaultGameSettings, createInitialGameState } from '../domain/game/defaults';
+import { withoutPendingRewardDeliveries } from '../domain/game/rewardDelivery';
 import { deriveRewards, sealRewardKeys } from '../domain/game/rewards';
 import type { GameSettings, GameState } from '../domain/game/types';
 import {
@@ -307,8 +308,25 @@ function resolveGameState(
   data: AppData,
   now: ISODateTime,
 ): GameState {
-  if (prepared.game !== undefined) return prepared.game.state;
+  /*
+   * THE DELIVERY QUEUE DOES NOT SURVIVE A RESTORE.
+   *
+   * Whatever the file said about rewards that had not yet been shown, it said about
+   * the machine and the moment it was written on. Restoring it here would mean the
+   * first thing a user sees after a restore is a run of "here is what you just
+   * earned" for work done somewhere else, possibly months ago - history dressed as a
+   * fresh moment, which is the one thing reward delivery must never do.
+   *
+   * Nothing earned is affected. XP, level, skills, trophies, awardedKeys and
+   * recentEvents all restore exactly as they did before this existed; only the
+   * un-shown ticket is dropped. See
+   * `docs/architecture/ninfit-durable-reward-delivery-v1.md` section 13.
+   */
+  if (prepared.game !== undefined) {
+    return withoutPendingRewardDeliveries(prepared.game.state);
+  }
 
+  // Fresh state carries no queue at all, so the sealed path needs nothing further.
   const fresh = createInitialGameState({ now });
   const facts = deriveRewards({
     programmeStartDate: data.profile.programmeStartDate,
