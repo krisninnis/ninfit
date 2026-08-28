@@ -1,0 +1,210 @@
+/**
+ * The completion moment - the calm end of an outing, not a victory screen.
+ *
+ * THE RESTRAINT IS THE DESIGN. No burst, no confetti, no medal, no rising counter, no
+ * colour the rest of the app does not already use. Someone has just walked or run;
+ * the screen's job is to acknowledge that and get out of the way, and anything that
+ * performs excitement at them would be the app congratulating itself.
+ *
+ * TWO FACTS, LARGE. Distance and active time carry the weight because they are the
+ * only things here that are true, measured and theirs. Everything else - the date,
+ * the companion, the note - is quiet around them.
+ *
+ * NO MOTION IS DECLARED. Not "motion that respects reduced-motion" - none at all, so
+ * the screen is already complete and calm on first paint for everyone. That is why
+ * there is no `@media (prefers-reduced-motion)` block below: there is nothing to
+ * switch off.
+ */
+
+@layer screens {
+  .journey-completion {
+    display: grid;
+    gap: var(--ft-space-5);
+    padding-bottom: var(--ft-space-6);
+  }
+
+  .journey-completion__header {
+    display: grid;
+    gap: var(--ft-space-2);
+  }
+
+  .journey-completion__eyebrow {
+    margin: 0;
+    color: var(--ft-accent);
+    font-size: var(--ft-text-xs);
+    font-weight: var(--ft-weight-semibold);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .journey-completion__header h1 {
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .journey-completion__when {
+    margin: 0;
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-sm);
+  }
+
+  .journey-completion__missing {
+    margin: 0;
+    color: var(--ft-text-secondary);
+  }
+
+  /* --- The companion ------------------------------------------------------ */
+
+  /*
+   * Present, not performing. The same translucent language as the rest of Journey so
+   * this reads as the companion standing with the user at the end, rather than as a
+   * reward card that has appeared to hand something over.
+   */
+  .journey-completion__companion {
+    display: grid;
+    justify-items: center;
+    gap: var(--ft-space-2);
+    padding: var(--ft-space-5) var(--ft-space-4);
+    border: 1px solid var(--ft-border-subtle);
+    border-radius: var(--ft-radius-xl);
+    background: color-mix(in srgb, var(--ft-surface-raised) 76%, transparent);
+    backdrop-filter: blur(20px);
+  }
+
+  /*
+   * The letter fallback, matching every other temporary mark in the app. It is what
+   * a species with no reviewed artwork still gets, which is most of them.
+   */
+  .journey-completion__portrait {
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    width: 88px;
+    height: 88px;
+    border: 1px solid color-mix(in oklab, var(--ft-accent) 24%, var(--ft-border-subtle));
+    border-radius: var(--ft-radius-circle);
+    background: color-mix(in srgb, var(--ft-accent-soft) 26%, var(--ft-surface-sunken));
+  }
+
+  .journey-completion__portrait-mark {
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-lg);
+    font-weight: var(--ft-weight-bold);
+    line-height: 1;
+  }
+
+  /*
+   * With real artwork the slot gets out of the way and grows, the same decision the
+   * launch screen makes: the reviewed art is a finished circular composition with its
+   * own edge, so the placeholder ring would frame a frame. `max-width` plus
+   * `aspect-ratio` means it can never be wider than the space it was given.
+   */
+  .journey-completion__portrait[data-art='true'] {
+    width: 168px;
+    height: auto;
+    max-width: 100%;
+    aspect-ratio: 1;
+    border-color: transparent;
+    background: none;
+  }
+
+  .journey-completion__portrait > img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .journey-completion__companion-name {
+    margin: 0;
+    font-size: var(--ft-text-lg);
+    font-weight: var(--ft-weight-medium);
+    color: var(--ft-text-primary);
+  }
+
+  .journey-completion__companion-line {
+    margin: 0;
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-sm);
+    text-align: center;
+    text-wrap: balance;
+  }
+
+  /* --- The two facts ------------------------------------------------------ */
+
+  .journey-completion__facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--ft-space-3);
+    margin: 0;
+  }
+
+  .journey-completion__fact {
+    display: grid;
+    gap: var(--ft-space-1);
+    min-width: 0;
+    padding: var(--ft-space-4);
+    border: 1px solid var(--ft-border-subtle);
+    border-radius: var(--ft-radius-lg);
+    background: color-mix(in srgb, var(--ft-surface-raised) 72%, transparent);
+    backdrop-filter: blur(16px);
+  }
+
+  .journey-completion__fact dt {
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-xs);
+    font-weight: var(--ft-weight-semibold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .journey-completion__fact dd {
+    margin: 0;
+    min-width: 0;
+  }
+
+  /*
+   * The measured number, and the largest thing on the screen. Tabular figures so a
+   * distance and a duration line up rather than shifting against each other, and
+   * `overflow-wrap` so a long duration breaks instead of widening the page.
+   */
+  .journey-completion__value {
+    color: var(--ft-text-primary);
+    font-size: var(--ft-text-2xl);
+    font-weight: var(--ft-weight-bold);
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+
+  .journey-completion__unit {
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-xs);
+  }
+
+  /* --- Out ---------------------------------------------------------------- */
+
+  .journey-completion__actions {
+    display: grid;
+    gap: var(--ft-space-3);
+  }
+
+  .journey-completion__note {
+    margin: 0;
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-sm);
+  }
+
+  @media (min-width: 768px) {
+    .journey-completion {
+      max-width: 34rem;
+    }
+
+    .journey-completion__portrait[data-art='true'] {
+      width: 200px;
+    }
+
+    .journey-completion__actions {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+}

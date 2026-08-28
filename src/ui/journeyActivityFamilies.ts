@@ -111,6 +111,26 @@ export function familyOffersActivityType(
   return activityTypesForFamily(id).includes(activityType);
 }
 
+/**
+ * Which door an activity type came through, if any.
+ *
+ * The inverse of `activityTypesForFamily`, and derived from the same table so the two
+ * can never disagree. `undefined` is a real answer: `hike` and `other` are recordable
+ * activity types that no door currently offers, and a caller asking "which family?"
+ * about one of those must get nothing rather than a plausible guess.
+ *
+ * This does NOT make a family part of a Journey. Nothing is stored, and the activity
+ * type remains the truth - this only answers a presentation question, such as which
+ * artwork belongs beside a completed Journey.
+ */
+export function journeyActivityFamilyForType(
+  activityType: JourneyActivityType,
+): JourneyActivityFamilyId | undefined {
+  return JOURNEY_ACTIVITY_FAMILIES.find((family) =>
+    family.activityTypes.includes(activityType),
+  )?.id;
+}
+
 /** Presentation label for one activity type. The type itself is the truth. */
 export function journeyActivityLabel(activityType: JourneyActivityType): string {
   return activityType.charAt(0).toUpperCase() + activityType.slice(1);
