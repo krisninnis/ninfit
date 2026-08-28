@@ -1,6 +1,11 @@
 import { nowTimestamp, todayISO } from '../domain/dates';
 import { createDefaultGameSettings, createInitialGameState, choosePath, completeOnboarding } from '../domain/game/defaults';
 import { evolveMascot, hatchEgg } from '../domain/game/mascot';
+import {
+  partitionPendingRewardDeliveries,
+  pendingRewardDeliveriesOf,
+  withPendingRewardDeliveries,
+} from '../domain/game/rewardDelivery';
 import { deriveRewards, grantRewards, type DerivedFacts } from '../domain/game/rewards';
 import type {
   FitnessPathId,
@@ -63,16 +68,37 @@ export function syncGame(repository: Repository, options: GameSyncOptions = {}):
 
   const { state, granted } = grantRewards(before, facts, { now, settings });
 
+  /*
+   * PRUNING THE DELIVERY QUEUE HAPPENS HERE BECAUSE THIS ALREADY RUNS.
+   *
+   * A pending reward that has waited past the freshness horizon is retired: removed
+   * without ever being presented, because an acknowledgement says "here is what you
+   * just earned" and a fortnight-old reward is not that. Nothing the user earned is
+   * touched - the XP, the skills, the trophy and the awarded key all stay exactly
+   * where they were, and nothing anywhere says a word about the gap.
+   *
+   * No scheduler exists or is needed: `syncGame` runs on every mount, so the queue is
+   * evaluated whenever the app is open and never when it is not.
+   */
+  const { deliverable, retired } = partitionPendingRewardDeliveries(
+    pendingRewardDeliveriesOf(state),
+    now,
+  );
+  const next = retired.length === 0 ? state : withPendingRewardDeliveries(state, deliverable);
+
   // Write only on a real change, so opening the app repeatedly does not churn storage.
+  // Retiring a stale ticket is a real change: without it here, the horizon would only
+  // ever filter on read and the queue would grow in storage for ever.
   const changed =
     granted.length > 0 ||
-    state.mascot.eggState !== before.mascot.eggState ||
-    state.mascot.evolutionReady !== before.mascot.evolutionReady ||
-    repository.getGameState() === undefined;
+    next.mascot.eggState !== before.mascot.eggState ||
+    next.mascot.evolutionReady !== before.mascot.evolutionReady ||
+    repository.getGameState() === undefined ||
+    retired.length > 0;
 
-  if (changed) repository.saveGameState(state);
+  if (changed) repository.saveGameState(next);
 
-  return { state, settings, granted, facts };
+  return { state: next, settings, granted, facts };
 }
 
 /** Hatch, when the user asks. A no-op unless the egg is ready. */

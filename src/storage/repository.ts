@@ -1,6 +1,10 @@
 import { isValidISODate, nowTimestamp } from '../domain/dates';
 import { createSeedAppData } from '../domain/defaults';
 import { createDefaultGameSettings, createInitialGameState } from '../domain/game/defaults';
+import {
+  isPendingRewardDeliveries,
+  withoutPendingRewardDeliveries,
+} from '../domain/game/rewardDelivery';
 import type { GameSettings, GameState } from '../domain/game/types';
 import { newId, type IdFactory } from '../domain/ids';
 import { SCHEMA_VERSION } from '../domain/schema';
@@ -203,6 +207,25 @@ export class Repository {
     }
     this.recordIssue(issue);
     return issue;
+  }
+
+  /**
+   * Quarantine a value once per key and kind, for the whole session.
+   *
+   * `getGameState` runs on nearly every render, so an unconditional copy would write a
+   * fresh timestamped quarantine key every time and fill the store with duplicates of
+   * the same bad value. `recordIssue` already de-duplicates the report; this
+   * de-duplicates the copy that goes with it.
+   */
+  private quarantineOnce(key: string, kind: StorageIssueKind, detail: string): void {
+    if (this.issues.some((issue) => issue.key === key && issue.kind === kind)) return;
+
+    const raw = this.adapter.get(key);
+    if (raw === null) {
+      this.recordIssue({ kind, key, detail });
+      return;
+    }
+    this.quarantine(key, raw, kind, detail);
   }
 
   private recordIssue(issue: StorageIssue): void {
@@ -442,8 +465,43 @@ export class Repository {
    * Nothing here belongs in a `DailyLog`: that stays a fitness journal, and game
    * state is derived from it rather than mixed into it.
    */
+  /**
+   * ONE SEMANTIC CHECK BEYOND "IS IT A RECORD", AND DELIBERATELY ONLY ONE.
+   *
+   * `pendingRewardDeliveries` is the reward delivery queue, and it is the only field
+   * here that presentation puts in front of a person verbatim. An unreadable one is
+   * therefore refused rather than rendered, in the same spirit as `getDailyLog`
+   * refusing a record whose date disagrees with its key.
+   *
+   * WHY THE WHOLE RECORD IS NOT REFUSED. Returning `undefined` would hand the caller
+   * a fresh game state with empty `awardedKeys`, and the next sync would re-grant
+   * months of history as though it had all just happened. Losing somebody's XP and
+   * trophies over an unreadable delivery ticket would be far worse than the problem.
+   * So the remedy is scoped: the queue is dropped from what callers see, and every
+   * field that represents something the user actually earned is returned untouched.
+   *
+   * NOTHING IS DESTROYED. The stored value is copied to quarantine before it is
+   * ignored, and this read never writes over it - the original stays exactly where it
+   * was until some later legitimate write of game state replaces it. See
+   * `docs/architecture/ninfit-durable-reward-delivery-v1.md` section 15.
+   */
   getGameState(): GameState | undefined {
-    return this.readRecord<GameState>(STORAGE_KEYS.game);
+    const state = this.readRecord<GameState>(STORAGE_KEYS.game);
+    if (state === undefined) return undefined;
+    if (
+      state.pendingRewardDeliveries === undefined
+      || isPendingRewardDeliveries(state.pendingRewardDeliveries)
+    ) {
+      return state;
+    }
+
+    this.quarantineOnce(
+      STORAGE_KEYS.game,
+      'invalid_shape',
+      'pendingRewardDeliveries is not a list of granted rewards, so no reward will be '
+        + 'presented from it. XP, skills, trophies and awarded keys are unaffected.',
+    );
+    return withoutPendingRewardDeliveries(state);
   }
 
   saveGameState(state: GameState): void {
