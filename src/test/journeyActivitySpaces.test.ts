@@ -427,7 +427,14 @@ describe('mascot artwork has one boundary, not scattered paths', () => {
     }) as Record<string, string>;
 
     for (const [path, source] of Object.entries(uiSources)) {
+      /*
+       * The reviewed art registries are the ONE place a mascot asset URL may be
+       * written down - that is their whole job. `mascotActivityArt` owns Journey
+       * door artwork; `mascotStageArt` owns standing/companion stage artwork. Every
+       * other module under ui/ must ask one of them rather than learn a path.
+       */
       if (path.endsWith('mascotActivityArt.ts')) continue;
+      if (path.endsWith('mascotStageArt.ts')) continue;
       expect(strip(source), `${path} hardcodes a mascot asset path`).not.toMatch(
         /['"`]\/mascots\/|assets\/mascots\//,
       );

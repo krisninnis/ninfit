@@ -10,7 +10,15 @@ import type { MascotFamilyId, MascotStageId } from '../domain/game/types';
  * continue to use the existing glyph fallback.
  */
 export interface MascotStageArt {
+  /**
+   * The resting still. For a stage that also has motion this MUST be a frame taken
+   * from that motion asset, so the two share framing, scale and character exactly and
+   * the swap between them is invisible. A separately drawn still is what forced the
+   * previous CSS scale compensation, and compensation is not a fix.
+   */
   src: string;
+  /** Optional one-shot motion. Never looped, never autoplayed on load. */
+  motionSrc?: string;
 }
 
 type MascotStageArtKey = `${MascotFamilyId}:${MascotStageId}`;
@@ -19,7 +27,9 @@ export const MASCOT_STAGE_ART: Readonly<
   Partial<Record<MascotStageArtKey, MascotStageArt>>
 > = {
   'tortoise:starter': {
-    src: '/mascots/tortoise/tortoise-starter-companion-v1.png',
+    /* Frame 0 of the wave below - the video's own keyframe, at rest. */
+    src: '/mascots/tortoise/tortoise-starter-wave-rest-v1.png',
+    motionSrc: '/mascots/tortoise/tortoise-starter-wave-v1.webm',
   },
 };
 
