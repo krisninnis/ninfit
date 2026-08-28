@@ -101,6 +101,71 @@ export function syncGame(repository: Repository, options: GameSyncOptions = {}):
   return { state: next, settings, granted, facts };
 }
 
+/**
+ * What is waiting to be said, oldest first.
+ *
+ * The ONLY route by which a reward reaches presentation. A screen asks this; it does
+ * not derive, grant, count or value anything, and it cannot - the answer is a list of
+ * events the domain granted and persisted some time earlier, and the caller's whole
+ * job is to render them and say when it has.
+ *
+ * Reads. Never writes: a screen mounting must not be able to change what is owed.
+ * Stale tickets are filtered here as well as pruned by `syncGame`, so a queue that has
+ * not been synced since the horizon passed still presents nothing.
+ *
+ * An unreadable queue answers with an empty list rather than a guess. Nothing is
+ * repaired from here and nothing is fabricated - see `getGameState`, which is where
+ * that decision is made and where the bad value is quarantined.
+ */
+export function pendingRewardDeliveries(
+  repository: Repository,
+  now: ISODateTime = nowTimestamp(),
+): RewardEvent[] {
+  const state = repository.getGameState();
+  if (state === undefined) return [];
+  return partitionPendingRewardDeliveries(pendingRewardDeliveriesOf(state), now).deliverable;
+}
+
+/**
+ * Mark exactly these events as said, and persist it.
+ *
+ * IDS, NOT KINDS OR XP. The caller names what it actually put in front of the person,
+ * and nothing else crosses this boundary. Presentation cannot express "acknowledge all
+ * trophies" or "acknowledge everything", because neither is a thing it witnessed.
+ *
+ * IT RE-READS RATHER THAN TRUSTING THE CALLER'S COPY. A component holds a snapshot
+ * from whenever it last rendered, and writing that snapshot back would quietly undo
+ * anything granted since - XP, a trophy, an awarded key. So current state is read
+ * here, at acknowledgement time, and only the delivery queue within it changes.
+ *
+ * REMOVAL ONLY, WHICH IS WHAT MAKES IT SAFE TO GET WRONG. Removals commute and repeat
+ * harmlessly: acknowledging an unknown id, or the same id twice, is a no-op. Two tabs
+ * doing this at once cannot resurrect an acknowledged reward or lose an unacknowledged
+ * one - the worst they can manage is showing the same thing twice, which is the
+ * honest v1 contract. See the architecture spec, section 14.
+ */
+export function acknowledgeRewardDeliveries(
+  repository: Repository,
+  ids: readonly string[],
+): void {
+  if (ids.length === 0) return;
+
+  const state = repository.getGameState();
+  if (state === undefined) return;
+
+  const pending = pendingRewardDeliveriesOf(state);
+  if (pending.length === 0) return;
+
+  const acknowledged = new Set(ids);
+  const remaining = pending.filter((event) => !acknowledged.has(event.id));
+
+  // Nothing matched: an id from another tab, another batch, or a repeat. Not an error,
+  // and not a reason to write.
+  if (remaining.length === pending.length) return;
+
+  repository.saveGameState(withPendingRewardDeliveries(state, remaining));
+}
+
 /** Hatch, when the user asks. A no-op unless the egg is ready. */
 export function hatchEggNow(repository: Repository, now: ISODateTime = nowTimestamp()): GameState {
   const state = loadState(repository, now);

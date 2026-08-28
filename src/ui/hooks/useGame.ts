@@ -10,12 +10,7 @@ import {
   type FinishOnboardingInput,
 } from '../../app/game';
 import type { DerivedFacts } from '../../domain/game/rewards';
-import type {
-  FitnessPathId,
-  GameSettings,
-  GameState,
-  RewardEvent,
-} from '../../domain/game/types';
+import type { FitnessPathId, GameSettings, GameState } from '../../domain/game/types';
 
 /**
  * The game layer, as the screens see it.
@@ -28,8 +23,18 @@ export interface GameHook {
   state: GameState;
   settings: GameSettings;
   facts: DerivedFacts;
-  /** Rewards granted by the most recent sync. Empty on a repeat. */
-  granted: RewardEvent[];
+  /*
+   * `granted` is deliberately NOT here.
+   *
+   * It used to be, and it was the reward delivery channel: the transient delta of
+   * whichever instance of this hook rendered first. Since App always renders before
+   * Today, Today's copy was empty on every cold load and the reward was never said.
+   *
+   * Delivery is now durable and lives in `GameState.pendingRewardDeliveries`, read
+   * through `useRewardDelivery`. Re-exposing a transient delta here would hand a future
+   * screen the same footgun back, so it stays off this surface. `syncGame` still
+   * returns `granted` for the app layer and the tests that check granting itself.
+   */
   needsOnboarding: boolean;
   refresh: () => void;
   hatch: () => void;
@@ -89,7 +94,6 @@ export function useGame(): GameHook {
     state: sync.state,
     settings: sync.settings,
     facts: sync.facts,
-    granted: sync.granted,
     needsOnboarding: !sync.state.onboarding.completed,
     refresh,
     hatch,

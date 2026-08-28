@@ -365,7 +365,39 @@ describe('placement on Today', () => {
     expect(plan).toBeGreaterThan(acknowledgement);
   });
 
-  it('is handed the domain delta unchanged', () => {
-    expect(code(todayScreenSource)).toMatch(/<RewardAcknowledgement granted=\{game\.granted\} \/>/);
+  it('is handed the durable pending batch, not a transient delta', () => {
+    /*
+     * RE-POINTED, NOT WEAKENED. This used to assert `granted={game.granted}`, which was
+     * the delivery defect in one line: the delta belonged to whichever useGame instance
+     * rendered first, and on a cold load that was App. The guard now pins the durable
+     * source and the acknowledgement callback, and additionally forbids the old route.
+     */
+    const today = code(todayScreenSource);
+    expect(today).toMatch(/<RewardAcknowledgement\s+granted=\{delivery\.batch\}/);
+    expect(today).toMatch(/onAcknowledged=\{delivery\.acknowledge\}/);
+    expect(today).not.toMatch(/game\.granted/);
+  });
+
+  it('acknowledges only when the dwell completes, never on cleanup', () => {
+    // The load-bearing line of the whole slice: leaving early must leave it pending.
+    expect(componentCode).toMatch(/setTimeout\(\(\) => \{[\s\S]*?onAcknowledged\(shown\);[\s\S]*?\}, rewardDwellMs\(/);
+    expect(componentCode).toMatch(/return \(\) => clearTimeout\(timer\);/);
+
+    // Nothing acknowledges outside that timeout.
+    const cleanup = componentCode.slice(componentCode.indexOf('return () => clearTimeout'));
+    expect(cleanup).not.toMatch(/onAcknowledged/);
+  });
+
+  it('acknowledges the exact ids it displayed', () => {
+    expect(componentCode).toMatch(/const shown = granted\.map\(\(event\) => event\.id\);/);
+    expect(componentCode).toMatch(/onAcknowledged\(shown\)/);
+    // Never the currently-pending list, which may have moved on.
+    expect(componentCode).not.toMatch(/onAcknowledged\(granted/);
+  });
+
+  it('still creates, grants and values nothing', () => {
+    expect(componentCode).not.toMatch(
+      /deriveRewards|grantRewards|syncGame|awardedKeys|pendingRewardDeliveries|repository|localStorage/,
+    );
   });
 });
