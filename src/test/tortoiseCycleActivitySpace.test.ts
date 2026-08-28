@@ -102,10 +102,10 @@ describe('the Cycle medallion is a real reviewed asset', () => {
 
 // --- 6-10. The boundary holds in every direction ----------------------------
 
-describe('species x family isolation still holds with two pictures declared', () => {
-  it('declares exactly the two reviewed entries', () => {
+describe('species x family isolation still holds with three pictures declared', () => {
+  it('declares exactly the reviewed entries', () => {
     expect(Object.keys(MASCOT_ACTIVITY_ART).sort())
-      .toEqual(['tortoise:cycle', 'tortoise:walk-run']);
+      .toEqual(['tortoise:cycle', 'tortoise:swim', 'tortoise:walk-run']);
   });
 
   it('gives Walk/Run and Cycle different pictures', () => {
@@ -122,8 +122,14 @@ describe('species x family isolation still holds with two pictures declared', ()
     expect(mascotActivityArt('tortoise', 'cycle')?.src).not.toContain('walk-run');
   });
 
-  it('keeps tortoise Swim on the fallback', () => {
-    expect(mascotActivityArt('tortoise', 'swim')).toBeUndefined();
+  it('keeps Cycle distinct from Swim, now that Swim has its own picture too', () => {
+    const cycle = mascotActivityArt('tortoise', 'cycle')?.src;
+    const swim = mascotActivityArt('tortoise', 'swim')?.src;
+    expect(cycle).toBeDefined();
+    expect(swim).toBeDefined();
+    expect(cycle).not.toBe(swim);
+    expect(cycle).toContain('cycle');
+    expect(swim).toContain('swim');
   });
 
   it('gives no other species the tortoise pictures, on any door', () => {
@@ -132,7 +138,7 @@ describe('species x family isolation still holds with two pictures declared', ()
         .map((f) => mascotActivityArt('tortoise', f.id)?.src)
         .filter((s): s is string => s !== undefined),
     );
-    expect(tortoiseArt.size).toBe(2);
+    expect(tortoiseArt.size).toBe(3);
 
     for (const species of ['bear', 'fox', 'otter', 'wolf'] as const) {
       for (const family of JOURNEY_ACTIVITY_FAMILIES) {
@@ -174,9 +180,8 @@ describe('no screen names the asset, the species or the folder', () => {
 // --- 11-14. The doorway, and what Start actually starts ---------------------
 
 describe('the Cycle doorway opens a screen and starts nothing on the way', () => {
-  it('is a companion door now, and Swim still is not', () => {
+  it('is a companion door', () => {
     expect(journeyActivityFamily('cycle')?.launch).toBe('companion');
-    expect(journeyActivityFamily('swim')?.launch).toBe('direct');
   });
 
   it('routes #/journey/launch/cycle to the Cycle launch screen', () => {
@@ -310,17 +315,14 @@ describe('a Cycle Journey finishes through the existing architecture', () => {
 
 // --- 19. Swim is untouched ---------------------------------------------------
 
-describe('Swim behaviour is unchanged', () => {
-  it('still launches directly from Journey Home in one tap', () => {
-    expect(journeyActivityFamily('swim')?.launch).toBe('direct');
-    expect(parseRouteFromHash(journeyLaunchHash('swim'))).toEqual({ kind: 'journey-home' });
-    expect(strip(home)).toContain('launch.start(activityType, nowIso())');
-  });
+describe('Cycle is unaffected by Swim gaining a door of its own', () => {
+  it('keeps its own route, its own picture and its own type', () => {
+    expect(parseRouteFromHash(journeyLaunchHash('cycle')))
+      .toEqual({ kind: 'journey-launch', family: 'cycle' });
+    expect(mascotActivityArt('tortoise', 'cycle')?.src).toBe(CYCLE_SRC);
 
-  it('still records as `swim`, with no artwork and no launch screen', () => {
     const started = createJourneyLaunchController(adapter, sequentialIdFactory('s'))
-      .start('swim', NOW);
-    expect(started.journey.activityType).toBe('swim');
-    expect(mascotActivityArt('tortoise', 'swim')).toBeUndefined();
+      .start('cycle', NOW);
+    expect(started.journey.activityType).toBe('cycle');
   });
 });

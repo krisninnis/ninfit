@@ -49,13 +49,12 @@ export interface JourneyActivityFamily {
 /**
  * The three doors, in the order Journey Home offers them.
  *
- * Cycle now has a companion launch of its own, because it has reviewed artwork and a
- * screen to show it on. It still records exactly what it always did - one tap became
- * two, and the second one is Start - and `cycle` remains its own activity type all the
- * way through. Swim keeps the direct launch it has always had: it records today, and
- * taking that away to make room for a screen it does not have yet would be removing
- * working behaviour from someone mid-programme. The `launch` field says which is which
- * rather than the copy pretending either way.
+ * All three doors now have a companion launch, because all three have reviewed
+ * artwork and a screen to show it on. Each still records exactly what it always did -
+ * one tap became two, and the second one is Start - and each activity type survives
+ * the journey unchanged. The `launch` field stays in the data rather than becoming an
+ * assumption, because the fourth and fifth species will arrive without art and a
+ * family without a picture must still be able to say so.
  *
  * A COMPANION DOOR IS NOT A CHOICE OF ACTIVITY. Walk/Run offers two types and must ask
  * which; Cycle offers one and must not pretend otherwise. Both go through the same
@@ -81,10 +80,10 @@ export const JOURNEY_ACTIVITY_FAMILIES: readonly JourneyActivityFamily[] = [
   {
     id: 'swim',
     label: 'Swim',
-    note: 'Pool or wearable distance later',
+    note: 'Time in the water',
     mark: 'S',
     activityTypes: ['swim'],
-    launch: 'direct',
+    launch: 'companion',
   },
 ];
 
