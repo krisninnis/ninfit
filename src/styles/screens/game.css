@@ -137,6 +137,65 @@
   font-weight: 700;
 }
 
+/*
+ * Reviewed standing artwork uses the same compact slot as the letter fallback.
+ * The image itself has transparency, so no second disc or border is added here.
+ */
+.mascot--art {
+  display: block;
+  width: 48px;
+  height: 48px;
+  max-width: 100%;
+  object-fit: contain;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+/*
+ * Once reviewed mascot art exists, the companion becomes a character rather than
+ * a status icon. It sits centred above the strip while the egg and glyph fallbacks
+ * keep their original compact layout.
+ */
+.game[data-has-mascot-art='true'] {
+  margin-top: 38px;
+  padding-top: 38px;
+}
+
+.game[data-has-mascot-art='true'] .game__art {
+  position: absolute;
+  top: -38px;
+  left: 50%;
+  width: 76px;
+  height: 76px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.game[data-has-mascot-art='true'] .mascot--art {
+  width: 76px;
+  height: 76px;
+  max-width: none;
+}
+
+@media (max-width: 430px) {
+  .game[data-has-mascot-art='true'] {
+    margin-top: 34px;
+    padding-top: 34px;
+  }
+
+  .game[data-has-mascot-art='true'] .game__art,
+  .game[data-has-mascot-art='true'] .mascot--art {
+    width: 68px;
+    height: 68px;
+  }
+
+  .game[data-has-mascot-art='true'] .game__art {
+    top: -34px;
+  }
+}
+
 .game__titles {
   display: flex;
   align-items: baseline;

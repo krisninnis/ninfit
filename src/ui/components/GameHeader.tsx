@@ -9,6 +9,7 @@ import { mascotMessage, type MascotContext } from '../../domain/game/messages';
 import type { GameSettings, GameState } from '../../domain/game/types';
 import { levelProgress } from '../../domain/game/xp';
 import { EggArt } from './EggArt';
+import { mascotStageArt } from '../mascotStageArt';
 import { useHatchCinematic } from '../hooks/useHatchCinematic';
 import {
   COMPANION_MOMENT_DWELL_MS,
@@ -73,6 +74,11 @@ interface GameHeaderProps {
   crackStage: number;
   onHatch: () => void;
   onEvolve: () => void;
+  /**
+   * Today may give reviewed mascot artwork a real companion presence above
+   * the progress strip. Egg and glyph fallbacks remain inside the strip.
+   */
+  companionPlacement?: 'inline' | 'above';
 }
 
 export function GameHeader({
@@ -83,9 +89,14 @@ export function GameHeader({
   crackStage,
   onHatch,
   onEvolve,
+  companionPlacement = 'inline',
 }: GameHeaderProps) {
   const family = visibleMascotFamily(state.mascot);
   const progress = levelProgress(state.xp.total);
+  const standingArt =
+    family === undefined ? undefined : mascotStageArt(family.id, state.mascot.stage);
+  const showArtAbove =
+    companionPlacement === 'above' && standingArt !== undefined;
 
   /*
    * The same cinematic onboarding uses. Today is the RECOVERY route into it - for a
@@ -133,11 +144,15 @@ export function GameHeader({
         : undefined;
 
   return (
-    <section
-      className="game"
-      aria-label="Your companion"
-      data-companion-reaction={reactionPresentation}
-    >
+    <>
+      <section
+        className="game"
+        aria-label="Your companion"
+        data-companion-reaction={reactionPresentation}
+        data-has-mascot-art={
+          standingArt !== undefined && !showArtAbove ? 'true' : 'false'
+        }
+      >
       <div
         className={`game__art${hatch.isRunning ? ` egg-hatch--${hatch.phase}` : ''}`}
       >
@@ -160,7 +175,14 @@ export function GameHeader({
               <span className="egg__hatchFlash" aria-hidden="true" />
             ) : null}
           </>
-        ) : (
+        ) : standingArt !== undefined && !showArtAbove ? (
+          <img
+            className="mascot mascot--art"
+            src={standingArt.src}
+            alt=""
+            aria-hidden="true"
+          />
+        ) : showArtAbove ? null : (
           <span className="mascot" aria-hidden="true">
             {family.glyph}
           </span>
@@ -226,6 +248,7 @@ export function GameHeader({
           {action.label}
         </button>
       ) : null}
-    </section>
+      </section>
+    </>
   );
 }

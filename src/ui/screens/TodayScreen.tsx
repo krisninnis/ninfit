@@ -11,6 +11,8 @@ import { RewardAcknowledgement } from '../components/RewardAcknowledgement';
 import { useGame } from '../hooks/useGame';
 import { useRewardDelivery } from '../hooks/useRewardDelivery';
 import { todayCompanionContext } from '../../domain/game/todayContext';
+import { visibleMascotFamily } from '../../domain/game/mascot';
+import { mascotStageArt } from '../mascotStageArt';
 import { MAX_CRACK_STAGE } from '../../domain/game/egg';
 import { todaySessionCompletion } from '../../domain/today';
 import type { SessionCompletion } from '../../domain/weeklyPlan';
@@ -210,8 +212,25 @@ export function TodayScreen() {
     lastActiveDate: game.facts.lastActiveDate,
   });
 
+  const visibleFamily = visibleMascotFamily(game.state.mascot);
+  const todayMascotArt =
+    visibleFamily === undefined
+      ? undefined
+      : mascotStageArt(visibleFamily.id, game.state.mascot.stage);
+
   return (
-    <Screen title="Today" subtitle={formatLongDate(date)}>
+    <>
+      {todayMascotArt !== undefined ? (
+        <div className="today__top-companion" aria-hidden="true">
+          <img
+            className="today__top-companion-art"
+            src={todayMascotArt.src}
+            alt=""
+          />
+        </div>
+      ) : null}
+
+      <Screen title="Today" subtitle={formatLongDate(date)}>
       {/*
         PHASE 6 ORDER. Context, then companion, then the plan - and the plan is the
         hero. This used to open with the game card, which meant the first and largest
@@ -250,6 +269,7 @@ export function TodayScreen() {
         crackStage={crackStage}
         onHatch={game.hatch}
         onEvolve={game.evolve}
+        companionPlacement="above"
       />
       </LivingScrim>
 
@@ -662,6 +682,7 @@ export function TodayScreen() {
       <p className="today__disclaimer">
         A personal record, not a medical assessment.
       </p>
-    </Screen>
+      </Screen>
+    </>
   );
 }
