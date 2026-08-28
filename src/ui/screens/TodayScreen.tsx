@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   acknowledgeRestDay,
   hasSymptomFlag,
@@ -11,6 +11,8 @@ import { RewardAcknowledgement } from '../components/RewardAcknowledgement';
 import { useGame } from '../hooks/useGame';
 import { useRewardDelivery } from '../hooks/useRewardDelivery';
 import { todayCompanionContext } from '../../domain/game/todayContext';
+import { visibleMascotFamily } from '../../domain/game/mascot';
+import { mascotStageArt } from '../mascotStageArt';
 import { MAX_CRACK_STAGE } from '../../domain/game/egg';
 import { todaySessionCompletion } from '../../domain/today';
 import type { SessionCompletion } from '../../domain/weeklyPlan';
@@ -126,6 +128,19 @@ function totalMinutes(activities: readonly PlannedActivity[]): number {
   return activities.reduce((sum, activity) => sum + activity.durationMinutes, 0);
 }
 
+/**
+ * The same test `StartupCinematic` and `useHatchCinematic` use, for the same reason.
+ *
+ * The global stylesheet already neutralises CSS animation and transition for anyone
+ * who asked for less motion, but a `<video>` is not CSS and would keep playing. So the
+ * wave is asked for explicitly here, and when motion is unwelcome the companion simply
+ * stays the still it already is - no dead control, no silent no-op button.
+ */
+function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
 export function TodayScreen() {
   // `completion` is deliberately not taken from the hook: the only thing that ever
   // read it was the daily completion score, which this screen no longer keeps.
@@ -210,8 +225,80 @@ export function TodayScreen() {
     lastActiveDate: game.facts.lastActiveDate,
   });
 
+  const [isMascotWaving, setIsMascotWaving] = useState(false);
+  const reducedMotion = prefersReducedMotion();
+
+  const visibleFamily = visibleMascotFamily(game.state.mascot);
+  const todayMascotArt =
+    visibleFamily === undefined
+      ? undefined
+      : mascotStageArt(visibleFamily.id, game.state.mascot.stage);
+  const canWave = todayMascotArt?.motionSrc !== undefined && !reducedMotion;
+
   return (
-    <Screen title="Today" subtitle={formatLongDate(date)}>
+    <>
+      {todayMascotArt !== undefined ? (
+        <div className="today__top-companion">
+          {/*
+            TEMPORARY PROOF HARNESS. Tapping plays the wave once so the rest -> wave ->
+            rest transition can be reviewed repeatedly by hand. The autonomous timing
+            comes later, and only once this transition has passed human review.
+
+            The interaction is presentation and nothing else: it starts no Journey and
+            writes no progression, consistency, evolution, health or persisted state.
+            All it does is choose which of two images of the same companion is shown.
+          */}
+          {canWave ? (
+            <button
+              type="button"
+              className="today__top-companion-button"
+              aria-label="Wave to your companion"
+              onClick={() => setIsMascotWaving(true)}
+            >
+              {isMascotWaving ? (
+                /*
+                  `poster` is the resting still, which IS this video's frame 0. A
+                  video paints nothing until its first frame is decoded, and without a
+                  poster that gap showed as a blank flash where the companion had just
+                  been. Because the poster and the first frame are the same pixels,
+                  there is now nothing to see until the wave actually starts.
+                */
+                <video
+                  className="today__top-companion-art"
+                  src={todayMascotArt.motionSrc}
+                  poster={todayMascotArt.src}
+                  autoPlay
+                  muted
+                  playsInline
+                  aria-hidden="true"
+                  onEnded={() => setIsMascotWaving(false)}
+                />
+              ) : (
+                /*
+                  Frame 0 of that same video. Identical canvas, framing and character,
+                  so this swap moves nothing - which is why no transform is needed.
+                */
+                <img
+                  className="today__top-companion-art"
+                  src={todayMascotArt.src}
+                  alt=""
+                  aria-hidden="true"
+                />
+              )}
+            </button>
+          ) : (
+            /* No motion available, or motion is unwelcome: purely decorative. */
+            <img
+              className="today__top-companion-art"
+              src={todayMascotArt.src}
+              alt=""
+              aria-hidden="true"
+            />
+          )}
+        </div>
+      ) : null}
+
+      <Screen title="Today" subtitle={formatLongDate(date)}>
       {/*
         PHASE 6 ORDER. Context, then companion, then the plan - and the plan is the
         hero. This used to open with the game card, which meant the first and largest
@@ -250,6 +337,7 @@ export function TodayScreen() {
         crackStage={crackStage}
         onHatch={game.hatch}
         onEvolve={game.evolve}
+        companionPlacement="above"
       />
       </LivingScrim>
 
@@ -662,6 +750,7 @@ export function TodayScreen() {
       <p className="today__disclaimer">
         A personal record, not a medical assessment.
       </p>
-    </Screen>
+      </Screen>
+    </>
   );
 }

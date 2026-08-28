@@ -9,6 +9,62 @@
   margin-bottom: var(--ft-space-1);
 }
 
+/*
+ * TODAY'S LIVING COMPANION.
+ *
+ * This is the mascot's home, separate from XP/progress. It appears before the
+ * shared Screen header so the character belongs to Today itself rather than to
+ * the progress strip below.
+ */
+.today__top-companion {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  /*
+   * Sized from the artwork, not by eye. The still and the wave are the same 608px
+   * canvas in which the character stands 79.8% tall, where the earlier separately
+   * drawn still stood 94.3% tall. Growing the box by that ratio keeps the companion
+   * the same apparent size the design approved, without scaling either element - so
+   * the still and the video occupy one identical box and nothing moves between them.
+   */
+  min-height: 229px;
+  margin: 0;
+}
+
+.today__top-companion-button {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.today__top-companion-button:focus-visible {
+  outline: 2px solid var(--ft-accent);
+  outline-offset: 3px;
+  border-radius: var(--ft-radius-sm);
+}
+
+.today__top-companion-art {
+  display: block;
+  width: 225px;
+  height: 225px;
+  object-fit: contain;
+}
+
+@media (max-width: 430px) {
+  .today__top-companion {
+    min-height: 182px;
+  }
+
+  .today__top-companion-art {
+    width: 178px;
+    height: 178px;
+  }
+}
+
 .today__living-bridge .today__meta {
   margin: 0 0 var(--ft-space-3);
   padding-bottom: var(--ft-space-2);

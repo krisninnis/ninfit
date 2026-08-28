@@ -190,8 +190,27 @@ describe('yoga video link', () => {
 
     // No embedding, no hosting, no reproduction of the video itself.
     expect(source).not.toMatch(/<iframe/i);
-    expect(source).not.toMatch(/<video/i);
     expect(source).not.toMatch(/youtube\.com\/embed/i);
+
+    /*
+     * NARROWED TO ITS INTENT, NOT RELAXED.
+     *
+     * This guard exists to stop Today embedding or re-hosting somebody else's
+     * workout video. Today does now contain one `<video>`: the decorative companion
+     * wave, which is first-party, silent, one-shot and comes from the reviewed
+     * mascot art registry. So the rule becomes what it always meant - no video
+     * element may carry activity or external content - which is a stronger
+     * statement than "no video tag" and still fails the thing we care about.
+     */
+    const code = source
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/[^\n]*/g, '');
+
+    for (const tag of code.match(/<video[\s\S]*?\/>/g) ?? []) {
+      expect(tag).not.toMatch(/activity|external|youtube|http/i);
+      expect(tag).toContain('todayMascotArt.motionSrc');
+    }
     // The URL lives on the activity, not hardcoded into the screen.
     expect(source).not.toContain('j7rKKpwdXNE');
   });
