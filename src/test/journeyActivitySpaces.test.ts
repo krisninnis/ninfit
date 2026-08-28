@@ -242,11 +242,23 @@ describe('a family cannot launch an activity it does not own', () => {
     });
   });
 
-  it('sends a family with no companion screen back to Journey Home', () => {
-    // Swim still launches directly. A typed URL must not conjure a screen it does
-    // not have, and must not crash either.
-    expect(journeyActivityFamily('swim')?.launch).toBe('direct');
-    expect(parseRouteFromHash('#/journey/launch/swim')).toEqual({ kind: 'journey-home' });
+  it('routes Swim to its own companion screen, now that it has one', () => {
+    expect(parseRouteFromHash('#/journey/launch/swim')).toEqual({
+      kind: 'journey-launch',
+      family: 'swim',
+    });
+  });
+
+  it('still refuses a launch route to anything that is not a family', () => {
+    /*
+     * All three families have a companion screen today, so the gate below is what
+     * keeps this honest: it reads each family's own `launch` field rather than
+     * assuming every door has a screen. A fourth family added without one is sent
+     * home, and the guard that proves it is the loop in the next test.
+     */
+    for (const hash of ['#/journey/launch/walk', '#/journey/launch/nonsense']) {
+      expect(parseRouteFromHash(hash), hash).toEqual({ kind: 'journey-home' });
+    }
   });
 
   it('gates the launch route on the family actually having a screen', () => {
@@ -336,12 +348,17 @@ describe('nothing existing was taken away', () => {
 
   it('keeps cycle and swim startable rather than disabling working behaviour', () => {
     /*
-     * Cycle gained a companion screen; it did not lose the ability to record. One tap
-     * became two and the second is Start. Swim is untouched and still starts from
-     * Journey Home in one tap, which is why the direct branch must still exist.
+     * Both gained a companion screen; neither lost the ability to record. One tap
+     * became two and the second is Start.
+     *
+     * The direct branch on Journey Home is now unused by any shipped family, and it
+     * stays on purpose: `launch` is data, a family without a screen is a state the
+     * type system still permits, and deleting the branch would make adding one a
+     * bigger change than it should be. The route gate is tested against every
+     * family's own field rather than against a list, so this cannot silently rot.
      */
     expect(journeyActivityFamily('cycle')?.launch).toBe('companion');
-    expect(journeyActivityFamily('swim')?.launch).toBe('direct');
+    expect(journeyActivityFamily('swim')?.launch).toBe('companion');
     expect(strip(home)).toContain('launch.start(activityType, nowIso())');
 
     // Both still record their own type, through the same controller as always.
@@ -392,7 +409,7 @@ describe('mascot artwork has one boundary, not scattered paths', () => {
     // still absent, and this test is the thing that notices if a species quietly
     // acquires a manifest entry without a file behind it.
     expect(Object.keys(MASCOT_ACTIVITY_ART).sort())
-      .toEqual(['tortoise:cycle', 'tortoise:walk-run']);
+      .toEqual(['tortoise:cycle', 'tortoise:swim', 'tortoise:walk-run']);
   });
 
   it('writes the intended location down once, keyed by species and family', () => {
@@ -493,15 +510,18 @@ describe('the tortoise Walk/Run artwork', () => {
   });
 
   it('does not let the tortoise having art weaken the fallback for anyone else', () => {
-    // Every other species, on every door.
+    /*
+     * The tortoise is complete, so it no longer exercises the `undefined` path at
+     * all. That makes this guard MORE load-bearing rather than less: every remaining
+     * species is the only thing still proving the fallback works, and twelve of the
+     * fifteen keys are still empty.
+     */
     for (const species of ['bear', 'fox', 'otter', 'wolf'] as const) {
       for (const family of JOURNEY_ACTIVITY_FAMILIES) {
         expect(mascotActivityArt(species, family.id), `${species}:${family.id}`)
           .toBeUndefined();
       }
     }
-    // And the tortoise's own door that has no art yet.
-    expect(mascotActivityArt('tortoise', 'swim')).toBeUndefined();
 
     // The screen still has both branches, and the letter is still the other one.
     const code = strip(launchScreen);
@@ -594,7 +614,11 @@ describe('Journey Home shows the activity medallion through the same boundary', 
   });
 
   it('keeps the letter for every door with no reviewed art', () => {
-    expect(mascotActivityArt('tortoise', 'swim')).toBeUndefined();
+    // No tortoise door is on the fallback any more, so a species that has none is
+    // what proves the branch is still reachable and still correct.
+    for (const family of JOURNEY_ACTIVITY_FAMILIES) {
+      expect(mascotActivityArt('bear', family.id), family.id).toBeUndefined();
+    }
 
     // The branch that draws it still exists, and still draws the family's own mark.
     const code = strip(home);
@@ -620,11 +644,11 @@ describe('Journey Home shows the activity medallion through the same boundary', 
     expect(walkRun).not.toContain('journey-cycle');
     expect(cycle).not.toContain('journey-walk-run');
 
-    // And the door with no reviewed art borrows from neither.
-    const swim = mascotActivityArt('tortoise', 'swim');
-    expect(swim).toBeUndefined();
-    expect(swim?.src).not.toBe(walkRun);
-    expect(swim?.src).not.toBe(cycle);
+    // And the third door is its own picture too, not a copy of either.
+    const swim = mascotActivityArt('tortoise', 'swim')?.src;
+    expect(swim).toBeDefined();
+    expect(swim).toContain('swim');
+    expect(new Set([walkRun, cycle, swim]).size).toBe(3);
   });
 
   it('never lends the tortoise artwork to another species', () => {

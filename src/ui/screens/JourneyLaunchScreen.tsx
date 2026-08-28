@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react';
 import { getAppContext } from '../../app/bootstrap';
-import { createJourneyLaunchController } from '../../app/journeyLaunchController';
+import {
+  createJourneyLaunchController,
+  journeyUsesPhoneGps,
+} from '../../app/journeyLaunchController';
 import { visibleMascotFamily } from '../../domain/game/mascot';
 import type { JourneyActivityType } from '../../domain/journey';
 import type { ISODateTime } from '../../domain/types';
@@ -71,6 +74,24 @@ export function JourneyLaunchScreen({ family, onClose }: JourneyLaunchScreenProp
    * asking again automatically.
    */
   const sole = choices.length === 1 ? choices[0] : undefined;
+
+  /*
+   * WHAT THIS DOOR CAN TRUTHFULLY SAY ABOUT LOCATION.
+   *
+   * Not every activity uses the phone's location. `journeyUsesPhoneGps` is already the
+   * one answer to that question - it is what the recorder itself consults, and it is
+   * why a swim is given a `manual` source rather than a GPS one. Asking it here means
+   * the readiness line cannot drift from what the recorder actually does.
+   *
+   * The old single line said location is used only WHILE recording, which is true of a
+   * walk and false of a swim: a swim never uses location at all, and implying that it
+   * does while recording would be a privacy claim in the wrong direction. So a door
+   * whose activities all avoid phone GPS says the stronger, simpler truth instead.
+   *
+   * Derived from the door's own types, never from a family id, so a family that later
+   * gains or loses a GPS activity says the right thing without an edit here.
+   */
+  const usesLocation = choices.some(journeyUsesPhoneGps);
 
   /*
    * Read, never synced - the same rule Journey Home follows. `useGame()` would call
@@ -181,7 +202,9 @@ export function JourneyLaunchScreen({ family, onClose }: JourneyLaunchScreenProp
         existing recorder behaves; neither claims anything this slice does not do.
       */}
       <p className="journey-launch__note">
-        Location is used only while a Journey is recording.
+        {usesLocation
+          ? 'Location is used only while a Journey is recording.'
+          : 'NinFit does not use location for this activity.'}
       </p>
       <p className="journey-launch__note">
         Journeys stay private on this device by default.

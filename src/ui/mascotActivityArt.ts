@@ -10,8 +10,10 @@ import type { JourneyActivityFamilyId } from './journeyActivityFamilies';
  * an image path typed into a screen. Screens ask this module; it is the only place
  * that knows a mascot has artwork at all.
  *
- * WHAT IS DECLARED TODAY. Two entries, both tortoise: the Walk/Run door and the
- * Cycle door. It went
+ * WHAT IS DECLARED TODAY. Three entries, all tortoise - one per Journey door. The
+ * tortoise is the first path mascot to be drawn end to end, which is exactly the
+ * order the asset pipeline asks for: prove one family completely before generating
+ * the other four. It went
  * through the pipeline in `skills/ninfit-visual-asset-pipeline/SKILL.md` - a reviewed
  * source sheet kept in `docs/brand/reference/mascots/`, converted once to a canonical
  * WebP under `public/`, and named for its species and family rather than for whatever
@@ -19,12 +21,12 @@ import type { JourneyActivityFamilyId } from './journeyActivityFamilies';
  * points at `public/`, never at `docs/`.
  *
  * EVERYTHING ELSE IS STILL `undefined`, AND THAT IS NOT A GAP TO PATCH. Four species
- * and the tortoise's own Swim door have no reviewed art, so they keep the same
- * temporary letter treatment the rest of the app uses. The tortoise having two
- * pictures changes nothing about how a bear is handled - callers must go on treating
- * `undefined` as ordinary, because it is still the answer thirteen times out of
- * fifteen. Nor may a door borrow its neighbour's art: Cycle got a picture by having
- * one drawn and reviewed, never by falling back to Walk/Run.
+ * have no reviewed art at all, so they keep the same temporary letter treatment the
+ * rest of the app uses. The tortoise being complete changes nothing about how a bear
+ * is handled - callers must go on treating `undefined` as ordinary, because it is
+ * still the answer twelve times out of fifteen. Nor may a door borrow its
+ * neighbour's art: each of these three was drawn and reviewed for its own activity,
+ * and none is a fallback for another.
  *
  * WHERE THE FILES GO. `public/mascots/<familyId>/<familyId>-journey-<activityFamily>.webp`,
  * referenced by URL rather than imported - the same reasoning the backgrounds registry
@@ -67,6 +69,15 @@ export const MASCOT_ACTIVITY_ART: MascotActivityArtManifest = {
      * in the picture, not a claim about the ride the user is about to take.
      */
     alt: 'Tortoise in a helmet, riding a bike on a trail',
+  },
+  'tortoise:swim': {
+    src: '/mascots/tortoise/tortoise-journey-swim.webp',
+    /*
+     * Who is pictured. Not how long, not how far - and notably not "in the pool",
+     * because the picture is of open water and the app does not know where anyone
+     * swims.
+     */
+    alt: 'Tortoise in a cap and goggles, swimming in a lake',
   },
 };
 
