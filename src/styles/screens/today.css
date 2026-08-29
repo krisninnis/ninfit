@@ -17,6 +17,13 @@
  * the progress strip below.
  */
 .today__top-companion {
+  position: relative;
+  /*
+   * The presence layers below are drawn behind the character but must stay in front
+   * of the page and the world backdrop. Isolating the block keeps `z-index: -1` a
+   * statement about this box only, rather than a negotiation with the app shell.
+   */
+  isolation: isolate;
   display: flex;
   justify-content: center;
   align-items: flex-end;
@@ -26,9 +33,94 @@
    * drawn still stood 94.3% tall. Growing the box by that ratio keeps the companion
    * the same apparent size the design approved, without scaling either element - so
    * the still and the video occupy one identical box and nothing moves between them.
+   *
+   * The box is now exactly the height of that canvas rather than four pixels more.
+   * Everything below positions itself as a percentage of this box, and a box that is
+   * not the artwork's own height would put the contact shadow slightly off the feet
+   * at one width and not another.
    */
-  min-height: 229px;
-  margin: 0;
+  min-height: 225px;
+  /*
+   * The box is the artwork, not the column.
+   *
+   * It used to be a full-width band, which is what made the presence layers below
+   * impossible to place: a glow centred on a 720px column is not centred on a 225px
+   * character. `fit-content` makes the block exactly as wide as whichever of the
+   * still and the wave is in it - they are the same size - so everything can be
+   * expressed as a percentage of the figure and stays correct at every width.
+   */
+  width: fit-content;
+  /*
+   * NO FRAME, AND A SMALLER GAP TO THE HEADING.
+   *
+   * The character used to sit in a tall band of bare page above the title, which read
+   * as a portrait dropped into a box - most obviously on desktop, where the app shell
+   * is a lit panel with its own hairline edge and the band became its lid. The canvas
+   * already carries ~9% of empty space below the feet, so that emptiness was being
+   * paid for twice. Pulling the block up by one space step lets the companion stand
+   * on the heading rather than float above it.
+   */
+  margin: 0 auto calc(var(--ft-space-4) * -1);
+}
+
+/*
+ * PRESENCE, NOT A CARD.
+ *
+ * A very low, very wide bloom of the accent tint, centred behind the character. It
+ * gives the companion somewhere to be without a border, a panel or a background
+ * asset: nothing is drawn, nothing is depicted, and no scenery is implied. It reads
+ * as the page surface lifting slightly where the companion stands.
+ *
+ * The tint is `--ft-accent-soft`, so it follows the path accent and both themes
+ * automatically - pale sage on the warm page, deep sage on the ink one.
+ */
+.today__top-companion::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  bottom: 1%;
+  width: 132%;
+  max-width: 300px;
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+  border-radius: var(--ft-radius-circle);
+  background: radial-gradient(
+    circle at 50% 58%,
+    color-mix(in oklab, var(--ft-accent-soft) 62%, transparent) 0%,
+    transparent 68%
+  );
+}
+
+/*
+ * THE CONTACT SHADOW - the one thing that stops the companion hovering.
+ *
+ * Placed on the feet, not by eye: the character's alpha bounding box ends at 90.6%
+ * of the 608px canvas and is ~52% of it wide, so the ellipse sits at 7% from the
+ * bottom of a box that is exactly the canvas height, and is narrower than the figure.
+ *
+ * `--ft-border-strong` rather than a shadow token or a text colour. It is the one
+ * neutral that steps AWAY from the page in the correct direction in both themes -
+ * darker than the warm page, lighter than the ink one - which is exactly how the
+ * token system says dark mode should express depth. `--ft-shadow-*` is `none` in
+ * dark mode by design and would have grounded the character in one theme only.
+ */
+.today__top-companion::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  bottom: 7%;
+  width: 44%;
+  max-width: 130px;
+  height: 5%;
+  transform: translateX(-50%);
+  border-radius: var(--ft-radius-circle);
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    color-mix(in oklab, var(--ft-border-strong) 82%, transparent) 0%,
+    transparent 72%
+  );
 }
 
 .today__top-companion-button {
@@ -54,9 +146,25 @@
   object-fit: contain;
 }
 
+/*
+ * ONCE THE COLUMN STOPS BEING THE SCREEN, THE COMPANION ANCHORS TO IT.
+ *
+ * Below 600px the reading column IS the viewport, and a centred character reads as
+ * the top of the page. Above it the column is a fixed 560px - 720px band with the
+ * heading hard left, so centring left a wide gap on one side of the character and
+ * another beside the title: two unrelated objects in a lot of nothing. Anchored to
+ * the column's start the companion stands directly over "Today" and the two read as
+ * one block, which is also what stops desktop looking like a stretched phone.
+ */
+@media (min-width: 600px) {
+  .today__top-companion {
+    margin-inline: 0;
+  }
+}
+
 @media (max-width: 430px) {
   .today__top-companion {
-    min-height: 182px;
+    min-height: 178px;
   }
 
   .today__top-companion-art {

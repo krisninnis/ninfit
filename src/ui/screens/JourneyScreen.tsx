@@ -13,6 +13,7 @@ import {
   type JourneyActivityFamily,
 } from '../journeyActivityFamilies';
 import { mascotActivityArt } from '../mascotActivityArt';
+import { mascotStageArt } from '../mascotStageArt';
 import { JourneyCompanion } from '../components/JourneyCompanion';
 import { journeyCompanionPresence } from '../journeyCompanionPresentation';
 import { formatJourneyDistance, journeyDistanceM } from '../journeyPresentation';
@@ -86,6 +87,17 @@ export function JourneyScreen() {
    * the companion strip is already showing. Still one plain read, still no sync.
    */
   const mascot = gameState === undefined ? undefined : visibleMascotFamily(gameState.mascot);
+  /*
+   * The reviewed standing still for whoever is actually with the user, asked of the
+   * same boundary Today asks. This screen learns that a companion may have artwork and
+   * never what that artwork is called, which is the whole reason the registry exists.
+   *
+   * It is resolved from `mascot`, so it is unreachable before the egg hatches:
+   * `visibleMascotFamily` returns undefined until then and the strip is absent anyway.
+   */
+  const companionArt = gameState === undefined || mascot === undefined
+    ? undefined
+    : mascotStageArt(mascot.id, gameState.mascot.stage);
   const companion = journeyCompanionPresence(
     mascot,
     { hasActiveJourney: active !== null, hasCompletedJourney: history.length > 0 },
@@ -139,6 +151,7 @@ export function JourneyScreen() {
       {companion !== undefined ? (
         <JourneyCompanion
           presence={companion}
+          art={companionArt}
           personality={settings.mascotPersonality}
         />
       ) : null}

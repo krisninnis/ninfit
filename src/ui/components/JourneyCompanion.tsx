@@ -1,5 +1,6 @@
 import { journeyCompanionMessage } from '../../domain/game/journeyCompanionContext';
 import type { MascotPersonality } from '../../domain/game/types';
+import type { MascotStageArt } from '../mascotStageArt';
 import { journeyCompanionPresentation } from '../journeyCompanionPresentation';
 import type { JourneyCompanionPresence } from '../journeyCompanionPresentation';
 
@@ -24,14 +25,30 @@ import type { JourneyCompanionPresence } from '../journeyCompanionPresentation';
  *
  * NO MOTION. There is no animation to collapse under reduced motion, because none was
  * added. The reaction attribute changes colour only, exactly as it does on Today.
+ *
+ * IT SHOWS THE ARTWORK IT IS HANDED AND LOOKS FOR NONE. The reviewed standing still
+ * arrives already resolved from `mascotStageArt`, the same boundary Today asks. This
+ * file therefore knows that a companion may have a picture, and never which picture,
+ * which is what lets the remaining four species arrive without editing it. The wave
+ * is deliberately not taken even where one exists: Journey Home is a compact strip
+ * about going somewhere, and a character that moves in it would be the arcade
+ * treatment this interface is not.
  */
 
 interface JourneyCompanionProps {
   presence: JourneyCompanionPresence;
   personality: MascotPersonality;
+  /**
+   * Reviewed standing artwork for this companion's current stage, or `undefined`.
+   *
+   * `undefined` is the ordinary answer - fourteen of the fifteen species/stage pairs
+   * have no reviewed art - and it keeps the temporary letter this strip has always
+   * had. It is never a broken image and never another species.
+   */
+  art?: MascotStageArt;
 }
 
-export function JourneyCompanion({ presence, personality }: JourneyCompanionProps) {
+export function JourneyCompanion({ presence, personality, art }: JourneyCompanionProps) {
   const message = journeyCompanionMessage(presence.context, personality);
   const reaction = journeyCompanionPresentation(presence.context);
 
@@ -42,14 +59,22 @@ export function JourneyCompanion({ presence, personality }: JourneyCompanionProp
       data-companion-reaction={reaction}
     >
       {/*
-        TEMPORARY PRESENTATION FALLBACK - the same placeholder Today uses.
+        THE COMPANION MARK, AND THE LETTER THAT IS STILL LOAD-BEARING BEHIND IT.
 
-        `family.glyph` is a single letter, not mascot artwork, and it is aria-hidden
-        because the name beside it is the real answer to "who is this". It should be
-        replaced by the art pipeline rather than refined here.
+        Reviewed artwork wears the slot when it exists. When it does not - which is
+        still the answer for four species and four of the five tortoise stages - the
+        strip keeps `family.glyph`, a single letter that is not mascot artwork and
+        that the art pipeline replaces rather than refines.
+
+        Decorative either way. The name beside it is the real answer to "who is this",
+        and nothing here states anything about what the user has done or earned.
       */}
-      <span className="journey-home__companion-mark" aria-hidden="true">
-        {presence.family.glyph}
+      <span
+        className="journey-home__companion-mark"
+        data-art={art !== undefined ? 'true' : 'false'}
+        aria-hidden="true"
+      >
+        {art !== undefined ? <img src={art.src} alt="" /> : presence.family.glyph}
       </span>
 
       <span className="journey-home__companion-body">
