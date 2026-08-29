@@ -17,7 +17,9 @@ export interface MascotStageArt {
    * previous CSS scale compensation, and compensation is not a fix.
    */
   src: string;
-  /** Optional one-shot motion. Never looped, never autoplayed on load. */
+  /** Optional occasional one-shot idle. Never looped, never autoplayed on load. */
+  idleSrc?: string;
+  /** Optional explicit one-shot motion (e.g. the tap-to-wave). Never looped. */
   motionSrc?: string;
 }
 
@@ -27,8 +29,9 @@ export const MASCOT_STAGE_ART: Readonly<
   Partial<Record<MascotStageArtKey, MascotStageArt>>
 > = {
   'tortoise:starter': {
-    /* Frame 0 of the wave below - the video's own keyframe, at rest. */
-    src: '/mascots/tortoise/tortoise-starter-wave-rest-v1.png',
+    /* Frame 0 of the idle master below - the video's own keyframe, at rest. */
+    src: '/mascots/tortoise/tortoise-starter-idle-v1.png',
+    idleSrc: '/mascots/tortoise/tortoise-starter-idle-v1.webm',
     motionSrc: '/mascots/tortoise/tortoise-starter-wave-v1.webm',
   },
 };

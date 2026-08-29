@@ -57,13 +57,19 @@ reference PNG — that is source material and must not be wired into runtime cod
 
 ## Current status
 
-One reviewed asset: `tortoise/tortoise-journey-walk-run.webp`, declared in the
-manifest and shown on the Walk/Run launch screen.
+Two reviewed assets:
 
-Its reviewed source sheet is kept at
-`docs/brand/reference/mascots/ninfit-tortoise-journey-walk-run-reference-v1.png`,
-as the visual asset pipeline requires. That PNG is reference material and must
-never be referenced by runtime code.
+- `tortoise/tortoise-journey-walk-run.webp`, declared in the manifest and shown
+  on the Walk/Run launch screen. Its reviewed source sheet is kept at
+  `docs/brand/reference/mascots/ninfit-tortoise-journey-walk-run-reference-v1.png`.
+- `tortoise/tortoise-starter-idle-v1.webm` (the approved Starter clean idle
+  master) with its resting still `tortoise-starter-idle-v1.png`, declared in
+  `MASCOT_STAGE_ART` and shown on the Today companion. The approved master is
+  preserved as reference at
+  `docs/brand/reference/mascots/tortoise/tortoise-starter-idle-master-v1.webm`.
+
+Reference material lives in `docs/` and must never be referenced by runtime
+code.
 
 Everything else is still undeclared — four species, and Cycle and Swim for the
 tortoise — and those all fall back to the temporary letter. That is the normal

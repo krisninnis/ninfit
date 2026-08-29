@@ -6,29 +6,40 @@ import { MASCOT_STAGE_ART, mascotStageArt } from '../ui/mascotStageArt';
 describe('tortoise standing companion artwork', () => {
   it('registers the reviewed Starter artwork', () => {
     expect(mascotStageArt('tortoise', 'starter')).toEqual({
-      src: '/mascots/tortoise/tortoise-starter-wave-rest-v1.png',
+      src: '/mascots/tortoise/tortoise-starter-idle-v1.png',
+      idleSrc: '/mascots/tortoise/tortoise-starter-idle-v1.webm',
       motionSrc: '/mascots/tortoise/tortoise-starter-wave-v1.webm',
     });
   });
 
-  it('ships the reviewed Starter wave alongside the standing artwork', () => {
+  it('ships the reviewed Starter idle and wave alongside the standing artwork', () => {
     const art = mascotStageArt('tortoise', 'starter');
 
+    expect(art?.idleSrc).toBe(
+      '/mascots/tortoise/tortoise-starter-idle-v1.webm',
+    );
     expect(art?.motionSrc).toBe(
       '/mascots/tortoise/tortoise-starter-wave-v1.webm',
     );
 
-    const diskPath = join('public', art!.motionSrc!.replace(/^\//, ''));
-    const bytes = readFileSync(diskPath, 'latin1');
+    const webmPaths = (
+      ['idleSrc', 'motionSrc'] as const
+    ).map((key) => art?.[key]).filter((v): v is string => v !== undefined);
 
-    expect(bytes.length).toBeGreaterThan(4);
+    for (const src of webmPaths) {
+      const diskPath = join('public', src.replace(/^\//, ''));
+      const bytes = readFileSync(diskPath, 'latin1');
 
-    // EBML signature used by WebM.
-    const signature = Array.from(bytes.slice(0, 4), (char) =>
-      char.charCodeAt(0),
-    );
+      // Our one-shot WebMs are ~0.05-1 MB, not empty.
+      expect(bytes.length).toBeGreaterThan(4);
 
-    expect(signature).toEqual([0x1a, 0x45, 0xdf, 0xa3]);
+      // EBML signature used by WebM.
+      const signature = Array.from(bytes.slice(0, 4), (char) =>
+        char.charCodeAt(0),
+      );
+
+      expect(signature).toEqual([0x1a, 0x45, 0xdf, 0xa3]);
+    }
   });
 
   it('does not leak Starter artwork into later tortoise stages', () => {
@@ -135,7 +146,7 @@ describe('tortoise standing companion artwork', () => {
       'utf8',
     );
 
-    expect(today).toContain('const [isMascotWaving, setIsMascotWaving] = useState(false)');
+    expect(today).toContain("useState<CompanionState>('rest')");
     expect(today).toContain('aria-label="Wave to your companion"');
     /*
      * RE-POINTED, NOT WEAKENED. The "only wave when there is motion" test moved into
@@ -147,7 +158,7 @@ describe('tortoise standing companion artwork', () => {
     expect(today).toContain('autoPlay');
     expect(today).toContain('muted');
     expect(today).toContain('playsInline');
-    expect(today).toContain('onEnded={() => setIsMascotWaving(false)}');
+    expect(today).toContain("onEnded={() => setCompanionState('rest')}");
 
     /*
      * The poster closes the decode gap. A video paints nothing until its first frame
@@ -159,18 +170,18 @@ describe('tortoise standing companion artwork', () => {
     expect(today).not.toContain('loop');
   });
 
-  it('takes the resting still from the wave itself, so the swap cannot jump', () => {
+  it('takes the resting still from the idle master itself, so the swap cannot jump', () => {
     /*
      * THE POINT OF THIS WHOLE SLICE.
      *
      * A separately drawn still is what forced the old `transform: scale(1.08)`: the
      * two assets framed the character differently, and no single scale factor can
-     * reconcile two different renders. Deriving the still from frame 0 of the video
-     * makes them the same canvas, the same framing and the same character by
+     * reconcile two different renders. Deriving the still from frame 0 of the idle
+     * master makes them the same canvas, the same framing and the same character by
      * construction - so the guard is that they agree, not that a fudge factor exists.
      */
     const art = mascotStageArt('tortoise', 'starter');
-    expect(art?.motionSrc).toBeDefined();
+    expect(art?.idleSrc).toBeDefined();
 
     const still = readFileSync(join('public', art!.src.replace(/^\//, '')), 'latin1');
     const byteAt = (index: number) => still.charCodeAt(index) & 0xff;
@@ -178,13 +189,13 @@ describe('tortoise standing companion artwork', () => {
       (byteAt(index) << 24) | (byteAt(index + 1) << 16)
       | (byteAt(index + 2) << 8) | byteAt(index + 3);
 
-    // The wave is 608x608; the still must be that same canvas.
+    // The idle master is 608x608; the still must be that same canvas.
     expect(uint32At(16)).toBe(608);
     expect(uint32At(20)).toBe(608);
-    expect(byteAt(25)).toBe(6); // RGBA - the transparency the wave also carries.
+    expect(byteAt(25)).toBe(6); // RGBA - the transparency the master also carries.
 
-    // And it is named for the motion it came from, not for a separate drawing.
-    expect(art!.src).toContain('wave-rest');
+    // And it is named for the master it came from, not for a separate drawing.
+    expect(art!.src).toContain('idle');
   });
 
   it('never scales one of the two presentations to match the other', () => {
@@ -427,5 +438,124 @@ describe("Today's companion is a presence on the page, not a portrait in a box",
     expect(art).toMatch(/width:\s*225px/);
     expect(art).toMatch(/height:\s*225px/);
     expect(art).toMatch(/object-fit:\s*contain/);
+  });
+});
+
+/**
+ * T1A - STARTER CLEAN IDLE RUNTIME.
+ *
+ * The approved clean idle master is the canonical resting motion and its frame 0 is
+ * the resting still. This block pins the runtime contract: an occasional one-shot
+ * idle that is never immediate, never a loop, never persisted, that defers to an
+ * explicit tap, is reduced to nothing for reduced-motion users, and does not exist
+ * before the egg has opened.
+ */
+
+describe('the Starter Companion idle runtime', () => {
+  const today = readFileSync(join('src', 'ui', 'screens', 'TodayScreen.tsx'), 'utf8');
+  const strip2 = (s: string) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\{\/\*[\s\S]*?\*\/\}/g, '').replace(/\/\/[^\n]*/g, '');
+
+  it('presents the idle, the still and the wave through one state machine', () => {
+    // The source of truth for what is on screen. A single `rest | idle | wave`
+    // state decides between the still and the two one-shot videos.
+    expect(today).toContain("type CompanionState = 'rest' | 'idle' | 'wave'");
+    expect(today).toContain("useState<CompanionState>('rest')");
+    expect(today).toContain("=== 'wave'");
+    expect(today).toContain("=== 'idle'");
+    expect(today).toContain("onClick={() => setCompanionState('wave')}");
+    expect(today).toContain("onEnded={() => setCompanionState('rest')}");
+  });
+
+  it('derives the resting still from the idle master and keeps the wave path unchanged', () => {
+    const art = mascotStageArt('tortoise', 'starter');
+    // The still is frame 0 of the idle master, not a separate drawing.
+    expect(art?.src).toBe('/mascots/tortoise/tortoise-starter-idle-v1.png');
+    // Both one-shots are separate; the wave stays EXACTLY where it was.
+    expect(art?.idleSrc).toBe('/mascots/tortoise/tortoise-starter-idle-v1.webm');
+    expect(art?.motionSrc).toBe('/mascots/tortoise/tortoise-starter-wave-v1.webm');
+    // Today still resolves through the registry and never learns a path.
+    expect(strip2(today)).toContain('todayMascotArt.idleSrc');
+    expect(today).not.toContain('/mascots/tortoise/');
+    expect(today).not.toContain('.webm');
+    expect(today).not.toContain('.png');
+  });
+
+  it('plays the idle once, never on load and never as a loop', () => {
+    // No idle on arrival: state opens at `rest` and the arm delay is at least 20s.
+    expect(today).toContain("const [companionState, setCompanionState] = useState<CompanionState>('rest')");
+    expect(today).toContain('20000 + Math.floor(Math.random() * 20000)');
+    // The idle video is a one-shot like the wave: no loop, autoPlay only on mount.
+    expect(today).toContain('src={todayMascotArt.idleSrc}');
+    expect(today).toContain('poster={todayMascotArt.src}');
+    expect(today).toContain('autoPlay');
+    expect(today).toContain('muted');
+    expect(today).toContain('playsInline');
+    expect((today.match(/loop/g) ?? []).length).toBe(0);
+  });
+
+  it('returns to rest when either one-shot ends', () => {
+    // Count exactly one case of the idle returning to rest and one for the wave -
+    // both via the same `onEnded`, both back to the still.
+    expect((today.match(/onEnded=\{\(\) => setCompanionState\('rest'\)\}/g) ?? []).length).toBe(2);
+  });
+
+  it('arms a single timer and never a duplicate chain', () => {
+    // One effect, one timeout, one cleanup. The dependency is `canIdle`, so the
+    // timer is re-armed only when the capability actually changes, never per render.
+    expect((today.match(/useEffect\(\(\) => \{/g) ?? []).length).toBeLessThanOrEqual(2);
+    expect(today).toContain('window.setTimeout');
+    expect(today).toContain('window.clearTimeout(id)');
+    expect(today).toContain('}, [canIdle]);');
+  });
+
+  it('gives an explicit tap priority over an in-progress idle', () => {
+    // The one button always moves straight to `wave`; a tap during idle therefore
+    // cancels the idle for the clean hand-off to the wave.
+    const block = today.slice(
+      today.indexOf('className="today__top-companion"'),
+      today.indexOf('<Screen title="Today"', today.indexOf('className="today__top-companion"')),
+    );
+    expect(strip2(block)).toContain("onClick={() => setCompanionState('wave')}");
+    expect(block).toContain('aria-label="Wave to your companion"');
+    // The idle never stops an explicit request: there is no idle-only interlock.
+    expect(strip2(block)).not.toContain("companionState !== 'rest'");
+  });
+
+  it('offers no idle at all under reduced motion - still only, no timer', () => {
+    // `canIdle` folds in the reduced-motion answer, so a reduced-motion user neither
+    // schedules nor plays an idle.
+    expect(today).toContain('const canIdle =');
+    expect(today).toContain('todayMascotArt?.idleSrc !== undefined && !reducedMotion');
+    expect(today).toContain('if (!canIdle) return;');
+    // The still is what reduced-motion users keep seeing (no button, no video).
+    expect(today).toContain('{canWave ? (');
+    expect(today).toContain('/* No motion available, or motion is unwelcome: purely decorative. */');
+  });
+
+  it('never runs an idle before the egg is opened', () => {
+    // Art only exists once the family is visible (post-hatch), and `canIdle` needs an
+    // idleSource - so pre-hatch todayMascotArt is undefined, canIdle is false, and the
+    // effect arms nothing and no idle asset is ever requested.
+    expect(today).toContain('visibleFamily === undefined');
+    expect(today).toContain('? undefined');
+    expect(today).toContain('todayMascotArt?.idleSrc !== undefined');
+    expect(today).toContain('if (!canIdle) return;');
+    // No idle source, no idle element, no wave - a pre-hatch user sees no species.
+    expect(today).toContain('{todayMascotArt !== undefined ? (');
+  });
+
+  it('keeps the idle and its timer presentation-only and stateless', () => {
+    // Scope to the companion presentation region only - from the state machine
+    // declaration through to the shared screen - not the whole Today component,
+    // which legitimately touches the game for other reasons.
+    const start = today.indexOf("type CompanionState = 'rest' | 'idle' | 'wave'");
+    const end = today.indexOf('<Screen title="Today"', start);
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const code = strip2(today.slice(start, end));
+    // No game writes or persistence from any of the companion's timing.
+    expect(code).not.toMatch(/grantRewards|syncGame|setGameState|streak|evolve|hatch/i);
+    expect(code).not.toMatch(/localStorage|sessionStorage|indexedDB|repository|navigate\(/i);
   });
 });
