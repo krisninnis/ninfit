@@ -82,6 +82,8 @@ gameplay rules.
 
 ### T0 — Starter visual integration
 
+**Status: COMPLETE on `main` via PR #72.**
+
 Use the completed Starter Tortoise to establish the production presentation
 language before generating another species.
 
@@ -95,8 +97,16 @@ language before generating another species.
 
 ### T1 — Starter clean motion
 
+**Status: IN PROGRESS.**
+
+- **T1A — clean occasional idle: COMPLETE on `main` via PR #73.** The
+  desktop/tablet centring correction is included in that merged delivery.
+- **T1B — clean interactive wave: NEXT.** The current tap wave remains temporary
+  proof and must not be promoted as the clean master.
+
 1. Preserve the current wave only as temporary proof.
-2. Produce a clean idle master.
+2. Preserve the reviewed clean idle master and its occasional, non-looping runtime
+   contract.
 3. Produce a clean wave master without generator branding/watermark.
 4. Add happy, proud and rest only as separately reviewed slices.
 
