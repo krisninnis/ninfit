@@ -1,0 +1,100 @@
+/** Settings: application preferences and the route into data management. */
+
+@layer screens {
+  .settings__theme-fieldset {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .settings__theme-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--ft-space-2);
+    margin-top: var(--ft-space-2);
+  }
+
+  .settings__theme-option {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    min-width: 0;
+    min-height: var(--ft-control-lg);
+    padding: var(--ft-space-3);
+    border: 1px solid var(--ft-border-subtle);
+    border-radius: var(--ft-radius-md);
+    background: var(--ft-surface-sunken);
+    cursor: pointer;
+  }
+
+  .settings__theme-option input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .settings__theme-option > span {
+    display: grid;
+    gap: var(--ft-space-1);
+    min-width: 0;
+  }
+
+  .settings__theme-option strong {
+    color: var(--ft-text-primary);
+    font-size: var(--ft-text-sm);
+  }
+
+  .settings__theme-option small {
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-xs);
+    line-height: var(--ft-leading-normal);
+  }
+
+  .settings__theme-option--selected {
+    border-color: var(--ft-accent);
+    background: var(--ft-accent-soft);
+  }
+
+  .settings__theme-option:focus-within {
+    outline: 2px solid var(--ft-accent-ring);
+    outline-offset: 2px;
+  }
+
+  .settings__section-copy {
+    margin: 0;
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-sm);
+    line-height: var(--ft-leading-normal);
+  }
+
+  .settings__destination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ft-space-3);
+    text-align: left;
+  }
+
+  .settings__destination > span:first-child {
+    display: grid;
+    gap: var(--ft-space-1);
+  }
+
+  .settings__destination small {
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-xs);
+    font-weight: var(--ft-weight-regular);
+    line-height: var(--ft-leading-normal);
+  }
+
+  @media (max-width: 430px) {
+    .settings__theme-options {
+      grid-template-columns: 1fr;
+    }
+  }
+}

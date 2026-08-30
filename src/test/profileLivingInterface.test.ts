@@ -58,7 +58,7 @@ describe('Profile Living Interface v1', () => {
     expect(hero).not.toContain('<AccountSection />');
 
     expect(screen).toContain('<Section title="Trophies" defaultOpen={false}>');
-    expect(screen).toContain('<SettingsSection');
+    expect(screen).toContain('<DisplayUnitsSection');
     expect(screen).toContain('<AccountSection />');
   });
 

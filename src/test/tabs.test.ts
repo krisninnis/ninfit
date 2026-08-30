@@ -17,13 +17,13 @@ import {
 } from '../ui/tabs';
 
 describe('tabs', () => {
-  it('keeps the original five journal tabs in order', () => {
-    expect(TABS.map((tab) => tab.id)).toEqual(['today', 'week', 'progress', 'profile', 'data']);
+  it('keeps the five journal destinations in order with Settings replacing Data', () => {
+    expect(TABS.map((tab) => tab.id)).toEqual(['today', 'week', 'progress', 'profile', 'settings']);
   });
 
   it('adds Journey as a primary navigation destination without weakening TabId', () => {
     expect(PRIMARY_NAV.map((item) => item.id)).toEqual([
-      'today', 'week', 'journey', 'progress', 'profile', 'data',
+      'today', 'week', 'journey', 'progress', 'profile', 'settings',
     ]);
     expect(isTabId('journey')).toBe(false);
   });
@@ -119,9 +119,9 @@ describe('hashForTab', () => {
 describe('isTabId', () => {
   it('accepts known ids and rejects others', () => {
     expect(isTabId('today')).toBe(true);
-    expect(isTabId('data')).toBe(true);
+    expect(isTabId('data')).toBe(false);
     expect(isTabId('journey')).toBe(false);
-    expect(isTabId('settings')).toBe(false);
+    expect(isTabId('settings')).toBe(true);
     expect(isTabId('')).toBe(false);
   });
 });

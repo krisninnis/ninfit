@@ -26,6 +26,7 @@ export interface GameSeedOptions {
 
 export function createDefaultGameSettings(): GameSettings {
   return {
+    theme: 'system',
     mascotPersonality: 'normal',
     soundEnabled: false,
     hapticsEnabled: false,
@@ -37,6 +38,26 @@ export function createDefaultGameSettings(): GameSettings {
       community: false,
     },
     defaultTrophyVisibility: 'private',
+  };
+}
+
+/** Fill additive preferences when an older local save or backup predates them. */
+export function normaliseGameSettings(
+  stored: Partial<GameSettings> | undefined,
+): GameSettings {
+  const defaults = createDefaultGameSettings();
+  const theme = stored?.theme;
+
+  return {
+    ...defaults,
+    ...stored,
+    theme: theme === 'light' || theme === 'dark' || theme === 'system'
+      ? theme
+      : defaults.theme,
+    challenges: {
+      ...defaults.challenges,
+      ...stored?.challenges,
+    },
   };
 }
 

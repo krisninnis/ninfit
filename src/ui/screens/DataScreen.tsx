@@ -80,7 +80,7 @@ function formatBackupTime(value: string | undefined): string {
   return `${formatLongDate(day)}, ${time}`;
 }
 
-export function DataScreen() {
+export function DataScreen({ onClose }: { onClose: () => void }) {
   const {
     meta,
     issues,
@@ -99,6 +99,10 @@ export function DataScreen() {
 
   return (
     <Screen title="Your data" subtitle="Everything is stored on this device.">
+      <button type="button" className="btn btn--secondary data__back" onClick={onClose}>
+        ← Back to Settings
+      </button>
+
       {!isPersistent ? (
         <section className="card card--attention">
           <AttentionIcon />

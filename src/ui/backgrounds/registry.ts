@@ -343,5 +343,5 @@ export const BACKDROP_FOR_TAB: Readonly<Record<TabId, BackdropId>> = {
   week: 'week',
   progress: 'progress',
   profile: 'profile',
-  data: 'data',
+  settings: 'settings',
 };

@@ -31,7 +31,7 @@ describe('Passport v1 wiring', () => {
 
   it('uses the Profile world while remaining a focused sub-route', () => {
     expect(app).toMatch(/showPassport\s*\?\s*'profile'/);
-    expect(app).toContain("const showPrimaryNav = route.kind === 'tab' || showJourneyHome");
+    expect(app).toContain("const showPrimaryNav = route.kind === 'tab' || showJourneyHome || showData");
   });
 
   it('uses the shared Living Interface hero primitive', () => {

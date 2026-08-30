@@ -161,7 +161,7 @@ describe('app-shell invariants', () => {
   })
 
   it('hides the normal tab bar during the ID decision screen', () => {
-    expect(app).toContain("const showPrimaryNav = route.kind === 'tab' || showJourneyHome")
+    expect(app).toContain("const showPrimaryNav = route.kind === 'tab' || showJourneyHome || showData")
     expect(app).toContain("route.kind === 'account'")
     expect(app).toMatch(/<TabBar\s+[\s\S]*?current=\{tab\}/)
   })

@@ -39,7 +39,7 @@ describe('one navigation, two compositions', () => {
       'journey',
       'progress',
       'profile',
-      'data',
+      'settings',
     ]);
     expect(tabBar).not.toMatch(/matchMedia|innerWidth|isDesktop|min-width/);
   });
@@ -128,7 +128,7 @@ describe('it disturbs nothing already working', () => {
   });
 
   it('keeps only primary destinations chromed', () => {
-    expect(app).toContain("const showPrimaryNav = route.kind === 'tab' || showJourneyHome;");
+    expect(app).toContain("const showPrimaryNav = route.kind === 'tab' || showJourneyHome || showData;");
     expect(app).toContain("route.kind === 'account'");
     expect(app).toContain("route.kind === 'journey-active'");
   });
