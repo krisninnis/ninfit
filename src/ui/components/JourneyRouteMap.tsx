@@ -7,6 +7,7 @@ import {
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { JourneyGpsPoint } from '../../domain/journey';
 import { journeyPointGeoJson, journeySegmentsGeoJson } from '../journeyMapGeometry';
+import { journeyMapPaintColours } from '../mapLibreColour';
 
 interface JourneyRouteMapProps {
   segments: JourneyGpsPoint[][];
@@ -57,12 +58,10 @@ function baseStyle(): StyleSpecification {
   };
 }
 
-function cssToken(element: HTMLElement, token: string, fallback: string): string {
-  const value = getComputedStyle(element).getPropertyValue(token).trim();
-  return value || fallback;
-}
-
 function addJourneyLayers(map: MapLibreMap, element: HTMLElement): void {
+  const colours = journeyMapPaintColours((token) =>
+    getComputedStyle(element).getPropertyValue(token).trim());
+
   map.addSource(ROUTE_SOURCE, {
     type: 'geojson',
     data: { type: 'FeatureCollection', features: [] },
@@ -78,7 +77,7 @@ function addJourneyLayers(map: MapLibreMap, element: HTMLElement): void {
     source: ROUTE_SOURCE,
     layout: { 'line-cap': 'round', 'line-join': 'round' },
     paint: {
-      'line-color': cssToken(element, '--ft-surface-raised', '#ffffff'),
+      'line-color': colours.routeCasing,
       'line-width': 8,
       'line-opacity': 0.92,
     },
@@ -90,7 +89,7 @@ function addJourneyLayers(map: MapLibreMap, element: HTMLElement): void {
     source: ROUTE_SOURCE,
     layout: { 'line-cap': 'round', 'line-join': 'round' },
     paint: {
-      'line-color': cssToken(element, '--ft-accent', '#4f8065'),
+      'line-color': colours.routeLine,
       'line-width': 5,
       'line-opacity': 0.98,
     },
@@ -102,9 +101,9 @@ function addJourneyLayers(map: MapLibreMap, element: HTMLElement): void {
     source: POSITION_SOURCE,
     paint: {
       'circle-radius': 7,
-      'circle-color': cssToken(element, '--ft-accent', '#4f8065'),
+      'circle-color': colours.positionFill,
       'circle-stroke-width': 3,
-      'circle-stroke-color': cssToken(element, '--ft-surface-raised', '#ffffff'),
+      'circle-stroke-color': colours.positionStroke,
     },
   });
 }
