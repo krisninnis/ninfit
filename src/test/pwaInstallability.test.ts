@@ -41,7 +41,10 @@ describe('PWA installability', () => {
 
     expect(main).toContain('registerServiceWorker();');
     expect(registration).toContain("'serviceWorker' in navigator");
-    expect(registration).toContain("register('/sw.js')");
+    expect(registration).toContain("register('/sw.js', { updateViaCache: 'none' })");
+    expect(registration).toContain('registration.update()');
+    expect(registration).toContain("document.visibilityState === 'visible'");
+    expect(registration).not.toContain('window.location.reload');
   });
 
   it('keeps the service worker conservative: same-origin GETs only and network-first navigation', () => {
@@ -50,6 +53,8 @@ describe('PWA installability', () => {
     expect(worker).toContain("event.request.method !== 'GET'");
     expect(worker).toContain('requestUrl.origin !== self.location.origin');
     expect(worker).toContain("event.request.mode === 'navigate'");
-    expect(worker).toContain('fetch(event.request).catch');
+    expect(worker).toContain("fetch(event.request, { cache: 'no-store' }).catch");
+    expect(worker).toContain("key.startsWith('ninfit-shell-')");
+    expect(worker).toContain("const CACHE_VERSION = 'ninfit-shell-v2'");
   });
 });
