@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { getAppContext } from '../../app/bootstrap';
 import { createJourneyLaunchController } from '../../app/journeyLaunchController';
+import { adventureMapSnapshot } from '../../domain/adventureMap';
 import { createDefaultGameSettings } from '../../domain/game/defaults';
 import { visibleMascotFamily } from '../../domain/game/mascot';
 import type { Journey, JourneyActivityType } from '../../domain/journey';
@@ -14,6 +15,7 @@ import {
 } from '../journeyActivityFamilies';
 import { mascotActivityArt } from '../mascotActivityArt';
 import { mascotStageArt } from '../mascotStageArt';
+import { AdventureMapPanel } from '../components/AdventureMapPanel';
 import { JourneyCompanion } from '../components/JourneyCompanion';
 import { journeyCompanionPresence } from '../journeyCompanionPresentation';
 import { formatJourneyDistance, journeyDistanceM } from '../journeyPresentation';
@@ -63,9 +65,11 @@ export function JourneyScreen() {
   const storage = useMemo(() => getAppContext().adapter, []);
   const repository = useMemo(() => getAppContext().repository, []);
   const launch = useMemo(() => createJourneyLaunchController(storage), [storage]);
+  const [showAdventureMap, setShowAdventureMap] = useState(false);
   const active = launch.loadActive();
   const history = loadJourneyHistory(storage);
   const recent = history.slice(0, 3);
+  const adventure = adventureMapSnapshot(history);
 
   /*
    * THE COMPANION IS READ, NEVER SYNCED, FROM THIS SCREEN.
@@ -213,6 +217,38 @@ export function JourneyScreen() {
           })}
         </div>
       )}
+
+      <section
+        className="journey-detail__route-section"
+        aria-labelledby="journey-adventure-map-title"
+        data-adventure-map-entry="true"
+      >
+        <div className="journey-detail__section-heading">
+          <div>
+            <p className="journey-detail__eyebrow">Our Adventure</p>
+            <h2 id="journey-adventure-map-title">Adventure Map</h2>
+          </div>
+          <span>
+            {adventure.mappedJourneyCount > 0
+              ? `${adventure.mappedJourneyCount} ${adventure.mappedJourneyCount === 1 ? 'Journey' : 'Journeys'} mapped`
+              : 'Ready when you are'}
+          </span>
+        </div>
+        <p className="journey-detail__privacy-note">
+          Move in the real world and your trusted Journey routes can gradually build a private history of where you have been together.
+        </p>
+        <div>
+          <button
+            type="button"
+            className="btn btn--secondary"
+            aria-expanded={showAdventureMap}
+            onClick={() => setShowAdventureMap((current) => !current)}
+          >
+            {showAdventureMap ? 'Hide Adventure Map' : 'Open Adventure Map'}
+          </button>
+        </div>
+        {showAdventureMap ? <AdventureMapPanel snapshot={adventure} /> : null}
+      </section>
 
       <section className="journey-home__recent" aria-labelledby="journey-recent-title">
         <div className="journey-home__section-heading">
