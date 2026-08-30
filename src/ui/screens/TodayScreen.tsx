@@ -225,7 +225,17 @@ export function TodayScreen() {
     lastActiveDate: game.facts.lastActiveDate,
   });
 
-  const [isMascotWaving, setIsMascotWaving] = useState(false);
+  /*
+   * THE COMPANION'S PRESENTATION STATE.
+   *
+   * `rest` is the standing still. `idle` is the occasional automatic one-shot the
+   * timer below schedules. `wave` is the explicit tap-to-wave. All three show the
+   * same canvas; the state just decides which of the still and the two one-shot
+   * videos is on screen. Nothing here is persistence or game state - it is the
+   * choice of two images of the same companion, nothing more.
+   */
+  type CompanionState = 'rest' | 'idle' | 'wave';
+  const [companionState, setCompanionState] = useState<CompanionState>('rest');
   const reducedMotion = prefersReducedMotion();
 
   const visibleFamily = visibleMascotFamily(game.state.mascot);
@@ -235,33 +245,61 @@ export function TodayScreen() {
       : mascotStageArt(visibleFamily.id, game.state.mascot.stage);
   const canWave = todayMascotArt?.motionSrc !== undefined && !reducedMotion;
 
+  /*
+   * THE OCCASIONAL IDLE - ONE SHOT PER MOUNT, NEVER ON LOAD, NEVER A LOOP.
+   *
+   * A single timer arms one idle some time in the 20-40s window after the screen
+   * appears, and only if the companion is at rest and not motion-reduced. When it
+   * fires, the idle plays once and the video's own `onEnded` returns to rest.
+   *
+   * The timer is a real thing that must not outlive the screen: the effect clears
+   * it on unmount and on any change to `canIdle`, so there is exactly one pending
+   * timer and never a duplicate chain. Before the egg has hatched there is no art
+   * and no idle asset, `canIdle` is false, and this effect arms nothing - so a
+   * pre-hatch user neither schedules an idle nor requests one.
+   */
+  const canIdle =
+    todayMascotArt?.idleSrc !== undefined && !reducedMotion;
+
+  useEffect(() => {
+    if (!canIdle) return;
+    const delay = 20000 + Math.floor(Math.random() * 20000);
+    const id = window.setTimeout(
+      () => setCompanionState((previous) => (previous === 'rest' ? 'idle' : previous)),
+      delay,
+    );
+    return () => window.clearTimeout(id);
+  }, [canIdle]);
+
   return (
     <>
       {todayMascotArt !== undefined ? (
         <div className="today__top-companion">
           {/*
-            TEMPORARY PROOF HARNESS. Tapping plays the wave once so the rest -> wave ->
-            rest transition can be reviewed repeatedly by hand. The autonomous timing
-            comes later, and only once this transition has passed human review.
+            The one control is the explicit tap-to-wave. Idle runs itself through the
+            timer above; progress from rest, through whichever one-shot is playing, and
+            back to rest is decided by `companionState` alone.
 
             The interaction is presentation and nothing else: it starts no Journey and
             writes no progression, consistency, evolution, health or persisted state.
-            All it does is choose which of two images of the same companion is shown.
+            All it does is choose which of three presentations of the same companion is
+            shown, and a tap always goes to the wave - even if one lands mid-idle, the
+            button takes priority and the move to the wave is clean.
           */}
           {canWave ? (
             <button
               type="button"
               className="today__top-companion-button"
               aria-label="Wave to your companion"
-              onClick={() => setIsMascotWaving(true)}
+              onClick={() => setCompanionState('wave')}
             >
-              {isMascotWaving ? (
+              {companionState === 'wave' ? (
                 /*
-                  `poster` is the resting still, which IS this video's frame 0. A
+                  `poster` is the resting still, which is this motion's own frame 0. A
                   video paints nothing until its first frame is decoded, and without a
                   poster that gap showed as a blank flash where the companion had just
                   been. Because the poster and the first frame are the same pixels,
-                  there is now nothing to see until the wave actually starts.
+                  there is nothing to see until the wave actually starts.
                 */
                 <video
                   className="today__top-companion-art"
@@ -271,12 +309,28 @@ export function TodayScreen() {
                   muted
                   playsInline
                   aria-hidden="true"
-                  onEnded={() => setIsMascotWaving(false)}
+                  onEnded={() => setCompanionState('rest')}
+                />
+              ) : companionState === 'idle' ? (
+                /*
+                  The occasional idle, armed by the timer above and always one-shot:
+                  it plays once and `onEnded` drops straight back to the still. Its
+                  poster is the same resting still, so the start is silent too.
+                */
+                <video
+                  className="today__top-companion-art"
+                  src={todayMascotArt.idleSrc}
+                  poster={todayMascotArt.src}
+                  autoPlay
+                  muted
+                  playsInline
+                  aria-hidden="true"
+                  onEnded={() => setCompanionState('rest')}
                 />
               ) : (
                 /*
-                  Frame 0 of that same video. Identical canvas, framing and character,
-                  so this swap moves nothing - which is why no transform is needed.
+                  Frame 0 of the same canvas. Identical canvas, framing and character,
+                  so every swap moves nothing - which is why no transform is needed.
                 */
                 <img
                   className="today__top-companion-art"

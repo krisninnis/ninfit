@@ -147,18 +147,18 @@
 }
 
 /*
- * ONCE THE COLUMN STOPS BEING THE SCREEN, THE COMPANION ANCHORS TO IT.
+ * ONCE THE COLUMN STOPS BEING THE SCREEN, THE COMPANION CENTRES OVER IT.
  *
  * Below 600px the reading column IS the viewport, and a centred character reads as
- * the top of the page. Above it the column is a fixed 560px - 720px band with the
- * heading hard left, so centring left a wide gap on one side of the character and
- * another beside the title: two unrelated objects in a lot of nothing. Anchored to
- * the column's start the companion stands directly over "Today" and the two read as
- * one block, which is also what stops desktop looking like a stretched phone.
+ * the top of the page. Above it the column becomes a fixed band (560px, then the
+ * 720px reading column beside the desktop rail), so the companion keeps the same
+ * centred-over-the-column position the phone already used. The character is drawn
+ * near the middle of its own square canvas, so centring that box centres the visible
+ * tortoise over the column without guessing at a padding offset.
  */
 @media (min-width: 600px) {
   .today__top-companion {
-    margin-inline: 0;
+    margin-inline: auto;
   }
 }
 
