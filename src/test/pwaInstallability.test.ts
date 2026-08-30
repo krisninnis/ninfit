@@ -41,7 +41,8 @@ describe('PWA installability', () => {
 
     expect(main).toContain('registerServiceWorker();');
     expect(registration).toContain("'serviceWorker' in navigator");
-    expect(registration).toContain("register('/sw.js')");
+    expect(registration).toContain("register('/sw.js', { updateViaCache: 'none' })");
+    expect(registration).toContain('registration.update()');
   });
 
   it('keeps the service worker conservative: same-origin GETs only and network-first navigation', () => {
@@ -50,6 +51,7 @@ describe('PWA installability', () => {
     expect(worker).toContain("event.request.method !== 'GET'");
     expect(worker).toContain('requestUrl.origin !== self.location.origin');
     expect(worker).toContain("event.request.mode === 'navigate'");
-    expect(worker).toContain('fetch(event.request).catch');
+    expect(worker).toContain('networkFirstNavigation(event.request)');
+    expect(worker).toContain("cache.put('/', response.clone())");
   });
 });
