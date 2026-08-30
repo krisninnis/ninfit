@@ -6,6 +6,7 @@ import { updateGameSettings } from '../app/game';
 import { createMemoryStorageAdapter } from '../storage/StorageAdapter';
 import { createRepository } from '../storage/repository';
 import { applyThemePreference } from '../ui/theme';
+import { buildChannelForHostname, buildFingerprintFromAssetUrls } from '../ui/buildInfo';
 import {
   DATA_HASH,
   PRIMARY_NAV,
@@ -130,5 +131,34 @@ describe('existing safety preferences remain available', () => {
     expect(data).toContain('Export JSON backup');
     expect(data).toContain('Export daily CSV');
     expect(data).toContain('Choose a backup file');
+  });
+});
+
+
+describe('build identification', () => {
+  it('identifies production, preview and local channels', () => {
+    expect(buildChannelForHostname('ninfit.vercel.app')).toBe('production');
+    expect(buildChannelForHostname('ninfit-git-feature-example.vercel.app')).toBe('preview');
+    expect(buildChannelForHostname('localhost')).toBe('local');
+    expect(buildChannelForHostname('example.com')).toBe('web');
+  });
+
+  it('derives a compact fingerprint from Vite hashed assets', () => {
+    expect(
+      buildFingerprintFromAssetUrls([
+        '/assets/index-AbC12345.js',
+        '/assets/index-ZyX98765.css',
+        '/manifest.webmanifest',
+      ]),
+    ).toBe('AbC12345.ZyX98765');
+  });
+
+  it('shows build information in Settings', () => {
+    const settings = read('ui', 'screens', 'SettingsScreen.tsx');
+    expect(settings).toContain('<Section title="About"');
+    expect(settings).toContain('Version');
+    expect(settings).toContain('Channel');
+    expect(settings).toContain('Build');
+    expect(settings).toContain('currentAppBuildInfo');
   });
 });
