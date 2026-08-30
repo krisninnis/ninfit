@@ -14,7 +14,12 @@ export function AdventureMapPanel({ snapshot }: AdventureMapPanelProps) {
   const hasRoute = snapshot.segments.length > 0;
 
   return (
-    <div data-adventure-map-panel="true" role="region" aria-label="Adventure Map">
+    <div
+      className="journey-detail__route-section"
+      data-adventure-map-panel="true"
+      role="region"
+      aria-label="Adventure Map"
+    >
       <div className="journey-detail__facts" aria-label="Adventure Map facts">
         <div>
           <span>Mapped Journeys</span>
