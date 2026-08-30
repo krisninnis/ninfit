@@ -5,156 +5,188 @@ A short live checkpoint for a human or agent picking the project up cold.
 **Authority:** live Git, tests and repository contents outrank this file. If they
 disagree, believe Git and say so. See `skills/ninfit-handoff/SKILL.md`.
 
-Last updated: **2026-08-27**
+Last updated: **2026-08-30**
 
 ## Repository truth
 
 | | |
 |---|---|
 | Remote | `https://github.com/krisninnis/ninfit.git` |
-| `main` | `925fc8a38cf90a549ed9d19c385c2ce1c8d1dda1` |
-| Latest merged PR | **#59 — Journey Home Companion Integration v1** |
-| Latest verified product baseline | **79 test files / 1599 tests**, TypeScript passed, production Vite build passed, `git diff --check` clean |
+| `main` | `1350f032c55495f191bc19c4c4c477a74f587365` |
+| Latest merged PR | **#76 — Settings & Navigation Reorganisation v1** |
+| Latest verified runtime baseline | **88 files / 1902 tests** on PR #76; TypeScript passed, production Vite build passed, `git diff --check` clean |
 | Node | `24.x` |
-| Deployment evidence | PR #59 head `689c145696b9b3743650f99ba622016645fd573a` had a successful Vercel status before merge. Post-merge production deployment was not independently re-verified from the Vercel connector. |
+| Production | `https://ninfit.vercel.app` |
+| Phone review workflow | GitHub PR → Vercel Preview → human phone review → merge → production PWA |
 
 Verify live Git before acting. Branches are cut from verified `origin/main`, never
-from a stale local `main`.
+from a stale local checkout.
 
 ## Recently completed
 
 Most recent first.
 
-| PR | Merge | What landed |
-|---|---|---|
-| #59 | `925fc8a` | **Journey Home Companion Integration v1** — path companion presence driven only by existing active/history Journey truth |
-| #58 | `7912414` | **Companion Moment Lifetime v1** — transient completion/trophy emphasis expires and does not replay from stale history |
-| #57 | `1994f98` | **Companion Reaction Presentation v1** — deterministic companion contexts gain restrained visual treatments |
-| #56 | `0ca69d5` | **Fitness → Companion Reaction Boundary v1** — presentation consumes derived fitness facts without owning fitness truth |
-| #55 | `5eccb39` | **Profile Living Interface v1** |
-| #54 | `d402c14` | **Week Living Interface v1** |
-| #53 | `1fbe7b5` | **Progress Living Interface v1** |
-| #52 | `ff1c48c` | **Passport v1** |
-| #51 | `92afa54` | **Today Living Interface v1** |
-| #50 | `489cb91` | **Shared Living Interface scrim primitive** |
+| PR | What landed |
+|---|---|
+| #76 | **Settings & Navigation Reorganisation v1** — Settings replaces Data in primary navigation; Data remains a secondary Settings destination; System/Light/Dark appearance is persisted through the existing theme engine |
+| #75 | **Journey Map MapLibre Color Compatibility v1** — modern CSS theme colours are converted to MapLibre-compatible sRGB at the map boundary |
+| #73 | **Tortoise Starter Clean Idle Runtime v1** — approved clean occasional idle, rest still, reduced-motion handling and desktop/tablet centring correction |
+| #74 | **Living Fitness Adventure niche** — roadmap locks “Move in the real world. Explore with your companion. Build a history together.” plus Adventure Map, Mascot Memory, Journey Book, effort choices, non-FOMO quests and future community Adventures |
 
-Earlier Journey work already merged into `main` includes truthful route segmentation,
-live map presentation, route privacy, completion/detail presentation and Journey
-postcards. Read live history rather than reconstructing those slices from conversation
-memory.
+Earlier Journey work already merged into `main` includes Journey Home, active GPS
+recording, truthful route points/distance, route privacy, completion/history/detail
+presentation, postcards, backup/restore integrity and companion integration.
 
 ## Current product/architecture position
 
-NinFit remains **fitness-first**. Fitness truth is authoritative; programme/game and
-companion systems sit downstream.
+NinFit remains **fitness-first**. Fitness truth is authoritative; programme/game,
+companion and narrative systems sit downstream.
 
-The first Living Interface sweep is now present across:
-
-- Today
-- Week
-- Progress
-- Profile
-- Passport
-- Journey Home companion presence
-
-The companion pipeline now has explicit boundaries:
+Primary navigation is now:
 
 ```
-trusted fitness/Journey truth
-→ deterministic derived facts/context
-→ presentation mapping
-→ bounded or standing companion treatment
-→ UI
+Today · Week · Journey · Progress · Profile · Settings
 ```
 
-Important current guarantees:
+Data remains available under Settings rather than competing for a permanent primary
+navigation slot.
 
-- companion presentation does not fabricate activity, completion, distance, PBs,
-  trophies, XP, rewards or health meaning
-- Today completion/trophy emphasis is transient and freshness-gated
-- Journey history is standing truth, **not** a fresh completion event
-- Journey Home adds no GPS, route, distance, duration, reward or persistence logic
-- Opal remains separate from the user's path mascot
-- historical data never becomes a celebration merely because it exists
+The current theme architecture supports:
 
-## Current phase
+- **System** — follows `prefers-color-scheme`
+- **Light** — explicit light override
+- **Dark** — explicit dark override
 
-**Phase 8 reinforcement / Living Interface integration is active.**
+The semantic token system remains the single theme engine.
 
-The recent slices established the safe fitness-to-companion boundary and then reused
-it across Today and Journey without moving fitness/Journey truth into presentation.
+The Starter Tortoise presentation currently supports:
 
-## Next exact action
+```
+REST
+→ occasional clean IDLE one-shot
+→ REST
 
-### DISCOVERY — multi-`useGame` / shared game-state and reward-delivery correctness
+REST
+→ user TAP
+→ existing WAVE one-shot
+→ REST
+```
 
-This remains the highest-priority unresolved correctness question before expanding
-reinforcement further.
+The old tap-wave asset still contains its known Pika/background artefact. Replacing it
+is a separate T1B art/presentation slice; do not silently replace or destructively
+edit it.
 
-**Read-only investigation. Do not refactor during discovery.**
+## Living Fitness Adventure direction
 
-Prove or disprove, against current `main` and runtime evidence:
+The roadmap now explicitly positions NinFit as a living fitness adventure for people
+starting, restarting or struggling to stay active.
 
-1. whether multiple independent `useGame()` instances can consume newly granted
-   `RewardEvent`s before the intended acknowledgement surface sees them
-2. whether rewards granted away from Today can be persisted without ever being
-   acknowledged
-3. whether cold-load / import / other-tab reward events are lost to presentation
-4. whether App-level path/accent state can remain stale after Profile switches path
-5. whether redundant `syncGame` derivations occur
-6. what the **smallest runtime/component test** is that exposes any proven failure
+Core framing:
 
-**If the risk is proven:** stop with evidence and scope the smallest shared-state or
-single-reward-delivery correction as its own architecture/spec slice.
+> Move in the real world. Explore with your companion. Build a history together.
 
-**If disproven:** record the evidence here and return to Phase 8 sequencing.
+Long-term pillars:
 
-## Locked decisions relevant now
+- Adventure Map
+- Mascot Memory
+- Journey Book / “Our Adventure” recap
+- “What can I manage today?” effort choices
+- real-world quests without permanent FOMO
+- future community-created Adventures with later privacy/safety/moderation work
 
-The complete index is `docs/DECISIONS.md`. Do not reopen these casually:
+Fitness truth answers **what happened**. The companion/game layer supplies emotional
+reasons to return and may never invent the underlying activity.
 
-- Fitness is the product; game/companion is reinforcement.
-- No guilt, punishment, broken-streak pressure, score, daily completion percentage or
-  generic failure framing.
-- Fitness truth is never manufactured by game or AI.
-- Planned rest is valid adherence; partial completion counts.
-- Exactly five path mascot families; a sixth family requires a sixth fitness path.
-- Opal is the universal guide and does not replace the path mascot.
-- Hatching happens at the end of onboarding and grants no XP/trophy.
-- A hatched companion's species is permanent.
-- Health/body data remains neutral information, never a verdict.
-- Local fitness data remains authoritative; NinFit ID is optional identity only.
+## Important current guarantees
 
-## Parked work — do not merge
+- fitness and Journey truth are never fabricated by game, mascot, AI or presentation
+- local fitness data remains authoritative
+- Journey GPS, route points, distance and provenance stay in their existing truth layer
+- imports/backups preserve current Journey integrity rules
+- game settings cannot alter fitness records
+- health/body data remains neutral information, never a verdict
+- pre-hatch mascot secrecy remains intact
+- reduced motion suppresses ambient idle motion
+- MapLibre paint colours no longer receive unsupported OKLCH strings directly
+- Data backup/export/import remains available despite Data leaving primary navigation
+- Settings uses the existing theme engine rather than creating a second one
+- no guilt, punishment, pay-to-win or fake completion/reward patterns
 
-These were previously recorded as local-only work on the original machine. Their
-absence from a fresh clone is not evidence they never existed.
+## Active phone-first delivery work
 
-| Branch | SHA | Why parked |
-|---|---|---|
-| `preserve/journey-home-mobile-background-v1` | `c984009dd437694b4459b1f4f48b7a449e88d2bc` | Journey Home mobile scenery prototype; reference only |
-| `future/ornate-mystery-egg-v1` | `25dcfad80fbe6a189c0627443d2502dbbc851f5e` | Ornate Mystery Egg art route unfinished |
+Two independent PRs are currently under review and are **not merged**:
 
-The user's original checkout also currently contains helper/untracked folders created
-during delivery work (for example `ninfit-pr42/` and
-`ninfit-journey-home-companion-v1/`). Do not clean, delete, stash or repurpose them
-from an agent session without explicit human instruction.
+- **#80 — Mobile Demo Update Reliability v1**
+  - safer/eager PWA update checks
+  - online launch prefers current deployment
+  - cached shell remains offline fallback
+  - no forced reload that could interrupt an active Journey
+  - adds `docs/PHONE_DEMO.md`
+
+- **#81 — Settings Build Identification v1**
+  - Settings/About displays app version, deployment channel and a compact loaded-build fingerprint
+  - intended to make stale/mobile-deployment diagnosis obvious during phone demos
+
+Treat these as review candidates, not current product truth, until merged.
+
+## Next exact actions
+
+### 1. Finish phone-demo reliability
+
+Human-review PR #80 on a real phone. Confirm:
+
+- installability remains intact
+- a fresh online launch uses the latest production deployment
+- offline fallback still opens
+- coming back online does not erase local data
+- no surprise reload occurs during an active Journey
+
+### 2. Finish build identification
+
+Human-review PR #81. Confirm Settings → About is readable on mobile and that production
+and preview deployments show distinguishable build/channel information.
+
+### 3. T1B — Starter Clean Interactive Wave v1
+
+Prepare/approve a clean replacement for the current tap-wave asset.
+
+Locked behaviour:
+
+```
+REST → user tap → clean wave one-shot → REST
+```
+
+Ambient idle remains separate. No autoplay. No loop. Reduced-motion rules remain
+appropriate. The replacement must preserve Starter Tortoise identity and framing and
+must pass human visual review before production wiring.
+
+### 4. Living Fitness Adventure foundation design
+
+After the current mobile/reliability and art lane reach safe stops, continue the
+roadmap with local-first architecture for Adventure Map, deterministic Mascot Memory,
+Journey Book, manageable-effort choices and safe non-FOMO quests.
 
 ## Known blockers / follow-up
 
-### Shared game state / reward delivery
+### PWA/mobile update reliability
 
-Still unresolved; this is the **next exact action** above. The earlier checkpoint
-recorded a candidate correctness risk around multiple independent `useGame()`
-instances. Recent Journey work deliberately avoided adding another instance by reading
-game state/settings without syncing.
+PR #80 is the active correction. Until it merges and is verified on production,
+installed-app freshness is still a review item rather than a closed issue.
+
+### Build/version visibility
+
+PR #81 provides an About/build fingerprint, but it is not current product truth until
+merged.
+
+### Starter tap wave
+
+The old tap-wave asset remains intentionally unchanged and is known to contain a Pika
+background/watermark artefact. T1B requires a clean human-approved asset.
 
 ### Runtime test coverage
 
-The suite is extensive but is still dominated by pure-domain and source-boundary
-coverage. A shared-state/reward-delivery failure is likely to need a real runtime
-component test layer. Do not add jsdom, Testing Library or another renderer until the
-discovery proves what must be exercised.
+The suite is extensive but still relies heavily on pure/source-boundary tests. Add
+heavier browser/runtime infrastructure only when a proven failure requires it.
 
 ### Data safety before a real pilot
 
@@ -170,35 +202,28 @@ Still outstanding from `docs/production-readiness.md`:
 Password recovery remains a known gap before account promotion. Optional NinFit ID
 must not be described as cloud fitness backup/sync until that feature actually exists.
 
-### Art lane
+## Protected historical state
 
-Production mascot/trophy art remains a separate lane. Placeholder glyphs are temporary
-presentation infrastructure, not canonical mascot assets.
+Older local-only delivery/worktree folders may still exist on the original Windows
+machine. Their absence from a cloud clone is not evidence they never existed.
 
-### Documentation hygiene
-
-Older workflow/deployment/UI-verification skill text still contains some stale
-instructions identified by the earlier workflow audit. Correct those in a separate
-documentation slice rather than mixing them into product work.
-
-`docs/ROADMAP.md` also has its own line-ending housekeeping note; do not hide that
-inside a content edit.
+Do not clean, reset, stash, restore, prune, delete or repurpose the protected historical
+checkout merely to make it look tidy.
 
 ## Handoff checkpoint
 
 ```
 HANDOFF CHECKPOINT
-main SHA: 925fc8a38cf90a549ed9d19c385c2ce1c8d1dda1
-latest merged PR: #59 — Journey Home Companion Integration v1
-test baseline: 79 files / 1599 tests; TypeScript + production build passed
-completed: Journey Home path-companion integration on top of bounded companion reaction architecture
-current phase: Phase 8 reinforcement / Living Interface integration
-next exact action: DISCOVERY — multi-useGame / shared game-state and reward-delivery correctness
-parked branches/work: preserve/journey-home-mobile-background-v1; future/ornate-mystery-egg-v1
-known blockers: shared game-state correctness unresolved; runtime integration coverage gap; pilot data-safety items
-new locked decisions: none
-deployment state: PR #59 candidate had successful Vercel status; post-merge production not independently re-verified
-notes for next agent: live Git wins; do discovery before any shared-state refactor
+main SHA: 1350f032c55495f191bc19c4c4c477a74f587365
+latest merged PR: #76 — Settings & Navigation Reorganisation v1
+latest verified runtime baseline: 88 files / 1902 tests; TypeScript + production build passed
+completed: #73 T1A clean idle, #74 living-adventure niche, #75 MapLibre colour compatibility, #76 Settings/navigation
+open review work: #80 mobile update reliability; #81 Settings build identification
+current phase: phone-first reliability + Starter presentation hardening
+next exact action: human phone review of #80/#81, then T1B clean wave preparation
+known blockers: clean T1B wave asset still required; pilot data-safety items remain
+deployment workflow: GitHub PR → Vercel Preview → human phone review → merge → production PWA
+notes for next agent: live Git wins; do not treat open PRs as merged truth
 ```
 
 Read `docs/ROADMAP.md` for *what to build*, `docs/DECISIONS.md` for durable
