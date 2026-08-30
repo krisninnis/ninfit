@@ -173,6 +173,7 @@ export interface RewardEvent {
 // --- Settings --------------------------------------------------------------
 
 export type MascotPersonality = 'quiet' | 'normal' | 'chatty';
+export type ThemePreference = 'system' | 'light' | 'dark';
 
 /**
  * Everything social starts off. Health data is private by default and stays private
@@ -187,6 +188,7 @@ export interface ChallengeToggles {
 }
 
 export interface GameSettings {
+  theme: ThemePreference;
   mascotPersonality: MascotPersonality;
   soundEnabled: boolean;
   hapticsEnabled: boolean;

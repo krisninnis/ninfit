@@ -8,11 +8,7 @@ import {
   isHighlightedSkill,
 } from "../../domain/game/paths";
 import { findTrophy } from "../../domain/game/trophies";
-import type {
-  MascotPersonality,
-  SkillKind,
-  SocialMode,
-} from "../../domain/game/types";
+import type { SkillKind } from "../../domain/game/types";
 import { useGame } from "../hooks/useGame";
 import { PASSPORT_HASH } from "../tabs";
 import { sortMeasurementsDescending } from "../../domain/measurement";
@@ -41,7 +37,6 @@ import {
   SelectField,
   Stepper,
   TextField,
-  Toggle,
 } from "../components/Field";
 import { AttentionIcon } from "../components/Icon";
 import { LivingScrim } from "../components/LivingScrim";
@@ -581,7 +576,7 @@ export function ProfileScreen() {
       </Section>
 
       <GameSection />
-      <SettingsSection
+      <DisplayUnitsSection
         units={units}
         onUnitsChange={(preferredUnits) => updateProfile({ preferredUnits })}
       />
@@ -602,21 +597,6 @@ export function ProfileScreen() {
     </Screen>
   );
 }
-
-const PERSONALITIES: ReadonlyArray<{
-  value: MascotPersonality;
-  label: string;
-}> = [
-  { value: "quiet", label: "Quiet" },
-  { value: "normal", label: "Normal" },
-  { value: "chatty", label: "Chatty" },
-];
-
-const SOCIAL_MODES: ReadonlyArray<{ value: SocialMode; label: string }> = [
-  { value: "private", label: "Private" },
-  { value: "friends", label: "Friends" },
-  { value: "community", label: "Community" },
-];
 
 /**
  * Game preferences and trophies.
@@ -696,6 +676,20 @@ function GameSection() {
             </div>
           ))}
         </div>
+        <button
+          type="button"
+          className="btn btn--secondary btn--block"
+          onClick={() => {
+            restartOnboarding(getAppContext().repository);
+            window.location.reload();
+          }}
+        >
+          Run onboarding again
+        </button>
+        <p className="footnote">
+          Rerunning it only reconsiders your path. XP, trophies and everything in
+          the tracker are kept.
+        </p>
       </Section>
 
       <Section title="Trophies" defaultOpen={false}>
@@ -728,18 +722,15 @@ function GameSection() {
   );
 }
 
-function SettingsSection({
+function DisplayUnitsSection({
   units,
   onUnitsChange,
 }: {
   units: DisplayUnitPreferences;
   onUnitsChange: (units: DisplayUnitPreferences) => void;
 }) {
-  const game = useGame();
-  const { settings } = game;
-
   return (
-    <Section title="Settings" defaultOpen={false}>
+    <Section title="Display units" defaultOpen={false}>
       <SelectField
         label="Show weight in"
         value={units.weight}
@@ -754,73 +745,6 @@ function SettingsSection({
       />
       <p className="footnote">
         Stored in kilograms and centimetres either way.
-      </p>
-
-      <SelectField
-        label="Mascot personality"
-        value={settings.mascotPersonality}
-        options={PERSONALITIES}
-        onChange={(mascotPersonality) =>
-          game.updateSettings({ mascotPersonality })
-        }
-      />
-      <Toggle
-        label="Sound"
-        checked={settings.soundEnabled}
-        onChange={(soundEnabled) => game.updateSettings({ soundEnabled })}
-      />
-      <Toggle
-        label="Haptics"
-        checked={settings.hapticsEnabled}
-        onChange={(hapticsEnabled) => game.updateSettings({ hapticsEnabled })}
-      />
-      <SelectField
-        label="Social mode"
-        hint="Not connected to anything yet. Private by default, and health data stays private whatever you pick."
-        value={settings.socialMode}
-        options={SOCIAL_MODES}
-        onChange={(socialMode) => game.updateSettings({ socialMode })}
-      />
-      <Toggle
-        label="Personal challenges"
-        checked={settings.challenges.personal}
-        onChange={(personal) =>
-          game.updateSettings({
-            challenges: { ...settings.challenges, personal },
-          })
-        }
-      />
-      <Toggle
-        label="Friend challenges"
-        checked={settings.challenges.friends}
-        onChange={(friends) =>
-          game.updateSettings({
-            challenges: { ...settings.challenges, friends },
-          })
-        }
-      />
-      <Toggle
-        label="Community challenges"
-        checked={settings.challenges.community}
-        onChange={(community) =>
-          game.updateSettings({
-            challenges: { ...settings.challenges, community },
-          })
-        }
-      />
-      <button
-        type="button"
-        className="btn btn--primary btn--block"
-        onClick={() => {
-          restartOnboarding(getAppContext().repository);
-          window.location.reload();
-        }}
-      >
-        Run onboarding again
-      </button>
-      <p className="footnote">
-        Rerunning it only reconsiders your path. XP, trophies and everything in
-        the tracker are kept.
       </p>
     </Section>
   );

@@ -12,7 +12,7 @@ import {
  * Journey itself disappear from the product's information architecture.
  */
 
-export type TabId = 'today' | 'week' | 'progress' | 'profile' | 'data';
+export type TabId = 'today' | 'week' | 'progress' | 'profile' | 'settings';
 export type PrimaryNavId = TabId | 'journey';
 
 export interface TabDefinition {
@@ -26,7 +26,7 @@ export const TABS: readonly TabDefinition[] = [
   { id: 'week', label: 'Week', title: 'This week' },
   { id: 'progress', label: 'Progress', title: 'Progress' },
   { id: 'profile', label: 'Profile', title: 'Profile & baseline' },
-  { id: 'data', label: 'Data', title: 'Your data' },
+  { id: 'settings', label: 'Settings', title: 'Settings' },
 ] as const;
 
 export const PRIMARY_NAV: ReadonlyArray<{ id: PrimaryNavId; label: string }> = [
@@ -35,7 +35,7 @@ export const PRIMARY_NAV: ReadonlyArray<{ id: PrimaryNavId; label: string }> = [
   { id: 'journey', label: 'Journey' },
   { id: 'progress', label: 'Progress' },
   { id: 'profile', label: 'Profile' },
-  { id: 'data', label: 'Data' },
+  { id: 'settings', label: 'Settings' },
 ];
 
 export const DEFAULT_TAB: TabId = 'today';
@@ -64,6 +64,7 @@ export const JOURNEY_ACTIVE_HASH = '#/journey/active';
 export const ACCOUNT_HASH = '#/account';
 export const ACCOUNT_CONFIRMED_HASH = '#/account/confirmed';
 export const PASSPORT_HASH = '#/passport';
+export const DATA_HASH = '#/data';
 
 export type AppRoute =
   | { readonly kind: 'account'; readonly confirmed: boolean }
@@ -85,6 +86,7 @@ export type AppRoute =
   | { readonly kind: 'journey-detail'; readonly journeyId: string }
   | { readonly kind: 'journey-postcard'; readonly journeyId: string }
   | { readonly kind: 'passport' }
+  | { readonly kind: 'data' }
   | { readonly kind: 'tab'; readonly tab: TabId };
 
 const AUTH_FRAGMENT = /(^|[#&?])(access_token|refresh_token|error_code|error_description)=/;
@@ -157,6 +159,7 @@ export function parseRouteFromHash(hash: string): AppRoute {
   if (normalised === 'account') return { kind: 'account', confirmed: false };
   if (normalised === 'account/confirmed') return { kind: 'account', confirmed: true };
   if (normalised === 'passport') return { kind: 'passport' };
+  if (normalised === 'data') return { kind: 'data' };
 
   if (looksLikeAuthReturn(hash)) return { kind: 'account', confirmed: true };
 

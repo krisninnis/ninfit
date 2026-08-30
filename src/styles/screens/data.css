@@ -5,6 +5,10 @@
 @layer screens {
 /* ---------- Data ---------- */
 
+.data__back {
+  align-self: flex-start;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

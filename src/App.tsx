@@ -3,6 +3,7 @@ import { TabBar } from './ui/components/TabBar';
 import { OnboardingScreen } from './ui/screens/OnboardingScreen';
 import { NinFitIdScreen } from './ui/screens/NinFitIdScreen';
 import { DataScreen } from './ui/screens/DataScreen';
+import { SettingsScreen } from './ui/screens/SettingsScreen';
 import { ProfileScreen } from './ui/screens/ProfileScreen';
 import { ProgressScreen } from './ui/screens/ProgressScreen';
 import { TodayScreen } from './ui/screens/TodayScreen';
@@ -21,8 +22,10 @@ import { getAppContext } from './app/bootstrap';
 import { hasSeenIntro, markIntroSeen, shouldPlayIntro } from './ui/startup/introState';
 import { useGame } from './ui/hooks/useGame';
 import { visibleMascotFamily } from './domain/game/mascot';
+import { applyThemePreference } from './ui/theme';
 import {
   ACCOUNT_HASH,
+  DATA_HASH,
   JOURNEY_HASH,
   hashForPrimaryNav,
   hashForTab,
@@ -36,12 +39,11 @@ import {
   type TabId,
 } from './ui/tabs';
 
-const SCREENS: Record<TabId, ComponentType> = {
+const SCREENS: Record<Exclude<TabId, 'settings'>, ComponentType> = {
   today: TodayScreen,
   week: WeekScreen,
   progress: ProgressScreen,
   profile: ProfileScreen,
-  data: DataScreen,
 };
 
 export default function App() {
@@ -72,6 +74,10 @@ export default function App() {
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0 });
   }, [route]);
+
+  useEffect(() => {
+    applyThemePreference(game.settings.theme);
+  }, [game.settings.theme]);
 
   const navigate = (hash: string) => {
     window.location.hash = hash;
@@ -112,6 +118,7 @@ export default function App() {
   }
 
   const showNinFitId = route.kind === 'account';
+  const showData = route.kind === 'data';
   const showJourneyHome = route.kind === 'journey-home';
   const showActiveJourney = route.kind === 'journey-active';
   const showJourneyLaunch = route.kind === 'journey-launch';
@@ -120,15 +127,21 @@ export default function App() {
   const showJourneyPostcard = route.kind === 'journey-postcard';
   const showPassport = route.kind === 'passport';
   const screenTab: TabId = route.kind === 'tab' ? route.tab : 'today';
-  const CurrentScreen = SCREENS[screenTab];
-  const tab: PrimaryNavId = showJourneyHome || showJourneyDetail || showJourneyPostcard
+  const CurrentScreen = screenTab === 'settings' ? undefined : SCREENS[screenTab];
+  const tab: PrimaryNavId = showData
+    ? 'settings'
+    : showJourneyHome || showJourneyDetail || showJourneyPostcard
     || showJourneyLaunch || showJourneyComplete
     ? 'journey'
     : showPassport
       ? 'profile'
       : screenTab;
-  const showPrimaryNav = route.kind === 'tab' || showJourneyHome;
-  const backdropId = tab === 'journey' ? 'journey-wall' : BACKDROP_FOR_TAB[tab];
+  const showPrimaryNav = route.kind === 'tab' || showJourneyHome || showData;
+  const backdropId = showData
+    ? 'data'
+    : tab === 'journey'
+      ? 'journey-wall'
+      : BACKDROP_FOR_TAB[tab];
 
   return (
     <>
@@ -141,6 +154,8 @@ export default function App() {
               returningFromConfirmation={route.confirmed}
               onSkip={() => navigate(hashForTab('today'))}
             />
+          ) : showData ? (
+            <DataScreen onClose={() => navigate(hashForTab('settings'))} />
           ) : showActiveJourney ? (
             <ActiveJourneyScreen
               onClose={() => navigate(JOURNEY_HASH)}
@@ -172,8 +187,14 @@ export default function App() {
             <JourneyScreen />
           ) : showPassport ? (
             <PassportScreen onClose={() => navigate(hashForTab('profile'))} />
+          ) : screenTab === 'settings' ? (
+            <SettingsScreen
+              settings={game.settings}
+              onSettingsChange={game.updateSettings}
+              onOpenData={() => navigate(DATA_HASH)}
+            />
           ) : (
-            <CurrentScreen />
+            CurrentScreen ? <CurrentScreen /> : null
           )}
         </main>
 

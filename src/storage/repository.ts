@@ -1,6 +1,10 @@
 import { isValidISODate, nowTimestamp } from '../domain/dates';
 import { createSeedAppData } from '../domain/defaults';
-import { createDefaultGameSettings, createInitialGameState } from '../domain/game/defaults';
+import {
+  createDefaultGameSettings,
+  createInitialGameState,
+  normaliseGameSettings,
+} from '../domain/game/defaults';
 import {
   isPendingRewardDeliveries,
   withoutPendingRewardDeliveries,
@@ -509,11 +513,12 @@ export class Repository {
   }
 
   getGameSettings(): GameSettings | undefined {
-    return this.readRecord<GameSettings>(STORAGE_KEYS.gameSettings);
+    const stored = this.readRecord<Partial<GameSettings>>(STORAGE_KEYS.gameSettings);
+    return stored === undefined ? undefined : normaliseGameSettings(stored);
   }
 
   saveGameSettings(settings: GameSettings): void {
-    this.write(STORAGE_KEYS.gameSettings, settings);
+    this.write(STORAGE_KEYS.gameSettings, normaliseGameSettings(settings));
   }
 
   // --- Meta ----------------------------------------------------------------

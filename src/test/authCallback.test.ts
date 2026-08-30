@@ -181,13 +181,16 @@ describe('the user survives auth-js clearing the fragment', () => {
     for (const [hash, tab] of [
       ['#/week', 'week'],
       ['#/progress', 'progress'],
-      ['#/data', 'data'],
+      ['#/settings', 'settings'],
     ] as const) {
       expect(routeAfterHashChange({ kind: 'tab', tab: 'today' }, hash)).toEqual({
         kind: 'tab',
         tab,
       });
     }
+    expect(routeAfterHashChange({ kind: 'tab', tab: 'today' }, '#/data')).toEqual({
+      kind: 'data',
+    });
   });
 });
 
