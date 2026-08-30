@@ -422,10 +422,10 @@ describe("Today's companion is a presence on the page, not a portrait in a box",
     expect(todayCss).not.toMatch(/url\(/);
   });
 
-  it('anchors the companion to the reading column once the column stops being the screen', () => {
+  it('centres the companion over the reading column once the column stops being the screen', () => {
     expect(todayCss).toContain('@media (min-width: 600px)');
     const desktop = todayCss.slice(todayCss.indexOf('@media (min-width: 600px)'));
-    expect(desktop).toContain('margin-inline: 0');
+    expect(desktop).toContain('margin-inline: auto');
   });
 
   it('still keeps the still and the wave in one identical box', () => {
