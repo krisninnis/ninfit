@@ -2520,6 +2520,194 @@ Resilience may secretly contribute to Secret Prestige.
 
 
 ==================================================
+NINFIT PRODUCT NICHE — LIVING FITNESS ADVENTURE
+STATUS: LOCKED DIRECTION
+==================================================
+
+Primary positioning:
+
+NinFit is a living fitness adventure for people who are starting,
+restarting or struggling to stay active.
+
+It is not primarily for elite athletes, gym maximalists or people who
+already organise their lives around training.
+
+Core audience:
+
+- people who know they want to move more
+- people returning after time away
+- beginners who do not yet identify as "fit"
+- users who need motivation without guilt or streak pressure
+- users whose realistic win today may be a short walk, light session or
+  simply showing up safely
+
+Product promise:
+
+MOVE IN THE REAL WORLD.
+EXPLORE WITH YOUR COMPANION.
+BUILD A HISTORY TOGETHER.
+
+Differentiation:
+
+Fitness data answers:
+
+"What did I actually do?"
+
+The game answers:
+
+"Why do I want to come back tomorrow?"
+
+The long-term moat is the relationship between:
+
+- real movement
+- place
+- memory
+- mascot growth
+- personal history
+
+The path mascot must become a witness to genuine activity rather than a
+decorative XP meter.
+
+Over time, it may remember meaningful routes, milestones, favourite
+activities, firsts, returns and places associated with the user's real
+fitness history.
+
+RULE:
+
+The richer emotional layer must remain downstream of trusted fitness
+truth. Memory and narrative may interpret real history; they must never
+invent it.
+
+
+==================================================
+LIVING ADVENTURE PRODUCT PILLARS — LOCKED DIRECTION
+==================================================
+
+1. ADVENTURE MAP
+
+Real-world movement gradually creates a private personal map of the user's
+NinFit history.
+
+Potential states include:
+
+- new place discovered
+- familiar trail
+- favourite route
+- memorable place
+- PB location
+- photo memory
+- mascot memory
+- secret discovery
+- Champion / Legacy history
+
+Place history is private by default.
+
+A place should matter because something genuinely happened there, not
+because NinFit fabricated a collectible event.
+
+2. MASCOT MEMORY
+
+The mascot may develop sparse, structured memories grounded in real
+fitness history.
+
+Examples:
+
+- first 1 km together
+- first 5K
+- longest walk together
+- a route not visited for a long time
+- a favourite activity emerging from repeated history
+- a meaningful return after a break
+
+Memory should be occasional and emotionally valuable rather than constant
+AI chatter.
+
+AI may narrate approved memories, but deterministic history/provenance must
+establish what actually happened.
+
+3. JOURNEY BOOK
+
+A chronological private story of the user's real fitness life with their
+mascot.
+
+Possible entries:
+
+- hatch
+- first activity
+- distance milestones
+- new places
+- favourite routes
+- photos
+- PBs
+- stage evolution
+- Champion moments
+- Secret discoveries
+- Legacy memories
+- meaningful returns
+
+Long-term possibility:
+
+Create an annual "Our Adventure" recap that combines trusted statistics
+with selected memories and milestones.
+
+4. WHAT CAN I MANAGE TODAY?
+
+NinFit should support realistic effort choices rather than treating one
+full workout as the only valid outcome.
+
+Potential choices may include:
+
+- very small effort
+- short session
+- normal planned session
+- feeling good / optional progression
+
+Exact coaching behaviour belongs to programme logic and must remain safe.
+
+A smaller genuine effort stays smaller in fitness truth while still being
+allowed to feel positive emotionally.
+
+5. REAL-WORLD QUESTS WITHOUT FOMO
+
+Examples may include:
+
+- visit somewhere new
+- revisit an old route
+- complete three different routes over time
+- morning exploration
+- weather-linked discovery where safe
+- walk beside water
+- woodland exploration
+
+Some discoveries may remain secret until earned.
+
+Never create pressure to exercise unsafely for weather, time, location or
+secret content.
+
+No permanent FOMO.
+
+6. COMMUNITY-CREATED ADVENTURES — LONG-TERM
+
+Future users may be able to publish optional real-world Adventures for
+others to complete.
+
+Potential model:
+
+route
++
+story/theme
++
+safe discovery
++
+optional cosmetic/memory layer
+
+This may eventually combine route discovery, community and the mascot
+journey without turning NinFit into a public leaderboard-first product.
+
+Requires later safety/privacy/moderation/route-quality work before launch.
+
+
+==================================================
 PHASE 23 — ADVENTURES / EXPLORATION
 STATUS: FUTURE
 ==================================================
