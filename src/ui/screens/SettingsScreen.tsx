@@ -6,6 +6,7 @@ import type {
 } from '../../domain/game/types';
 import { Section, SelectField, Toggle } from '../components/Field';
 import { Screen } from '../components/Screen';
+import { currentAppBuildInfo } from '../buildInfo';
 
 interface SettingsScreenProps {
   settings: GameSettings;
@@ -43,6 +44,8 @@ export function SettingsScreen({
   onSettingsChange,
   onOpenData,
 }: SettingsScreenProps) {
+  const build = currentAppBuildInfo();
+
   return (
     <Screen title="Settings" subtitle="Make NinFit work the way you prefer.">
       <Section title="Appearance">
@@ -148,6 +151,27 @@ export function SettingsScreen({
         </button>
         <p className="footnote">
           NinFit remains local-first. Nothing here uploads your fitness history.
+        </p>
+      </Section>
+
+      <Section title="About" defaultOpen={false}>
+        <div className="stats">
+          <div className="stat stat--row">
+            <span className="stat__label">Version</span>
+            <span className="stat__value">{build.version}</span>
+          </div>
+          <div className="stat stat--row">
+            <span className="stat__label">Channel</span>
+            <span className="stat__value">{build.channel}</span>
+          </div>
+          <div className="stat stat--row">
+            <span className="stat__label">Build</span>
+            <span className="stat__value">{build.fingerprint}</span>
+          </div>
+        </div>
+        <p className="footnote">
+          The build fingerprint comes from the loaded app assets, so it is a quick way
+          to tell whether two phones are showing the same deployed version.
         </p>
       </Section>
     </Screen>
