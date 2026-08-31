@@ -477,3 +477,22 @@ describe('weight on the Data screen follows consequence', () => {
     expect(code).not.toMatch(/components\/(Opal|EggArt|GameHeader)/);
   });
 });
+
+
+describe('backup integrity is consequence-weighted', () => {
+  it('does not let the full JSON backup silently drop Journey history', () => {
+    const exportSource = readFileSync(
+      fileURLToPath(new URL('../io/exportJson.ts', import.meta.url)),
+      'utf8',
+    );
+
+    expect(exportSource).toMatch(/journeyResult\.issue/);
+    expect(exportSource).toMatch(/throw new Error/);
+    expect(exportSource).toMatch(/Journey history could not be included safely/i);
+  });
+
+  it('keeps the Data hook error path visible when backup construction throws', () => {
+    expect(useDataSource).toMatch(/try \{[\s\S]*buildBackup[\s\S]*catch \(error\)/);
+    expect(useDataSource).toMatch(/The backup could not be saved/);
+  });
+});
