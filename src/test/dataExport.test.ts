@@ -20,7 +20,7 @@ import {
 } from '../io/exportCsv';
 import { backupFilename, buildBackup, summariseBackup } from '../io/exportJson';
 import { createMemoryStorageAdapter, type StorageAdapter } from '../storage/StorageAdapter';
-import { Repository, createRepository } from '../storage/repository';
+import { Repository, STORAGE_KEYS, createRepository } from '../storage/repository';
 
 const NOW = '2026-08-14T12:42:00.000+01:00';
 const DAY_1 = '2026-08-13';
@@ -475,5 +475,82 @@ describe('weight on the Data screen follows consequence', () => {
      */
     expect(code).not.toMatch(/domain\/game/);
     expect(code).not.toMatch(/components\/(Opal|EggArt|GameHeader)/);
+  });
+});
+
+
+describe('full backup never turns unreadable repository data into defaults', () => {
+  it.each([
+    ['profile', STORAGE_KEYS.profile, '{ broken profile'],
+    ['baseline', STORAGE_KEYS.baseline, '["wrong","shape"]'],
+    ['measurements', STORAGE_KEYS.measurements, '{"not":"an array"}'],
+    ['weekly plans', STORAGE_KEYS.plans, '{"not":"an array"}'],
+    ['metric samples', STORAGE_KEYS.metricSamples, '{"not":"an array"}'],
+    ['game settings', STORAGE_KEYS.gameSettings, '["not","settings"]'],
+  ] as const)('fails closed when %s cannot be read', (_label, key, corrupt) => {
+    const store = createMemoryStorageAdapter();
+    const repository = newRepo(store, 'backup-corrupt');
+    repository.initialise();
+    store.set(key, corrupt);
+
+    expect(() => buildBackup(repository, { storage: store, now: NOW, today: DAY_2 }))
+      .toThrow(/could not be read safely for backup/i);
+
+    expect(store.get(key)).toBe(corrupt);
+  });
+
+  it('fails closed when a DailyLog date/key mismatch would otherwise omit a day', () => {
+    const store = createMemoryStorageAdapter();
+    const repository = newRepo(store, 'backup-day-mismatch');
+    repository.initialise();
+
+    const key = 'ft:v1:log:2026-08-14';
+    const corrupt = JSON.stringify({
+      id: 'wrong-date',
+      date: '2026-08-13',
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
+    store.set(key, corrupt);
+
+    expect(() => buildBackup(repository, { storage: store, now: NOW, today: DAY_2 }))
+      .toThrow(/could not be read safely for backup/i);
+
+    expect(store.get(key)).toBe(corrupt);
+  });
+
+  it('fails closed when game state is unreadable instead of exporting fresh zero-XP state', () => {
+    const store = createMemoryStorageAdapter();
+    const repository = newRepo(store, 'backup-game-corrupt');
+    repository.initialise();
+    store.set(STORAGE_KEYS.game, '{ broken game');
+
+    expect(() => buildBackup(repository, { storage: store, now: NOW, today: DAY_2 }))
+      .toThrow(/could not be read safely for backup/i);
+
+    expect(store.get(STORAGE_KEYS.game)).toBe('{ broken game');
+  });
+
+  it('permits scoped pending-delivery sanitisation because earned truth remains intact', () => {
+    const store = createMemoryStorageAdapter();
+    const repository = newRepo(store, 'backup-delivery-queue');
+    repository.initialise();
+    const state = repository.getGameState();
+    if (state === undefined) throw new Error('seed game state missing');
+
+    store.set(
+      STORAGE_KEYS.game,
+      JSON.stringify({
+        ...state,
+        xp: { total: 77, level: 2 },
+        awardedKeys: ['earned:pilot'],
+        pendingRewardDeliveries: 'not-a-list',
+      }),
+    );
+
+    const backup = buildBackup(repository, { storage: store, now: NOW, today: DAY_2 });
+    expect(backup.envelope.game?.state.xp.total).toBe(77);
+    expect(backup.envelope.game?.state.awardedKeys).toEqual(['earned:pilot']);
+    expect(backup.envelope.game?.state.pendingRewardDeliveries).toBeUndefined();
   });
 });
