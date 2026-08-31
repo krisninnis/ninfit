@@ -222,6 +222,14 @@ export function DataScreen({ onClose }: { onClose: () => void }) {
                 </span>
               </div>
               <div className="stat stat--row">
+                <span className="stat__label">NinFit version</span>
+                <span className="stat__value">{pending.summary.appVersion}</span>
+              </div>
+              <div className="stat stat--row">
+                <span className="stat__label">Backup format</span>
+                <span className="stat__value">Schema {pending.summary.schemaVersion}</span>
+              </div>
+              <div className="stat stat--row">
                 <span className="stat__label">Daily records</span>
                 <span className="stat__value">{pending.summary.dailyLogs}</span>
               </div>
