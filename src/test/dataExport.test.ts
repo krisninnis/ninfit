@@ -477,3 +477,18 @@ describe('weight on the Data screen follows consequence', () => {
     expect(code).not.toMatch(/components\/(Opal|EggArt|GameHeader)/);
   });
 });
+
+
+describe('backup version transparency', () => {
+  it('shows the app version and backup schema before replacement', () => {
+    expect(dataScreenSource).toContain('NinFit version');
+    expect(dataScreenSource).toContain('pending.summary.appVersion');
+    expect(dataScreenSource).toContain('Backup format');
+    expect(dataScreenSource).toContain('pending.summary.schemaVersion');
+  });
+
+  it('keeps version metadata descriptive rather than making it a trust shortcut', () => {
+    expect(dataScreenSource).not.toMatch(/safe because.*version/i);
+    expect(dataScreenSource).not.toMatch(/trusted because.*schema/i);
+  });
+});
