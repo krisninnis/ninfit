@@ -472,3 +472,32 @@ describe('write failures are reported, not hidden', () => {
     if (!result.ok) expect(result.phase).toBe('verify');
   });
 });
+
+
+describe('restore read-back verification coverage', () => {
+  it('verifies all repository-backed categories before reporting success', () => {
+    const source = readFileSync(
+      fileURLToPath(new URL('../io/importJson.ts', import.meta.url)),
+      'utf8',
+    );
+
+    expect(source).toContain('getHealthContext');
+    expect(source).toContain('getWeeklyPlans');
+    expect(source).toContain('getMetricSamples');
+    expect(source).toContain('getGameSettings');
+    expect(source).toContain('loadJourneyHistory');
+    expect(source).toContain('loadActiveJourneySnapshot');
+  });
+
+  it('keeps stale-day removal after read-back verification', () => {
+    const source = readFileSync(
+      fileURLToPath(new URL('../io/importJson.ts', import.meta.url)),
+      'utf8',
+    );
+    const verifyAt = source.indexOf('const verification = verifyWritten');
+    const removeAt = source.indexOf('repository.removeDailyLog');
+
+    expect(verifyAt).toBeGreaterThan(-1);
+    expect(removeAt).toBeGreaterThan(verifyAt);
+  });
+});
