@@ -482,3 +482,37 @@ describe('the Data screen reaches the store', () => {
     expect(code).toMatch(/commitImport\([\s\S]{0,120}?\bstorage\b/);
   });
 });
+
+
+describe('full backup fails closed when Journey history is unreadable', () => {
+  it('does not produce a plausible partial backup that silently omits corrupt Journey history', () => {
+    const source = device();
+    source.storage.set(journeyHistoryKey(), '{ corrupt journey history');
+
+    expect(() =>
+      buildBackup(source.repository, {
+        storage: source.storage,
+        now: '2026-08-31T08:30:00.000Z',
+        today: '2026-08-31',
+      }),
+    ).toThrow(/Journey history could not be included safely/i);
+
+    // The bad original remains in place and the conservative read keeps a quarantine copy.
+    expect(source.storage.get(journeyHistoryKey())).toBe('{ corrupt journey history');
+    expect(
+      source.storage.keys().some((key) => key.startsWith('ft:v1:quarantine:ninfit:journey:history:v1:')),
+    ).toBe(true);
+  });
+
+  it('still builds a complete backup when readable Journey history is empty', () => {
+    const source = device();
+
+    const backup = buildBackup(source.repository, {
+      storage: source.storage,
+      now: '2026-08-31T08:30:00.000Z',
+      today: '2026-08-31',
+    });
+
+    expect(backup.envelope.journey).toEqual({ history: [] });
+  });
+});
