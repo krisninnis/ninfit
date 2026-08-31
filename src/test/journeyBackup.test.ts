@@ -8,6 +8,7 @@ import { commitImport, prepareImport } from '../io/importJson';
 import {
   activeJourneySnapshotKey,
   loadActiveJourneySnapshot,
+  readActiveJourneySnapshotForBackup,
   saveActiveJourneySnapshot,
 } from '../storage/activeJourneySnapshot';
 import {
@@ -480,5 +481,58 @@ describe('the Data screen reaches the store', () => {
     const code = readFileSync(fileURLToPath(new URL('../ui/hooks/useData.ts', import.meta.url)), 'utf8');
     expect(code).toMatch(/buildBackup\(\s*repository\s*,\s*\{[^}]*\bstorage\b/);
     expect(code).toMatch(/commitImport\([\s\S]{0,120}?\bstorage\b/);
+  });
+});
+
+
+describe('corrupt active Journey recovery is never exported as "no active Journey"', () => {
+  it('quarantines malformed JSON and refuses to build a Journey block', () => {
+    const source = device();
+    source.storage.set(activeJourneySnapshotKey(), '{ broken active journey');
+
+    const read = readActiveJourneySnapshotForBackup(source.storage, {
+      now: () => '2026-08-31T08:40:00.000Z',
+    });
+    expect(read.ok).toBe(false);
+    if (read.ok) throw new Error('corrupt active recovery unexpectedly passed');
+
+    expect(source.storage.get(activeJourneySnapshotKey())).toBe('{ broken active journey');
+    expect(read.quarantinedAs).toBeDefined();
+    expect(source.storage.get(read.quarantinedAs as string)).toBe('{ broken active journey');
+
+    const result = buildJourneyBlock(source.storage, {
+      now: () => '2026-08-31T08:40:00.000Z',
+    });
+    expect(result.block).toBeUndefined();
+    expect(result.issue).toMatch(/Active Journey recovery/i);
+  });
+
+  it('rejects a completed Journey stored in the active recovery slot', () => {
+    const source = device();
+    source.storage.set(
+      activeJourneySnapshotKey(),
+      JSON.stringify({
+        schemaVersion: 1,
+        savedAt: '2026-08-31T08:40:00.000Z',
+        journey: completedJourney(),
+      }),
+    );
+
+    const read = readActiveJourneySnapshotForBackup(source.storage, {
+      now: () => '2026-08-31T08:41:00.000Z',
+    });
+    expect(read.ok).toBe(false);
+  });
+
+  it('keeps ordinary runtime loading fail-soft while backup remains fail-closed', () => {
+    const source = device();
+    source.storage.set(activeJourneySnapshotKey(), '{ broken active journey');
+
+    expect(loadActiveJourneySnapshot(source.storage)).toBeNull();
+    expect(
+      readActiveJourneySnapshotForBackup(source.storage, {
+        now: () => '2026-08-31T08:42:00.000Z',
+      }).ok,
+    ).toBe(false);
   });
 });
