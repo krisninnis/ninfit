@@ -77,11 +77,31 @@ export function buildBackup(
   const journey =
     options.storage === undefined ? undefined : buildJourneyBlock(options.storage).block;
 
-  const envelope = createExportEnvelope(readAppData(repository), {
+  const data = readAppData(repository);
+  const gameState = repository.getGameState();
+  const gameSettings = repository.getGameSettings();
+
+  const unsafeIssues = repository.getIssues().filter((issue) => {
+    return !(
+      issue.key.endsWith(':game')
+      && issue.kind === 'invalid_shape'
+      && issue.detail.includes('pendingRewardDeliveries')
+    );
+  });
+
+  if (unsafeIssues.length > 0) {
+    const labels = unsafeIssues.map((issue) => issue.key).join(', ');
+    throw new Error(
+      `Some stored NinFit data could not be read safely for backup: ${labels}. `
+        + 'The original values have not been replaced.',
+    );
+  }
+
+  const envelope = createExportEnvelope(data, {
     exportedAt,
     game: {
-      state: repository.getGameState() ?? createInitialGameState({ now: exportedAt }),
-      settings: repository.getGameSettings() ?? createDefaultGameSettings(),
+      state: gameState ?? createInitialGameState({ now: exportedAt }),
+      settings: gameSettings ?? createDefaultGameSettings(),
     },
     journey,
   });
