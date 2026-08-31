@@ -477,3 +477,29 @@ describe('weight on the Data screen follows consequence', () => {
     expect(code).not.toMatch(/components\/(Opal|EggArt|GameHeader)/);
   });
 });
+
+
+describe('Journey transparency on the Data screen', () => {
+  it('says the restorable JSON backup includes Journeys', () => {
+    expect(dataScreenSource).toMatch(/Includes your fitness history, Journeys, profile/i);
+  });
+
+  it('shows Journey count and unfinished recovery in restore confirmation', () => {
+    expect(dataScreenSource).toContain('stat__label">Journeys');
+    expect(dataScreenSource).toContain('hasJourneyData');
+    expect(dataScreenSource).toContain('hasActiveJourney');
+    expect(dataScreenSource).toContain('unfinished recovery');
+  });
+
+  it('explains why a pre-Journey backup leaves current Journey history alone', () => {
+    expect(dataScreenSource).toMatch(/predates Journey backup support/i);
+    expect(dataScreenSource).toMatch(/current Journey history will be\s+left alone/i);
+  });
+
+  it('reports restored Journey counts after a successful import', () => {
+    expect(useDataSource).toContain('journeysRestored: result.journeysRestored');
+    expect(useDataSource).toContain('activeJourneyRestored: result.activeJourneyRestored');
+    expect(dataScreenSource).toContain('status.journeysRestored');
+    expect(dataScreenSource).toContain('status.activeJourneyRestored');
+  });
+});
