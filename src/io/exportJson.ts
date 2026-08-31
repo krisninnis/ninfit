@@ -74,8 +74,17 @@ export function buildBackup(
   options: { now?: ISODateTime; today?: ISODate; storage?: StorageAdapter } = {},
 ): BackupFile {
   const exportedAt = options.now ?? nowTimestamp();
-  const journey =
-    options.storage === undefined ? undefined : buildJourneyBlock(options.storage).block;
+
+  let journey: ExportJourneyBlock | undefined;
+  if (options.storage !== undefined) {
+    const journeyResult = buildJourneyBlock(options.storage);
+    if (journeyResult.issue !== undefined) {
+      throw new Error(
+        `Journey history could not be included safely in this backup. ${journeyResult.issue}`,
+      );
+    }
+    journey = journeyResult.block;
+  }
 
   const envelope = createExportEnvelope(readAppData(repository), {
     exportedAt,
