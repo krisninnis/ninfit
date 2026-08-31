@@ -21,7 +21,13 @@ export type DataStatus =
   | { kind: 'idle' }
   | { kind: 'working' }
   | { kind: 'exported'; filename: string }
-  | { kind: 'imported'; written: number; removed: number }
+  | {
+      kind: 'imported';
+      written: number;
+      removed: number;
+      journeysRestored?: number;
+      activeJourneyRestored?: boolean;
+    }
   | { kind: 'error'; messages: string[] };
 
 export interface DataState {
@@ -123,7 +129,13 @@ export function useData(): DataState {
     }
 
     setPending(undefined);
-    setStatus({ kind: 'imported', written: result.dailyLogsWritten, removed: result.dailyLogsRemoved });
+    setStatus({
+      kind: 'imported',
+      written: result.dailyLogsWritten,
+      removed: result.dailyLogsRemoved,
+      journeysRestored: result.journeysRestored,
+      activeJourneyRestored: result.activeJourneyRestored,
+    });
   }, [pending, repository, adapter]);
 
   return {
