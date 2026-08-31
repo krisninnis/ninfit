@@ -482,3 +482,16 @@ describe('the Data screen reaches the store', () => {
     expect(code).toMatch(/commitImport\([\s\S]{0,120}?\bstorage\b/);
   });
 });
+
+
+describe('restore success requires Journey read-back verification', () => {
+  it('keeps Journey verification in the import boundary rather than presentation', () => {
+    const source = readFileSync(
+      fileURLToPath(new URL('../io/importJson.ts', import.meta.url)),
+      'utf8',
+    );
+    expect(source).toMatch(/loadJourneyHistory\(storage\)/);
+    expect(source).toMatch(/loadActiveJourneySnapshot\(storage\)/);
+    expect(source).toMatch(/Journey history could not be read back from storage/);
+  });
+});
