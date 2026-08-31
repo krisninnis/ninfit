@@ -482,3 +482,24 @@ describe('the Data screen reaches the store', () => {
     expect(code).toMatch(/commitImport\([\s\S]{0,120}?\bstorage\b/);
   });
 });
+
+
+describe('Journey backup summary is presentation-safe and complete enough for restore confirmation', () => {
+  it('reports completed history count and unfinished recovery without exposing coordinates', () => {
+    const source = device();
+    saveJourneyToHistory(source.storage, completedJourney({ id: 'summary-a' }));
+    saveJourneyToHistory(source.storage, completedJourney({ id: 'summary-b' }));
+    saveActiveJourneySnapshot(
+      source.storage,
+      recordingJourney(),
+      '2026-08-26T10:15:00.000Z',
+    );
+
+    const summary = summariseBackup(exportFrom(source));
+
+    expect(summary.hasJourneyData).toBe(true);
+    expect(summary.journeys).toBe(2);
+    expect(summary.hasActiveJourney).toBe(true);
+    expect(JSON.stringify(summary)).not.toMatch(/51\.5|-3\.5|acceptedPoints|rawPoints/);
+  });
+});
