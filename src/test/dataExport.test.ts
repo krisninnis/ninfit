@@ -477,3 +477,23 @@ describe('weight on the Data screen follows consequence', () => {
     expect(code).not.toMatch(/components\/(Opal|EggArt|GameHeader)/);
   });
 });
+
+
+describe('local-first device-loss wording', () => {
+  it('tells people to back up before destructive browser/device actions', () => {
+    expect(dataScreenSource).toMatch(/Before replacing your phone/i);
+    expect(dataScreenSource).toMatch(/removing the installed app/i);
+    expect(dataScreenSource).toMatch(/clearing browser\/site data/i);
+    expect(dataScreenSource).toMatch(/export a JSON backup/i);
+  });
+
+  it('does not present clearing site data as a normal app-update step', () => {
+    expect(dataScreenSource).toMatch(/should not need to clear site data just to get a newer NinFit build/i);
+    expect(dataScreenSource).toMatch(/Closing and\s+reopening the installed app while online is the safe first step/i);
+  });
+
+  it('keeps NinFit ID clearly separate from local fitness history', () => {
+    expect(dataScreenSource).toMatch(/not synced to your NinFit ID or to the cloud/i);
+    expect(dataScreenSource).toMatch(/does not contain your fitness records/i);
+  });
+});
