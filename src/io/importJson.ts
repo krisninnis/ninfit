@@ -10,9 +10,13 @@ import {
 } from '../domain/schema';
 import {
   clearActiveJourneySnapshot,
+  loadActiveJourneySnapshot,
   restoreActiveJourneySnapshot,
 } from '../storage/activeJourneySnapshot';
-import { replaceJourneyHistory } from '../storage/journeyHistory';
+import {
+  loadJourneyHistory,
+  replaceJourneyHistory,
+} from '../storage/journeyHistory';
 import type { ExportJourneyBlock } from '../domain/schema';
 import type { StorageAdapter } from '../storage/StorageAdapter';
 import type { AppData, ISODate, ISODateTime } from '../domain/types';
@@ -209,7 +213,15 @@ export function commitImport(
   }
 
   // 3. Read it back before removing anything.
-  const verification = verifyWritten(repository, data);
+  const verification = verifyWritten(
+    repository,
+    data,
+    resolveGameState(prepared, data, timestamp),
+    prepared.game?.settings ?? createDefaultGameSettings(),
+    prepared,
+    options.storage,
+    journeyOutcome,
+  );
   if (verification.length > 0) {
     return { ok: false, phase: 'verify', errors: verification };
   }
@@ -337,22 +349,46 @@ function resolveGameState(
   return sealRewardKeys(fresh, facts);
 }
 
-/** Spot-check that the replacement actually landed. */
-function verifyWritten(repository: Repository, data: AppData): string[] {
+/**
+ * Read back every replacement category before any stale day is removed.
+ *
+ * localStorage writes are whole-value operations, so identity/count/equality checks
+ * here are enough to detect a missed/rejected replacement without pretending the
+ * overall restore was transactional.
+ */
+function verifyWritten(
+  repository: Repository,
+  data: AppData,
+  expectedGameState: GameState,
+  expectedGameSettings: GameSettings,
+  prepared: PreparedImport,
+  storage: StorageAdapter | undefined,
+  journeyOutcome: JourneyRestoreOutcome,
+): string[] {
   const errors: string[] = [];
 
-  const profile = repository.getProfile();
-  if (profile?.id !== data.profile.id) {
+  if (repository.getProfile()?.id !== data.profile.id) {
     errors.push('The restored profile could not be read back from storage.');
   }
 
-  const baseline = repository.getBaseline();
-  if (baseline?.id !== data.baseline.id) {
+  if (repository.getHealthContext()?.id !== data.healthContext.id) {
+    errors.push('The restored health context could not be read back from storage.');
+  }
+
+  if (repository.getBaseline()?.id !== data.baseline.id) {
     errors.push('The restored baseline could not be read back from storage.');
   }
 
   if (repository.getMeasurements().length !== data.measurements.length) {
     errors.push('The restored measurements could not be read back from storage.');
+  }
+
+  if (repository.getWeeklyPlans().length !== data.weeklyPlans.length) {
+    errors.push('The restored programme could not be read back from storage.');
+  }
+
+  if (repository.getMetricSamples().length !== data.metricSamples.length) {
+    errors.push('The restored metric samples could not be read back from storage.');
   }
 
   for (const log of data.dailyLogs) {
@@ -363,8 +399,47 @@ function verifyWritten(repository: Repository, data: AppData): string[] {
     }
   }
 
-  if (repository.getGameState() === undefined) {
+  const gameState = repository.getGameState();
+  if (
+    gameState === undefined
+    || gameState.xp.total !== expectedGameState.xp.total
+    || gameState.awardedKeys.length !== expectedGameState.awardedKeys.length
+  ) {
     errors.push('Game progress could not be read back from storage.');
+  }
+
+  const gameSettings = repository.getGameSettings();
+  if (
+    gameSettings === undefined
+    || JSON.stringify(gameSettings) !== JSON.stringify(expectedGameSettings)
+  ) {
+    errors.push('Game settings could not be read back from storage.');
+  }
+
+  if (journeyOutcome.touched && storage !== undefined && prepared.journey !== undefined) {
+    const history = loadJourneyHistory(storage);
+    if (history.length !== prepared.journey.history.length) {
+      errors.push('Journey history could not be read back from storage.');
+    } else {
+      const expectedIds = prepared.journey.history.map((journey) => journey.id);
+      const actualIds = history.map((journey) => journey.id);
+      if (JSON.stringify(actualIds) !== JSON.stringify(expectedIds)) {
+        errors.push('Journey history identity/order could not be verified after restore.');
+      }
+    }
+
+    const active = loadActiveJourneySnapshot(storage);
+    if (prepared.journey.active === undefined) {
+      if (active !== null) {
+        errors.push('The stale unfinished Journey recovery could not be cleared.');
+      }
+    } else if (
+      active === null
+      || active.journey.id !== prepared.journey.active.journey.id
+      || active.savedAt !== prepared.journey.active.savedAt
+    ) {
+      errors.push('The unfinished Journey recovery could not be read back from storage.');
+    }
   }
 
   return errors;
