@@ -277,6 +277,14 @@ export function DataScreen({ onClose }: { onClose: () => void }) {
         <p className="footnote">
           Browsers can clear storage, so an occasional backup is worth having.
         </p>
+        <p className="footnote">
+          Before replacing your phone, removing the installed app, or clearing browser/site data,
+          export a JSON backup and keep the file somewhere you trust.
+        </p>
+        <p className="footnote">
+          You should not need to clear site data just to get a newer NinFit build. Closing and
+          reopening the installed app while online is the safe first step.
+        </p>
       </section>
 
       {issues.length > 0 ? (
