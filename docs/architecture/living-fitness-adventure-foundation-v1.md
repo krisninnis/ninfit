@@ -32,6 +32,20 @@ Important current facts:
 - precise route cloud sync is off by default
 - start/end masking exists as a projection rather than destructive editing
 
+Since this brief was first written, PR #79 has also landed the first private
+Adventure Map runtime baseline. That baseline:
+
+- reads the existing durable Journey history directly
+- admits only `completed` and `imported` Journeys
+- reuses trusted route segmentation and never joins observed runs across gaps
+- draws no line when segmentation evidence is missing
+- keeps Journey IDs as provenance without creating another store
+- computes no distance and mutates no Journey, reward or progression state
+- opens only when the user asks to see it from Journey Home
+
+It is a private, on-device route-history projection. It is not yet the coarse-place,
+memory or Journey Book system described below.
+
 Living Adventure systems must build **references and derived meaning** on top of those
 records rather than duplicating or mutating them.
 
@@ -98,6 +112,10 @@ source reference. Do not start with an untyped bag of arbitrary IDs.
 ## Goal
 
 Build a private personal geography of places where real movement actually occurred.
+
+The merged v1 route-history map is the starting point, not future work to recreate.
+The remainder of this section defines later derived-place concepts that may extend
+that surface only through separately bounded runtime slices.
 
 The Adventure Map is **not** a collectible map painted by fiction. It is a projection
 of trusted route history and approved derived meaning.
@@ -530,37 +548,46 @@ Do not extend the backup schema until a concrete runtime slice requires persiste
 
 # First implementation sequence
 
-Recommended narrow order:
+Current baseline and recommended narrow order:
 
-1. **Discovery-only derivation**
+1. **Private route-history projection — MERGED in PR #79**
+   - reads completed/imported Journey history
+   - reuses trusted segmented route runs
+   - no second store, distance calculation, sharing or cloud sync
+
+2. **Discovery-only coarse-place derivation — not started**
    - derive coarse "new place" facts from completed trusted Journey history
    - no persistence
    - no UI beyond tests/dev proof
 
-2. **Adventure Map private projection**
-   - minimal private map layer
-   - coarse cells / visited places
+3. **Coarse place layer on the existing Adventure Map**
+   - add visited coarse cells/places without replacing the trusted route projection
+   - no duplicate raw GPS store
    - no public sharing
 
-3. **First deterministic Mascot Memories**
+4. **First deterministic Mascot Memories**
    - one or two kinds only
    - stable IDs + provenance
    - no AI required
 
-4. **Journey Book projection**
+5. **Journey Book projection**
    - compose existing Journey and approved memory events
 
-5. **Manageable-effort programme slice**
+6. **Manageable-effort programme slice**
    - separate programme feature, not coupled to map/history
 
-6. **Safe quest framework**
+7. **Safe quest framework**
    - only after location/privacy rules are proven
 
 Do not begin community-created Adventures inside these slices.
 
 # Required tests for future runtime slices
 
-At minimum:
+The merged Adventure Map baseline already guards durable-status filtering, trusted
+segmentation, gap preservation, missing-evidence fail-closed behaviour, no second
+store and no sharing/cloud/geocoding/background-location wiring.
+
+Future slices must preserve those guards and add, at minimum:
 
 - same trusted history derives the same facts every time
 - duplicate Journey reads do not duplicate memory IDs
@@ -589,6 +616,7 @@ This document does not authorise:
 - duplicate raw GPS storage
 - new mascot species
 - new progression formulas
+- replacing or weakening the merged private route-history projection
 
 # Decision summary
 
