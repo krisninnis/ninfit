@@ -234,7 +234,7 @@ export function JourneyScreen() {
               : 'Ready when you are'}
           </span>
         </div>
-        <p className="journey-detail__privacy-note">
+        <p className="journey-home__note">
           Move in the real world and your trusted Journey routes can gradually build a private history of where you have been together.
         </p>
         <div>
