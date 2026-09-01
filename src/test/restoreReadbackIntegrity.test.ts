@@ -1,5 +1,11 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import importSource from '../io/importJson.ts?raw';
+
+const importSource = readFileSync(
+  fileURLToPath(new URL('../io/importJson.ts', import.meta.url)),
+  'utf8',
+);
 
 describe('restore read-back integrity', () => {
   it('verifies all repository-backed categories before reporting success', () => {
@@ -13,6 +19,12 @@ describe('restore read-back integrity', () => {
     expect(importSource).toContain('getGameSettings');
   });
 
+  it('keeps Journey verification inside the import boundary', () => {
+    expect(importSource).toContain('loadJourneyHistory(storage)');
+    expect(importSource).toContain('loadActiveJourneySnapshot(storage)');
+    expect(importSource).toMatch(/Journey history could not be read back from storage/);
+    expect(importSource).toMatch(/unfinished Journey recovery could not be read back from storage/);
+  });
 
   it('verifies replacement before removing stale daily records', () => {
     const verifyAt = importSource.indexOf('const verification = verifyWritten');
