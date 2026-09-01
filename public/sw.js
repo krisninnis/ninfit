@@ -1,6 +1,32 @@
 const CACHE_VERSION = 'ninfit-shell-v2';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
 
+/**
+ * Installed-app launches prefer the live deployment, and the cached root is only an
+ * offline fallback.
+ *
+ * The offline fallback also has to stay current. `sw.js` does not change on every
+ * product deploy, so a root cached once at first installation would keep answering
+ * offline launches with the first build the phone ever saw. Refresh it after every
+ * successful online launch, without letting a cache write fail a launch.
+ */
+async function networkFirstNavigation(request) {
+  try {
+    const response = await fetch(request, { cache: 'no-store' });
+
+    if (response.ok) {
+      await caches
+        .open(CACHE_VERSION)
+        .then((cache) => cache.put('/', response.clone()))
+        .catch(() => undefined);
+    }
+
+    return response;
+  } catch {
+    return caches.match('/').then((response) => response || Response.error());
+  }
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_VERSION).then((cache) => cache.addAll(APP_SHELL)).catch(() => undefined),
@@ -30,13 +56,7 @@ self.addEventListener('fetch', (event) => {
   if (requestUrl.origin !== self.location.origin) return;
 
   if (event.request.mode === 'navigate') {
-    // Installed-app launches prefer the live deployment. The cached root is only an
-    // offline fallback, so a new main deployment is visible on the next real launch.
-    event.respondWith(
-      fetch(event.request, { cache: 'no-store' }).catch(() =>
-        caches.match('/').then((response) => response || Response.error()),
-      ),
-    );
+    event.respondWith(networkFirstNavigation(event.request));
     return;
   }
 
