@@ -6,6 +6,7 @@ import { updateGameSettings } from '../app/game';
 import { createMemoryStorageAdapter } from '../storage/StorageAdapter';
 import { createRepository } from '../storage/repository';
 import { applyThemePreference } from '../ui/theme';
+import { buildChannelForHostname, buildFingerprintFromAssetUrls } from '../ui/buildInfo';
 import {
   DATA_HASH,
   PRIMARY_NAV,
@@ -130,5 +131,54 @@ describe('existing safety preferences remain available', () => {
     expect(data).toContain('Export JSON backup');
     expect(data).toContain('Export daily CSV');
     expect(data).toContain('Choose a backup file');
+  });
+});
+
+
+describe('build identification', () => {
+  it('identifies production, preview and local channels', () => {
+    expect(buildChannelForHostname('ninfit.vercel.app')).toBe('production');
+    expect(buildChannelForHostname('ninfit-git-feature-example.vercel.app')).toBe('preview');
+    expect(buildChannelForHostname('localhost')).toBe('local');
+    expect(buildChannelForHostname('example.com')).toBe('web');
+  });
+
+  it('derives a compact fingerprint from Vite hashed assets', () => {
+    expect(
+      buildFingerprintFromAssetUrls([
+        '/assets/index-AbC12345.js',
+        '/assets/index-ZyX98765.css',
+        '/manifest.webmanifest',
+      ]),
+    ).toBe('AbC12345.ZyX98765');
+  });
+
+  it('fingerprints the entry assets only, so one deployment reads the same on every phone', () => {
+    const source = read('ui', 'buildInfo.ts');
+    // Captured at module scope, before any lazily loaded route chunk can add its own
+    // stylesheet to the document and change the answer mid-session.
+    expect(source).toContain('const ENTRY_ASSET_URLS');
+    expect(source).toContain('documentAssetUrls(document)');
+    expect(source).not.toContain('fingerprint: buildFingerprintFromAssetUrls(documentAssetUrls(doc))');
+
+    const entry = ['/assets/index-AbC12345.js', '/assets/index-ZyX98765.css'];
+    const afterOpeningTheMap = [...entry, '/assets/JourneyRouteMap-QqQ55555.css'];
+    expect(buildFingerprintFromAssetUrls(entry)).toBe('AbC12345.ZyX98765');
+    expect(buildFingerprintFromAssetUrls(afterOpeningTheMap)).not.toBe(
+      buildFingerprintFromAssetUrls(entry),
+    );
+  });
+
+  it('reports an honest placeholder when nothing carries a build hash', () => {
+    expect(buildFingerprintFromAssetUrls(['/src/main.tsx'])).toBe('unavailable');
+  });
+
+  it('shows build information in Settings', () => {
+    const settings = read('ui', 'screens', 'SettingsScreen.tsx');
+    expect(settings).toContain('<Section title="About"');
+    expect(settings).toContain('Version');
+    expect(settings).toContain('Channel');
+    expect(settings).toContain('Build');
+    expect(settings).toContain('currentAppBuildInfo');
   });
 });
