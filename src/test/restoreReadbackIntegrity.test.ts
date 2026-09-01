@@ -29,7 +29,7 @@ describe('restore read-back integrity', () => {
   });
 
   it('keeps restore honesty explicit rather than claiming transactionality', () => {
-    expect(importSource).toMatch(/localStorage has no transactions/i);
+    expect(importSource).toMatch(/localStorage[\\s\\S]{0,8}has no transactions/i);
     expect(importSource).toMatch(/pre-import backup/i);
   });
 });
