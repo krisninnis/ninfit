@@ -6,7 +6,7 @@
   "description": "Local-first personal fitness tracker. Start small. Track honestly.",
   "scripts": {
     "dev": "vite",
-    "build": "vitest run src/test/accountFlow.test.ts src/test/accountIntegration.test.ts src/test/activeJourneyGpsSession.test.ts src/test/activeJourneySnapshot.test.ts src/test/activityCompletion.test.ts src/test/adventureMap.test.ts src/test/adventureMapWiring.test.ts src/test/backgrounds.test.ts src/test/cardTaxonomy.test.ts src/test/chartScale.test.ts src/test/companionMomentLifetime.test.ts src/test/companionPresentation.test.ts src/test/companionReactionPresentation.test.ts src/test/consistency.test.ts src/test/cssIntegrity.test.ts src/test/dailyLog.test.ts src/test/dataExport.test.ts src/test/dataImport.test.ts src/test/dates.test.ts src/test/defaults.test.ts src/test/desktopShell.test.ts src/test/eggState.test.ts && tsc --noEmit && vite build",
+    "build": "vitest run src/test/accountFlow.test.ts src/test/accountIntegration.test.ts src/test/activeJourneyGpsSession.test.ts src/test/activeJourneySnapshot.test.ts src/test/activityCompletion.test.ts src/test/adventureMap.test.ts src/test/adventureMapWiring.test.ts src/test/backgrounds.test.ts src/test/cardTaxonomy.test.ts src/test/chartScale.test.ts src/test/companionMomentLifetime.test.ts && tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
