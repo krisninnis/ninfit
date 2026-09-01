@@ -400,17 +400,18 @@ describe('legacy backups', () => {
 });
 
 describe('storage issues and import', () => {
-  it('does not let an unrelated corrupt key make a backup look clean', () => {
+  it('fails a full backup rather than turning corrupt stored data into an empty collection', () => {
     record(DAY_1, { exercise: { steps: 1000 } });
     adapter.set(STORAGE_KEYS.measurements, 'not json');
 
-    // The corruption is reported rather than silently read as "no measurements".
+    // Runtime reads still degrade safely and report the problem.
     expect(repo.getMeasurements()).toEqual([]);
     expect(repo.getIssues().length).toBeGreaterThan(0);
 
-    // A backup taken now says so by carrying an empty list, and the raw value stays put.
-    const backup = buildBackup(repo, { now: NOW, today: DAY_2 });
-    expect(backup.envelope.data.measurements).toEqual([]);
+    // A full backup asks the stricter question: was all authoritative data readable?
+    // It must fail visibly rather than produce a plausible file with measurements omitted.
+    expect(() => buildBackup(repo, { now: NOW, today: DAY_2 }))
+      .toThrow(/could not be read safely for backup/i);
     expect(adapter.get(STORAGE_KEYS.measurements)).toBe('not json');
   });
 
