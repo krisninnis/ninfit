@@ -153,6 +153,26 @@ describe('build identification', () => {
     ).toBe('AbC12345.ZyX98765');
   });
 
+  it('fingerprints the entry assets only, so one deployment reads the same on every phone', () => {
+    const source = read('ui', 'buildInfo.ts');
+    // Captured at module scope, before any lazily loaded route chunk can add its own
+    // stylesheet to the document and change the answer mid-session.
+    expect(source).toContain('const ENTRY_ASSET_URLS');
+    expect(source).toContain('documentAssetUrls(document)');
+    expect(source).not.toContain('fingerprint: buildFingerprintFromAssetUrls(documentAssetUrls(doc))');
+
+    const entry = ['/assets/index-AbC12345.js', '/assets/index-ZyX98765.css'];
+    const afterOpeningTheMap = [...entry, '/assets/JourneyRouteMap-QqQ55555.css'];
+    expect(buildFingerprintFromAssetUrls(entry)).toBe('AbC12345.ZyX98765');
+    expect(buildFingerprintFromAssetUrls(afterOpeningTheMap)).not.toBe(
+      buildFingerprintFromAssetUrls(entry),
+    );
+  });
+
+  it('reports an honest placeholder when nothing carries a build hash', () => {
+    expect(buildFingerprintFromAssetUrls(['/src/main.tsx'])).toBe('unavailable');
+  });
+
   it('shows build information in Settings', () => {
     const settings = read('ui', 'screens', 'SettingsScreen.tsx');
     expect(settings).toContain('<Section title="About"');

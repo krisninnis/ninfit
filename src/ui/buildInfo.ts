@@ -31,12 +31,34 @@ export function buildFingerprintFromAssetUrls(urls: readonly string[]): string {
   return unique.length > 0 ? unique.join('.') : 'unavailable';
 }
 
-export function currentAppBuildInfo(doc: Document = document): AppBuildInfo {
-  const assetUrls = [
+export function documentAssetUrls(doc: Document): string[] {
+  return [
     ...Array.from(doc.scripts, (script) => script.src),
     ...Array.from(doc.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'), (link) => link.href),
   ].filter((url) => url.length > 0);
+}
 
+/**
+ * The entry assets, read once while the document still contains only them.
+ *
+ * WHY A SNAPSHOT. Route chunks are loaded lazily, and Vite injects their stylesheets
+ * into the document when they arrive. Reading the asset list at render time therefore
+ * produced a fingerprint that depended on which screens the session had already
+ * opened: the same deployment showed `index.index-css` before the Adventure Map had
+ * been opened and `index.index-css.map-css` afterwards. A build identifier that two
+ * phones on one deployment can disagree about is worse than none, because the whole
+ * point of the field is comparing two phones.
+ *
+ * This module is imported by Settings, which App imports directly, so the snapshot is
+ * taken during application start-up, before any lazy chunk can be requested.
+ */
+const ENTRY_ASSET_URLS: readonly string[] =
+  typeof document === 'undefined' ? [] : documentAssetUrls(document);
+
+export function currentAppBuildInfo(
+  doc: Document = document,
+  assetUrls: readonly string[] = ENTRY_ASSET_URLS,
+): AppBuildInfo {
   return {
     version: __APP_VERSION__,
     channel: buildChannelForHostname(doc.location.hostname),
