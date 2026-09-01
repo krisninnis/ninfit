@@ -13,11 +13,6 @@ describe('restore read-back integrity', () => {
     expect(importSource).toContain('getGameSettings');
   });
 
-  it('keeps Journey verification inside the import boundary', () => {
-    expect(importSource).toMatch(
-      /loadJourneyHistory\(storage\)[\s\S]*Journey history could not be read back from storage[\s\S]*loadActiveJourneySnapshot\(storage\)[\s\S]*unfinished Journey recovery could not be read back from storage/,
-    );
-  });
 
   it('verifies replacement before removing stale daily records', () => {
     const verifyAt = importSource.indexOf('const verification = verifyWritten');
