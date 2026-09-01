@@ -6,7 +6,7 @@
   "description": "Local-first personal fitness tracker. Start small. Track honestly.",
   "scripts": {
     "dev": "vite",
-    "build": "vitest run src/test/restoreReadbackIntegrity.test.ts -t \"verifies all repository-backed categories before reporting success\" && tsc --noEmit && vite build",
+    "build": "vitest run src/test/restoreReadbackIntegrity.test.ts -t \"keeps Journey verification inside the import boundary\" && tsc --noEmit && vite build"verifies all repository-backed categories before reporting success\" && tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
