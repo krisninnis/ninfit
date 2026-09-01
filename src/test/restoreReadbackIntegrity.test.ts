@@ -1,11 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-
-const importSource = readFileSync(
-  fileURLToPath(new URL('../io/importJson.ts', import.meta.url)),
-  'utf8',
-);
+import importSource from '../io/importJson.ts?raw';
 
 describe('restore read-back integrity', () => {
   it('verifies all repository-backed categories before reporting success', () => {
