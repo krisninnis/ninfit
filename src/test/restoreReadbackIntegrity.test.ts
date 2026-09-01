@@ -14,10 +14,9 @@ describe('restore read-back integrity', () => {
   });
 
   it('keeps Journey verification inside the import boundary', () => {
-    expect(importSource).toContain('loadJourneyHistory(storage)');
-    expect(importSource).toContain('loadActiveJourneySnapshot(storage)');
-    expect(importSource).toMatch(/Journey history could not be read back from storage/);
-    expect(importSource).toMatch(/unfinished Journey recovery could not be read back from storage/);
+    expect(importSource).toMatch(
+      /loadJourneyHistory\(storage\)[\s\S]*Journey history could not be read back from storage[\s\S]*loadActiveJourneySnapshot\(storage\)[\s\S]*unfinished Journey recovery could not be read back from storage/,
+    );
   });
 
   it('verifies replacement before removing stale daily records', () => {
