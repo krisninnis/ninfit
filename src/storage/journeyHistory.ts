@@ -1,4 +1,5 @@
 import type { Journey } from '../domain/journey';
+import { validateJourneyForStatuses } from '../domain/schema';
 import { QUARANTINE_KEY_PREFIX } from './repository';
 import type { StorageAdapter } from './StorageAdapter';
 
@@ -61,32 +62,47 @@ export function readJourneyHistoryForBackup(
   const raw = storage.get(JOURNEY_HISTORY_KEY);
   if (raw === null) return { ok: true, journeys: [] };
 
-  let candidate: Partial<JourneyHistoryEnvelope>;
+  let candidate: unknown;
   try {
-    candidate = JSON.parse(raw) as Partial<JourneyHistoryEnvelope>;
+    candidate = JSON.parse(raw);
   } catch (error) {
     return quarantineHistory(storage, raw, `Journey history is not valid JSON: ${String(error)}`, options);
   }
 
-  if (candidate.schemaVersion !== 1) {
+  if (typeof candidate !== 'object' || candidate === null || Array.isArray(candidate)) {
+    return quarantineHistory(storage, raw, 'Journey history is not an object', options);
+  }
+
+  const record = candidate as Record<string, unknown>;
+  if (record['schemaVersion'] !== 1) {
     return quarantineHistory(
       storage,
       raw,
-      `Journey history uses schema version ${JSON.stringify(candidate.schemaVersion)}`,
+      `Journey history uses schema version ${JSON.stringify(record['schemaVersion'])}`,
       options,
     );
   }
 
-  if (!Array.isArray(candidate.journeys)) {
+  if (!Array.isArray(record['journeys'])) {
     return quarantineHistory(storage, raw, 'Journey history is not a list of Journeys', options);
   }
 
-  return {
-    ok: true,
-    journeys: candidate.journeys.filter((journey): journey is Journey =>
-      Boolean(journey && isPersistableJourney(journey as Journey)),
+  const journeys = record['journeys'];
+  const errors = journeys.flatMap((journey, index) =>
+    validateJourneyForStatuses(journey, ['completed', 'imported']).map(
+      (error) => `history[${index}]: ${error}`,
     ),
-  };
+  );
+  if (errors.length > 0) {
+    return quarantineHistory(
+      storage,
+      raw,
+      `Journey history contains invalid Journey data: ${errors.join('; ')}`,
+      options,
+    );
+  }
+
+  return { ok: true, journeys: journeys as Journey[] };
 }
 
 function quarantineHistory(
