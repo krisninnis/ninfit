@@ -319,6 +319,21 @@ function validateJourney(
   }
 }
 
+/**
+ * Structural Journey validation shared by import and conservative backup reads.
+ *
+ * Runtime Journey loaders may remain fail-soft for presentation, but a complete
+ * backup must not silently omit or accept a malformed authoritative Journey.
+ */
+export function validateJourneyForStatuses(
+  value: unknown,
+  allowedStatuses: readonly string[],
+): string[] {
+  const errors: string[] = [];
+  validateJourney(value, 'Journey', allowedStatuses, errors);
+  return errors;
+}
+
 function validateJourneyBlock(value: unknown, errors: string[]): void {
   if (value === undefined) return;
 
