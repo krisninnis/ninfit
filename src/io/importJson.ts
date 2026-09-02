@@ -1,5 +1,9 @@
 import { nowTimestamp } from '../domain/dates';
-import { createDefaultGameSettings, createInitialGameState } from '../domain/game/defaults';
+import {
+  createDefaultGameSettings,
+  createInitialGameState,
+  normaliseGameSettings,
+} from '../domain/game/defaults';
 import { withoutPendingRewardDeliveries } from '../domain/game/rewardDelivery';
 import { deriveRewards, sealRewardKeys } from '../domain/game/rewards';
 import type { GameSettings, GameState } from '../domain/game/types';
@@ -187,6 +191,9 @@ export function commitImport(
   }
 
   const { data } = prepared;
+  const expectedGameSettings = normaliseGameSettings(
+    prepared.game?.settings ?? createDefaultGameSettings(),
+  );
   const incomingDates = new Set(data.dailyLogs.map((log) => log.date));
   const existingDates = repository.listDailyLogDates();
 
@@ -204,7 +211,7 @@ export function commitImport(
     }
 
     repository.saveGameState(resolveGameState(prepared, data, timestamp));
-    repository.saveGameSettings(prepared.game?.settings ?? createDefaultGameSettings());
+    repository.saveGameSettings(expectedGameSettings);
     journeyOutcome = restoreJourneys(prepared, options.storage);
   } catch (error) {
     return {
@@ -221,7 +228,7 @@ export function commitImport(
     repository,
     data,
     resolveGameState(prepared, data, timestamp),
-    prepared.game?.settings ?? createDefaultGameSettings(),
+    expectedGameSettings,
     prepared,
     options.storage,
     journeyOutcome,
