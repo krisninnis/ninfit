@@ -181,6 +181,7 @@ export function TodayScreen() {
   const nextUp = primaryAction(view.activities, (id) => isActivityCompleted(log, id));
   const plannedMinutes = totalMinutes(view.activities);
   const activeDays = game.facts.activeDays.length;
+  const isFirstDay = view.weekNumber === 1 && view.dayIndex === 1;
 
   /*
     What the companion has noticed today.
@@ -423,7 +424,7 @@ export function TodayScreen() {
       {view.status === 'planned' ? (
         <section className="card card--action plan plan--hero">
           <div className="plan__head">
-            <h2 className="plan__title">Today&rsquo;s session</h2>
+            <h2 className="plan__title">{isFirstDay ? 'Your first step' : 'Today&rsquo;s session'}</h2>
             {/* Duration and intensity as two glanceable facts, not two sentences. */}
             <p className="plan__facts">
               {plannedMinutes > 0 ? <span className="plan__fact">{plannedMinutes} min</span> : null}
@@ -434,6 +435,13 @@ export function TodayScreen() {
               ) : null}
             </p>
           </div>
+
+          {isFirstDay ? (
+            <p className="plan__welcome">
+              Start small. The first workout is here to prove NinFit fits your life — not to
+              make you prove anything to NinFit.
+            </p>
+          ) : null}
 
           <ul className="plan__activities">
             {view.activities.map((activity) => (
