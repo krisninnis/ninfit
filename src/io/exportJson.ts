@@ -7,7 +7,7 @@ import { readActiveJourneySnapshotForBackup } from '../storage/activeJourneySnap
 import { readJourneyHistoryForBackup } from '../storage/journeyHistory';
 import type { StorageAdapter } from '../storage/StorageAdapter';
 import type { ISODate, ISODateTime } from '../domain/types';
-import type { Repository } from '../storage/repository';
+import { createRepository, type Repository } from '../storage/repository';
 import type { DownloadableFile } from './download';
 
 /**
@@ -97,11 +97,20 @@ export function buildBackup(
     journey = journeyResult.block;
   }
 
-  const data = readAppData(repository);
-  const gameState = repository.getGameState();
-  const gameSettings = repository.getGameSettings();
+  // When the backing store is available, read through a fresh repository so backup
+  // integrity reflects the values that exist now rather than historical issues
+  // remembered earlier in the app session. The ordinary runtime repository keeps
+  // issues deliberately sticky for diagnostics; a repaired value must nevertheless
+  // be exportable once the current stored value is valid.
+  const readRepository = options.storage === undefined
+    ? repository
+    : createRepository(options.storage);
 
-  const unsafeIssues = repository.getIssues().filter((issue) => {
+  const data = readAppData(readRepository);
+  const gameState = readRepository.getGameState();
+  const gameSettings = readRepository.getGameSettings();
+
+  const unsafeIssues = readRepository.getIssues().filter((issue) => {
     return !(
       issue.key.endsWith(':game')
       && issue.kind === 'invalid_shape'
