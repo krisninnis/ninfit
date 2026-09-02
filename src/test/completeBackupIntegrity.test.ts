@@ -58,6 +58,29 @@ describe('complete JSON backup integrity', () => {
     expect(source.storage.get(STORAGE_KEYS.profile)).toBe('{ corrupt profile');
   });
 
+  it('allows a complete backup after a previously corrupt value is repaired in the same session', () => {
+    const source = device();
+    const profile = source.repository.getProfile();
+    if (profile === undefined) throw new Error('seed profile missing');
+
+    source.storage.set(STORAGE_KEYS.profile, '{ corrupt profile');
+    expect(source.repository.getProfile()).toBeUndefined();
+    expect(source.repository.getIssues().some((issue) => issue.key === STORAGE_KEYS.profile)).toBe(true);
+
+    source.repository.saveProfile({
+      ...profile,
+      displayName: 'Repaired Profile',
+      updatedAt: '2026-09-02T10:00:00.000Z',
+    });
+
+    // Runtime diagnostics deliberately remember the earlier issue, but backup integrity
+    // must judge the current persisted value rather than a historical session warning.
+    expect(source.repository.getIssues().some((issue) => issue.key === STORAGE_KEYS.profile)).toBe(true);
+
+    const backup = buildBackup(source.repository, { storage: source.storage });
+    expect(backup.envelope.data.profile.displayName).toBe('Repaired Profile');
+  });
+
   it('permits the existing scoped pending-reward-delivery sanitisation', () => {
     const source = device();
     const state = source.repository.getGameState();
