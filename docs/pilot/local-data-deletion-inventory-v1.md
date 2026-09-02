@@ -30,7 +30,7 @@ That wording is directionally correct and must remain explicit.
 | Profile | local repository | no dedicated delete action | GAP |
 | Health notes | local repository | editable through Profile; no whole-history deletion action | PARTIAL |
 | Baseline | local repository | editable; no whole-history deletion action | PARTIAL |
-| Measurements | local repository | per-entry behaviour exists in product UI/domain where exposed; no documented global clear | PARTIAL |
+| Measurements | local repository | no per-entry or global deletion action is currently exposed | GAP |
 | DailyLogs | local repository, one key/day | no Data-screen whole-history clear action | GAP |
 | WeeklyPlans | local repository | no user-facing global clear | GAP |
 | MetricSamples | local repository | no user-facing global clear | GAP |
