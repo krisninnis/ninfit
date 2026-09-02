@@ -10,9 +10,13 @@ import {
 } from '../domain/schema';
 import {
   clearActiveJourneySnapshot,
+  loadActiveJourneySnapshot,
   restoreActiveJourneySnapshot,
 } from '../storage/activeJourneySnapshot';
-import { replaceJourneyHistory } from '../storage/journeyHistory';
+import {
+  loadJourneyHistory,
+  replaceJourneyHistory,
+} from '../storage/journeyHistory';
 import type { ExportJourneyBlock } from '../domain/schema';
 import type { StorageAdapter } from '../storage/StorageAdapter';
 import type { AppData, ISODate, ISODateTime } from '../domain/types';
@@ -125,6 +129,10 @@ function checkDailyLogDates(data: AppData): string[] {
   return errors;
 }
 
+function sameStoredValue(actual: unknown, expected: unknown): boolean {
+  return JSON.stringify(actual) === JSON.stringify(expected);
+}
+
 export interface CommitOptions {
   now?: ISODateTime;
   /**
@@ -209,7 +217,15 @@ export function commitImport(
   }
 
   // 3. Read it back before removing anything.
-  const verification = verifyWritten(repository, data);
+  const verification = verifyWritten(
+    repository,
+    data,
+    resolveGameState(prepared, data, timestamp),
+    prepared.game?.settings ?? createDefaultGameSettings(),
+    prepared,
+    options.storage,
+    journeyOutcome,
+  );
   if (verification.length > 0) {
     return { ok: false, phase: 'verify', errors: verification };
   }
@@ -337,34 +353,82 @@ function resolveGameState(
   return sealRewardKeys(fresh, facts);
 }
 
-/** Spot-check that the replacement actually landed. */
-function verifyWritten(repository: Repository, data: AppData): string[] {
+/**
+ * Read back every replacement category before any stale day is removed.
+ *
+ * localStorage writes are whole-value operations, so category identity/count/equality
+ * checks detect missed or rejected replacement without pretending the overall restore
+ * is transactional.
+ */
+function verifyWritten(
+  repository: Repository,
+  data: AppData,
+  expectedGameState: GameState,
+  expectedGameSettings: GameSettings,
+  prepared: PreparedImport,
+  storage: StorageAdapter | undefined,
+  journeyOutcome: JourneyRestoreOutcome,
+): string[] {
   const errors: string[] = [];
 
-  const profile = repository.getProfile();
-  if (profile?.id !== data.profile.id) {
+  if (!sameStoredValue(repository.getProfile(), data.profile)) {
     errors.push('The restored profile could not be read back from storage.');
   }
 
-  const baseline = repository.getBaseline();
-  if (baseline?.id !== data.baseline.id) {
+  if (!sameStoredValue(repository.getHealthContext(), data.healthContext)) {
+    errors.push('The restored health context could not be read back from storage.');
+  }
+
+  if (!sameStoredValue(repository.getBaseline(), data.baseline)) {
     errors.push('The restored baseline could not be read back from storage.');
   }
 
-  if (repository.getMeasurements().length !== data.measurements.length) {
+  if (!sameStoredValue(repository.getMeasurements(), data.measurements)) {
     errors.push('The restored measurements could not be read back from storage.');
+  }
+
+  if (!sameStoredValue(repository.getWeeklyPlans(), data.weeklyPlans)) {
+    errors.push('The restored programme could not be read back from storage.');
+  }
+
+  if (!sameStoredValue(repository.getMetricSamples(), data.metricSamples)) {
+    errors.push('The restored metric samples could not be read back from storage.');
   }
 
   for (const log of data.dailyLogs) {
     const stored = repository.getDailyLog(log.date);
-    if (stored?.id !== log.id) {
+    if (!sameStoredValue(stored, log)) {
       errors.push(`The record for ${log.date} could not be read back from storage.`);
       break;
     }
   }
 
-  if (repository.getGameState() === undefined) {
+  if (!sameStoredValue(repository.getGameState(), expectedGameState)) {
     errors.push('Game progress could not be read back from storage.');
+  }
+
+  if (!sameStoredValue(repository.getGameSettings(), expectedGameSettings)) {
+    errors.push('Game settings could not be read back from storage.');
+  }
+
+  if (journeyOutcome.touched && storage !== undefined && prepared.journey !== undefined) {
+    const history = loadJourneyHistory(storage);
+    if (!sameStoredValue(history, prepared.journey.history)) {
+      errors.push('Journey history could not be read back from storage.');
+    }
+
+    const active = loadActiveJourneySnapshot(storage);
+    if (prepared.journey.active === undefined) {
+      if (active !== null) {
+        errors.push('The stale unfinished Journey recovery could not be cleared.');
+      }
+    } else if (
+      active === null
+      || active.savedAt !== prepared.journey.active.savedAt
+      || !sameStoredValue(active.journey, prepared.journey.active.journey)
+    ) {
+      errors.push('The unfinished Journey recovery could not be read back from storage.');
+    }
   }
 
   return errors;
