@@ -20,7 +20,8 @@ import { useEffect, useRef, useState } from 'react';
  * comes from domain state (`eggState === 'ready'`), and `onHatch`, which performs the
  * one real mutation. This hook chooses the moment, never the outcome. If the domain
  * says no, `request()` does nothing at all - there is no presentation-only "hatched"
- * state that could disagree with what is stored.
+ * state that could disagree with what is stored. The full ceremony commits at the
+ * break and continues as an overlay over the already-hatched domain state.
  *
  * REDUCED MOTION HATCHES IMMEDIATELY.
  *
@@ -30,12 +31,14 @@ import { useEffect, useRef, useState } from 'react';
  * be a worse experience wearing the costume of an accessible one.
  */
 
-export type HatchPhase = 'idle' | 'cracking' | 'flash';
+export type HatchPhase = 'idle' | 'cracking' | 'held' | 'flash' | 'emerging' | 'settling';
 
 /** The shell shakes and strains before it gives. */
-const CRACKING_MS = 650;
+const GATHER_MS = 850;
+const BREAK_MS = 1450;
+const EMERGENCE_MS = 2900;
 /** Total time to the real transition. The flash occupies the remainder. */
-const HATCH_MS = 950;
+const HATCH_MS = 4200;
 
 export interface HatchCinematic {
   phase: HatchPhase;
@@ -82,14 +85,19 @@ export function useHatchCinematic({
     clear();
     setPhase('cracking');
 
-    timers.current.push(window.setTimeout(() => setPhase('flash'), CRACKING_MS));
+    timers.current.push(window.setTimeout(() => setPhase('held'), GATHER_MS));
     timers.current.push(
       window.setTimeout(() => {
         onHatch();
-        setPhase('idle');
-        timers.current = [];
-      }, HATCH_MS),
+        setPhase('flash');
+      }, BREAK_MS),
     );
+    timers.current.push(window.setTimeout(() => setPhase('emerging'), BREAK_MS + 250));
+    timers.current.push(window.setTimeout(() => setPhase('settling'), EMERGENCE_MS));
+    timers.current.push(window.setTimeout(() => {
+      setPhase('idle');
+      timers.current = [];
+    }, HATCH_MS));
   };
 
   return { phase, isRunning: phase !== 'idle', request };
