@@ -424,7 +424,7 @@ export function TodayScreen() {
       {view.status === 'planned' ? (
         <section className="card card--action plan plan--hero">
           <div className="plan__head">
-            <h2 className="plan__title">{isFirstDay ? 'Your first step' : 'Today&rsquo;s session'}</h2>
+            <h2 className="plan__title">{isFirstDay ? 'Your first step' : 'Today’s session'}</h2>
             {/* Duration and intensity as two glanceable facts, not two sentences. */}
             <p className="plan__facts">
               {plannedMinutes > 0 ? <span className="plan__fact">{plannedMinutes} min</span> : null}
