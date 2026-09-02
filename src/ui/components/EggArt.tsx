@@ -32,17 +32,12 @@ export function EggArt({
   const style = energy === undefined ? undefined : ({ '--egg-energy': energy } as CSSProperties);
   const energised = energy === undefined ? '' : ' egg--energised';
 
-  // Domain progression has five earned crack stages, while the current presentation
-  // has three visible crack tiers. Keep that compression here, in presentation:
-  // the domain remains one qualifying day -> one monotonic stage.
-  const crackTier =
-    crackStage <= 0
-      ? 0
-      : crackStage <= 2
-        ? 1
-        : crackStage <= 4
-          ? 2
-          : 3;
+  // Keep the presentation faithful to the domain's six values. Clamp defensively so
+  // malformed callers cannot create a partially-rendered or species-specific state.
+  const visibleStage = Number.isFinite(crackStage)
+    ? Math.max(0, Math.min(5, Math.floor(crackStage)))
+    : 0;
+  const stageStyle = (stage: number) => ({ opacity: stage <= visibleStage ? 1 : 0 });
 
   return (
     <svg
@@ -56,38 +51,30 @@ export function EggArt({
       <ellipse cx="50" cy="66" rx="5" ry="6" className="egg__speck" />
       <ellipse cx="42" cy="30" rx="4" ry="5" className="egg__speck" />
 
-      {crackTier >= 1 ? (
-        <path
-          className="egg__crack"
-          d="M40 21 L37 30 L42 35 L38 43"
-        />
-      ) : null}
-
-      {crackTier >= 2 ? (
-        <>
-          <path
-            className="egg__crack"
-            d="M38 43 L29 48 L34 55 L25 62"
-          />
-          <path
-            className="egg__crack"
-            d="M42 35 L51 40 L47 48 L56 54"
-          />
-        </>
-      ) : null}
-
-      {crackTier >= 3 ? (
-        <>
-          <path
-            className="egg__crack egg__crack--bright"
-            d="M34 55 L42 61 L37 70 L45 78"
-          />
-          <path
-            className="egg__crack egg__crack--bright"
-            d="M47 48 L43 57 L52 64 L48 73"
-          />
-        </>
-      ) : null}
+      <g className="egg__stage" data-egg-stage="1" style={stageStyle(1)}>
+        <path className="egg__crack" d="M40 21 L37 30 L42 35 L38 43" />
+      </g>
+      <g className="egg__stage" data-egg-stage="2" style={stageStyle(2)}>
+        <path className="egg__crack-light" d="M38 43 L29 48 L34 55 L25 62" />
+        <path className="egg__crack" d="M38 43 L29 48 L34 55 L25 62" />
+        <path className="egg__crack-light" d="M42 35 L51 40 L47 48 L56 54" />
+        <path className="egg__crack" d="M42 35 L51 40 L47 48 L56 54" />
+      </g>
+      <g className="egg__stage" data-egg-stage="3" style={stageStyle(3)}>
+        <path className="egg__crack-light" d="M34 55 L42 61 L37 70 L45 78" />
+        <path className="egg__crack" d="M34 55 L42 61 L37 70 L45 78" />
+      </g>
+      <g className="egg__stage" data-egg-stage="4" style={stageStyle(4)}>
+        <path className="egg__crack-light" d="M25 62 L22 70 L29 76 L26 84" />
+        <path className="egg__crack" d="M25 62 L22 70 L29 76 L26 84" />
+        <path className="egg__fragment" d="M25 84 L30 88 L27 92" />
+      </g>
+      <g className="egg__stage" data-egg-stage="5" style={stageStyle(5)}>
+        <path className="egg__crack-light" d="M47 48 L43 57 L52 64 L48 73" />
+        <path className="egg__crack" d="M47 48 L43 57 L52 64 L48 73" />
+        <path className="egg__crack-light" d="M29 48 L40 51 L51 40" />
+        <path className="egg__crack" d="M29 48 L40 51 L51 40" />
+      </g>
     </svg>
   );
 }
