@@ -3,11 +3,11 @@ import { nowTimestamp, todayISO } from '../domain/dates';
 import { createDefaultGameSettings, createInitialGameState } from '../domain/game/defaults';
 import { createExportEnvelope, type ExportEnvelope } from '../domain/schema';
 import type { ExportJourneyBlock } from '../domain/schema';
-import { loadActiveJourneySnapshot } from '../storage/activeJourneySnapshot';
+import { readActiveJourneySnapshotForBackup } from '../storage/activeJourneySnapshot';
 import { readJourneyHistoryForBackup } from '../storage/journeyHistory';
 import type { StorageAdapter } from '../storage/StorageAdapter';
 import type { ISODate, ISODateTime } from '../domain/types';
-import type { Repository } from '../storage/repository';
+import { createRepository, type Repository } from '../storage/repository';
 import type { DownloadableFile } from './download';
 
 /**
@@ -61,10 +61,21 @@ export function buildJourneyBlock(
     };
   }
 
+  const active = readActiveJourneySnapshotForBackup(storage, options);
+  if (!active.ok) {
+    return {
+      issue: active.quarantinedAs
+        ? `${active.detail}. A copy was kept at ${active.quarantinedAs}.`
+        : active.detail,
+    };
+  }
+
   const block: ExportJourneyBlock = { history: history.journeys };
-  const active = loadActiveJourneySnapshot(storage);
-  if (active !== null) {
-    block.active = { savedAt: active.savedAt, journey: active.journey };
+  if (active.snapshot !== null) {
+    block.active = {
+      savedAt: active.snapshot.savedAt,
+      journey: active.snapshot.journey,
+    };
   }
   return { block };
 }
@@ -74,14 +85,52 @@ export function buildBackup(
   options: { now?: ISODateTime; today?: ISODate; storage?: StorageAdapter } = {},
 ): BackupFile {
   const exportedAt = options.now ?? nowTimestamp();
-  const journey =
-    options.storage === undefined ? undefined : buildJourneyBlock(options.storage).block;
 
-  const envelope = createExportEnvelope(readAppData(repository), {
+  let journey: ExportJourneyBlock | undefined;
+  if (options.storage !== undefined) {
+    const journeyResult = buildJourneyBlock(options.storage);
+    if (journeyResult.issue !== undefined) {
+      throw new Error(
+        `Journey data could not be included safely in this backup. ${journeyResult.issue}`,
+      );
+    }
+    journey = journeyResult.block;
+  }
+
+  // When the backing store is available, read through a fresh repository so backup
+  // integrity reflects the values that exist now rather than historical issues
+  // remembered earlier in the app session. The ordinary runtime repository keeps
+  // issues deliberately sticky for diagnostics; a repaired value must nevertheless
+  // be exportable once the current stored value is valid.
+  const readRepository = options.storage === undefined
+    ? repository
+    : createRepository(options.storage);
+
+  const data = readAppData(readRepository);
+  const gameState = readRepository.getGameState();
+  const gameSettings = readRepository.getGameSettings();
+
+  const unsafeIssues = readRepository.getIssues().filter((issue) => {
+    return !(
+      issue.key.endsWith(':game')
+      && issue.kind === 'invalid_shape'
+      && issue.detail.includes('pendingRewardDeliveries')
+    );
+  });
+
+  if (unsafeIssues.length > 0) {
+    const labels = unsafeIssues.map((issue) => issue.key).join(', ');
+    throw new Error(
+      `Some stored NinFit data could not be read safely for backup: ${labels}. `
+        + 'The original values have not been replaced.',
+    );
+  }
+
+  const envelope = createExportEnvelope(data, {
     exportedAt,
     game: {
-      state: repository.getGameState() ?? createInitialGameState({ now: exportedAt }),
-      settings: repository.getGameSettings() ?? createDefaultGameSettings(),
+      state: gameState ?? createInitialGameState({ now: exportedAt }),
+      settings: gameSettings ?? createDefaultGameSettings(),
     },
     journey,
   });

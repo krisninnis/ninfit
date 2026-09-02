@@ -1,4 +1,7 @@
 import type { Journey } from '../domain/journey';
+import { isValidISODateTime } from '../domain/dates';
+import { validateJourneyForStatuses } from '../domain/schema';
+import { QUARANTINE_KEY_PREFIX } from './repository';
 import type { StorageAdapter } from './StorageAdapter';
 
 const ACTIVE_JOURNEY_KEY = 'ninfit:journey:active:v1';
@@ -79,4 +82,84 @@ export function restoreActiveJourneySnapshot(
 
 export function activeJourneySnapshotKey(): string {
   return ACTIVE_JOURNEY_KEY;
+}
+
+
+export type ActiveJourneySnapshotRead =
+  | { ok: true; snapshot: ActiveJourneySnapshot | null }
+  | { ok: false; detail: string; quarantinedAs?: string };
+
+/**
+ * Conservative read used by full backup/export.
+ *
+ * Runtime loading stays fail-soft so Journey UI can recover gracefully. A complete
+ * backup must answer a stricter question: whether all recoverable Journey state was
+ * read safely. Corruption must never be reinterpreted as “no active Journey”.
+ */
+export function readActiveJourneySnapshotForBackup(
+  storage: StorageAdapter,
+  options: { now?: () => string } = {},
+): ActiveJourneySnapshotRead {
+  const raw = storage.get(ACTIVE_JOURNEY_KEY);
+  if (raw === null) return { ok: true, snapshot: null };
+
+  let candidate: unknown;
+  try {
+    candidate = JSON.parse(raw);
+  } catch (error) {
+    return quarantineActiveSnapshot(
+      storage,
+      raw,
+      `Active Journey recovery is not valid JSON: ${String(error)}`,
+      options,
+    );
+  }
+
+  if (typeof candidate !== 'object' || candidate === null || Array.isArray(candidate)) {
+    return quarantineActiveSnapshot(
+      storage,
+      raw,
+      'Active Journey recovery is not an object',
+      options,
+    );
+  }
+
+  const parsed = parseSnapshot(raw);
+  const record = candidate as Record<string, unknown>;
+  const journeyErrors = validateJourneyForStatuses(
+    record['journey'],
+    ['recording', 'paused'],
+  );
+  if (
+    parsed === null
+    || !isValidISODateTime(record['savedAt'])
+    || journeyErrors.length > 0
+  ) {
+    return quarantineActiveSnapshot(
+      storage,
+      raw,
+      journeyErrors.length > 0
+        ? `Active Journey recovery contains invalid Journey data: ${journeyErrors.join('; ')}`
+        : 'Active Journey recovery has an unsupported schema, saved time or Journey state',
+      options,
+    );
+  }
+
+  return { ok: true, snapshot: parsed };
+}
+
+function quarantineActiveSnapshot(
+  storage: StorageAdapter,
+  raw: string,
+  detail: string,
+  options: { now?: () => string },
+): ActiveJourneySnapshotRead {
+  const stamp = options.now?.() ?? new Date().toISOString();
+  const quarantinedAs = `${QUARANTINE_KEY_PREFIX}${ACTIVE_JOURNEY_KEY}:${stamp}`;
+  try {
+    storage.set(quarantinedAs, raw);
+    return { ok: false, detail, quarantinedAs };
+  } catch {
+    return { ok: false, detail };
+  }
 }
