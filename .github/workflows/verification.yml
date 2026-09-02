@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -34,7 +36,15 @@ jobs:
           printf 'VITE_SUPABASE_PUBLISHABLE_KEY=placeholder\n' >> .env.local
 
       - name: Check whitespace errors
-        run: git diff --check
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            git diff --check "$BASE_SHA...$HEAD_SHA"
+          else
+            git diff --check "$GITHUB_SHA^" "$GITHUB_SHA"
+          fi
 
       - name: Run full test suite
         run: npm test
