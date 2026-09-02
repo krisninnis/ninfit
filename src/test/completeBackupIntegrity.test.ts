@@ -17,6 +17,40 @@ function device() {
 }
 
 describe('complete JSON backup integrity', () => {
+  it('fails closed when one Journey history entry is malformed', () => {
+    const source = device();
+    source.storage.set(
+      journeyHistoryKey(),
+      JSON.stringify({ schemaVersion: 1, journeys: [{ status: 'completed' }] }),
+    );
+
+    expect(() => buildBackup(source.repository, { storage: source.storage }))
+      .toThrow(/Journey data could not be included safely/i);
+    expect(source.storage.get(journeyHistoryKey())).toContain('"status":"completed"');
+  });
+
+  it('fails closed when an active Journey has only a plausible status', () => {
+    const source = device();
+    source.storage.set(
+      activeJourneySnapshotKey(),
+      JSON.stringify({
+        schemaVersion: 1,
+        savedAt: '2026-09-01T12:00:00.000Z',
+        journey: { status: 'recording' },
+      }),
+    );
+
+    expect(() => buildBackup(source.repository, { storage: source.storage }))
+      .toThrow(/Journey data could not be included safely/i);
+  });
+
+  it('fails closed when Journey history is JSON null', () => {
+    const source = device();
+    source.storage.set(journeyHistoryKey(), 'null');
+    expect(() => buildBackup(source.repository, { storage: source.storage }))
+      .toThrow(/Journey data could not be included safely/i);
+  });
+
   it('fails closed when Journey history is unreadable', () => {
     const source = device();
     source.storage.set(journeyHistoryKey(), '{ corrupt journey history');
