@@ -110,6 +110,28 @@
     position: relative;
   }
 
+  .egg-hatch__reduced {
+    position: absolute;
+    inset: auto 0 -2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    color: var(--ft-text-primary);
+    font-size: 0.9rem;
+    opacity: 1;
+    transition: opacity 180ms ease-out;
+  }
+
+  .egg-hatch__skip {
+    border: 0;
+    background: none;
+    color: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+    font: inherit;
+  }
+
   .egg__hatchFlash {
     position: absolute;
     inset: 50% auto auto 50%;
@@ -150,6 +172,15 @@
     .egg-hatch--cracking .egg,
     .egg__hatchFlash {
       animation: none;
+    }
+    .egg-hatch--reduced-ready .egg,
+    .egg-hatch--reduced-opening .egg,
+    .egg-hatch--reduced-meet .egg {
+      animation: none;
+      transform: none;
+    }
+    .egg-hatch__reduced {
+      transition: opacity 180ms ease-out;
     }
   }
 
