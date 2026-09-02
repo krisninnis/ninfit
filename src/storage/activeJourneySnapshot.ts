@@ -1,4 +1,6 @@
 import type { Journey } from '../domain/journey';
+import { isValidISODateTime } from '../domain/dates';
+import { validateJourneyForStatuses } from '../domain/schema';
 import { QUARANTINE_KEY_PREFIX } from './repository';
 import type { StorageAdapter } from './StorageAdapter';
 
@@ -123,11 +125,22 @@ export function readActiveJourneySnapshotForBackup(
   }
 
   const parsed = parseSnapshot(raw);
-  if (parsed === null) {
+  const record = candidate as Record<string, unknown>;
+  const journeyErrors = validateJourneyForStatuses(
+    record['journey'],
+    ['recording', 'paused'],
+  );
+  if (
+    parsed === null
+    || !isValidISODateTime(record['savedAt'])
+    || journeyErrors.length > 0
+  ) {
     return quarantineActiveSnapshot(
       storage,
       raw,
-      'Active Journey recovery has an unsupported schema or invalid Journey state',
+      journeyErrors.length > 0
+        ? `Active Journey recovery contains invalid Journey data: ${journeyErrors.join('; ')}`
+        : 'Active Journey recovery has an unsupported schema, saved time or Journey state',
       options,
     );
   }
