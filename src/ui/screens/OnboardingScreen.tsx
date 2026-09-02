@@ -237,6 +237,12 @@ export function OnboardingScreen({
         illustration that changes per screen. It is identical on every path.
       */}
       <div className={`step__egg${hatch.isRunning ? ` egg-hatch--${hatch.phase}` : ''}`}>
+        {hatch.phase.startsWith('reduced-') ? (
+          <div className="egg-hatch__reduced" role="status" aria-live="polite">
+            <span>{hatch.phase === 'reduced-ready' ? 'Your egg is ready.' : hatch.phase === 'reduced-opening' ? 'It’s opening.' : 'Meet your companion.'}</span>
+            <button type="button" className="egg-hatch__skip" onClick={hatch.skip}>Skip</button>
+          </div>
+        ) : null}
         {/*
           The shell cracks as the questionnaire progresses. The stage is derived from
           the SAME progress fraction that drives the bar, so the two can never
