@@ -5,16 +5,16 @@ A short live checkpoint for a human or agent picking the project up cold.
 **Authority:** live Git, tests and repository contents outrank this file. If they
 disagree, believe Git and say so. See `skills/ninfit-handoff/SKILL.md`.
 
-Last updated: **2026-09-01**
+Last updated: **2026-09-02**
 
 ## Repository truth
 
 | | |
 |---|---|
 | Remote | `https://github.com/krisninnis/ninfit.git` |
-| `main` | `5035d37d501bf7fe1f2136b6d80c3ea348531d10` |
-| Latest merged PR | **#79 — Adventure Map v1** |
-| Verified baseline | **91 test files / 1918 tests**, TypeScript passed, production Vite build passed, `git diff --check` clean, `git status` clean |
+| `main` | `7b2edd7c528ee9691f0df2b63332ee2899a747a6` |
+| Latest merged PR | **#182 — Hatch timing contract tests** |
+| Verified baseline | **101 test files / 1976 tests** at the PR2 checkpoint; PR3 typecheck/build passed and PR4 Vercel passed. Full local suite requires the configured Supabase test environment. |
 | Node | `24.x` (baseline above independently re-verified on Node 22.22 from a clean clone of this SHA) |
 | Deployment | GitHub/Vercel reported the post-merge `main` deployment green. Vercel runs `npm run build` only — see *CI gap* below. |
 
@@ -29,6 +29,8 @@ SHA above.
 | PR | Merge | What landed |
 |---|---|---|
 | #79 | `5035d37` | **Adventure Map v1** — a projection of durable Journey history onto one private map |
+| #181 | `69c2523` | **Reduced-motion hatch ceremony** — three still states, real commit beat, accessible status copy and Skip control |
+| #182 | `7b2edd7` | **Hatch timing contract tests** — expectations aligned with the reduced-motion ceremony |
 | #81 | `145e4dd` | **Settings Build Identification** — version, channel and build fingerprint in Settings → About |
 | #80 | `815576e` | **Mobile Demo Update Reliability** — installed launches prefer the live deployment; the offline shell fallback stays current |
 | #77 | — | **Closed as superseded, not merged.** Its one unique behaviour (refreshing the cached offline root after a successful online navigation) and its executable service-worker harness were carried onto #80 before that merge |
@@ -85,16 +87,19 @@ reads identically on every phone regardless of which screens the session has ope
 
 ## Current phase
 
-**Phase 8 reinforcement / Living Interface integration.** The P0 runtime train is
-merged and the mobile demo baseline is verified.
+**Phase 9 mascot onboarding integration.** The P0 safety/runtime train is merged,
+the Tortoise starter foundation is present, and the egg crack/full/reduced-motion
+hatch ceremonies are implemented.
 
 ## Next exact action
 
-**Premium egg / hatch implementation. Not started.**
+**Add the real GitHub Actions verification gate, then build the Day 1 First Win
+post-hatch movement experience.**
 
-`docs/ROADMAP.md` holds the LOCKED Mystery Egg and hatch-trigger rules. Read them
-before writing any of it: hatching happens at the end of onboarding, grants no XP or
-trophy, is never automatic, and a hatched companion's species is permanent.
+The hatch implementation is now in `useHatchCinematic`, `EggArt`, `GameHeader` and
+`OnboardingScreen`. Keep the ceremony presentation-only: hatching happens at the end
+of onboarding, grants no XP or trophy, is never automatic, and a hatched companion's
+species is permanent. Issue #144 remains the verification-gate blocker.
 
 ## Locked decisions relevant now
 
