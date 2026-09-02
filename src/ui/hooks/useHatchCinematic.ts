@@ -23,15 +23,14 @@ import { useEffect, useRef, useState } from 'react';
  * state that could disagree with what is stored. The full ceremony commits at the
  * break and continues as an overlay over the already-hatched domain state.
  *
- * REDUCED MOTION HATCHES IMMEDIATELY.
+ * REDUCED MOTION IS A CEREMONY, NOT A SKIP.
  *
- * Not a shortened animation: no animation. `onHatch` is called synchronously and the
- * phase never leaves `idle`, so someone who has asked for less movement gets the
- * same outcome with no wait. The alternative - playing a silent 1.1s pause - would
- * be a worse experience wearing the costume of an accessible one.
+ * It uses three still states and opacity-only transitions. The domain mutation still
+ * happens at the opening beat, matching the full-motion ceremony without requiring
+ * scale, translation, shaking or particles.
  */
 
-export type HatchPhase = 'idle' | 'cracking' | 'held' | 'flash' | 'emerging' | 'settling';
+export type HatchPhase = 'idle' | 'cracking' | 'held' | 'flash' | 'emerging' | 'settling' | 'reduced-ready' | 'reduced-opening' | 'reduced-meet';
 
 /** The shell shakes and strains before it gives. */
 const GATHER_MS = 850;
@@ -39,6 +38,9 @@ const BREAK_MS = 1450;
 const EMERGENCE_MS = 2900;
 /** Total time to the real transition. The flash occupies the remainder. */
 const HATCH_MS = 4200;
+const REDUCED_READY_MS = 700;
+const REDUCED_MEET_MS = 1400;
+const REDUCED_TOTAL_MS = 2100;
 
 export interface HatchCinematic {
   phase: HatchPhase;
@@ -46,6 +48,8 @@ export interface HatchCinematic {
   isRunning: boolean;
   /** Start it. A no-op unless the domain allows hatching and nothing is running. */
   request: () => void;
+  /** Skip the presentation while preserving the real commit point. */
+  skip: () => void;
 }
 
 export function useHatchCinematic({
@@ -57,6 +61,7 @@ export function useHatchCinematic({
 }): HatchCinematic {
   const [phase, setPhase] = useState<HatchPhase>('idle');
   const timers = useRef<number[]>([]);
+  const committed = useRef(false);
 
   const clear = () => {
     for (const timer of timers.current) window.clearTimeout(timer);
@@ -78,20 +83,28 @@ export function useHatchCinematic({
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     if (reduceMotion) {
-      onHatch();
+      clear();
+      committed.current = false;
+      setPhase('reduced-ready');
+      timers.current.push(window.setTimeout(() => {
+        if (!committed.current) { committed.current = true; onHatch(); }
+        setPhase('reduced-opening');
+      }, REDUCED_READY_MS));
+      timers.current.push(window.setTimeout(() => setPhase('reduced-meet'), REDUCED_MEET_MS));
+      timers.current.push(window.setTimeout(() => { setPhase('idle'); timers.current = []; }, REDUCED_TOTAL_MS));
       return;
     }
 
     clear();
+    committed.current = false;
     setPhase('cracking');
 
     timers.current.push(window.setTimeout(() => setPhase('held'), GATHER_MS));
-    timers.current.push(
-      window.setTimeout(() => {
-        onHatch();
-        setPhase('flash');
-      }, BREAK_MS),
-    );
+    timers.current.push(window.setTimeout(() => {
+      onHatch();
+      setPhase('flash');
+      committed.current = true;
+    }, BREAK_MS));
     timers.current.push(window.setTimeout(() => setPhase('emerging'), BREAK_MS + 250));
     timers.current.push(window.setTimeout(() => setPhase('settling'), EMERGENCE_MS));
     timers.current.push(window.setTimeout(() => {
@@ -100,5 +113,13 @@ export function useHatchCinematic({
     }, HATCH_MS));
   };
 
-  return { phase, isRunning: phase !== 'idle', request };
+  const skip = () => {
+    if (phase === 'idle') return;
+    clear();
+    if (!committed.current) { committed.current = true; onHatch(); }
+    setPhase('reduced-meet');
+    timers.current.push(window.setTimeout(() => { setPhase('idle'); timers.current = []; }, 500));
+  };
+
+  return { phase, isRunning: phase !== 'idle', request, skip };
 }

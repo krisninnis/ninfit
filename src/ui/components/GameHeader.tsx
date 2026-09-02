@@ -156,6 +156,12 @@ export function GameHeader({
       <div
         className={`game__art${hatch.isRunning ? ` egg-hatch--${hatch.phase}` : ''}`}
       >
+        {hatch.phase.startsWith('reduced-') ? (
+          <div className="egg-hatch__reduced" role="status">
+            <span>{hatch.phase === 'reduced-ready' ? 'Your egg is ready.' : hatch.phase === 'reduced-opening' ? 'It’s opening.' : 'Meet your companion.'}</span>
+            <button type="button" className="egg-hatch__skip" onClick={hatch.skip}>Skip</button>
+          </div>
+        ) : null}
         {/*
           TEMPORARY PRESENTATION FALLBACK.
 
