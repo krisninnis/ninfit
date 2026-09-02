@@ -129,6 +129,10 @@ function checkDailyLogDates(data: AppData): string[] {
   return errors;
 }
 
+function sameStoredValue(actual: unknown, expected: unknown): boolean {
+  return JSON.stringify(actual) === JSON.stringify(expected);
+}
+
 export interface CommitOptions {
   now?: ISODateTime;
   /**
@@ -367,65 +371,50 @@ function verifyWritten(
 ): string[] {
   const errors: string[] = [];
 
-  if (repository.getProfile()?.id !== data.profile.id) {
+  if (!sameStoredValue(repository.getProfile(), data.profile)) {
     errors.push('The restored profile could not be read back from storage.');
   }
 
-  if (repository.getHealthContext()?.id !== data.healthContext.id) {
+  if (!sameStoredValue(repository.getHealthContext(), data.healthContext)) {
     errors.push('The restored health context could not be read back from storage.');
   }
 
-  if (repository.getBaseline()?.id !== data.baseline.id) {
+  if (!sameStoredValue(repository.getBaseline(), data.baseline)) {
     errors.push('The restored baseline could not be read back from storage.');
   }
 
-  if (repository.getMeasurements().length !== data.measurements.length) {
+  if (!sameStoredValue(repository.getMeasurements(), data.measurements)) {
     errors.push('The restored measurements could not be read back from storage.');
   }
 
-  if (repository.getWeeklyPlans().length !== data.weeklyPlans.length) {
+  if (!sameStoredValue(repository.getWeeklyPlans(), data.weeklyPlans)) {
     errors.push('The restored programme could not be read back from storage.');
   }
 
-  if (repository.getMetricSamples().length !== data.metricSamples.length) {
+  if (!sameStoredValue(repository.getMetricSamples(), data.metricSamples)) {
     errors.push('The restored metric samples could not be read back from storage.');
   }
 
   for (const log of data.dailyLogs) {
     const stored = repository.getDailyLog(log.date);
-    if (stored?.id !== log.id) {
+    if (!sameStoredValue(stored, log)) {
       errors.push(`The record for ${log.date} could not be read back from storage.`);
       break;
     }
   }
 
-  const gameState = repository.getGameState();
-  if (
-    gameState === undefined
-    || gameState.xp.total !== expectedGameState.xp.total
-    || gameState.awardedKeys.length !== expectedGameState.awardedKeys.length
-  ) {
+  if (!sameStoredValue(repository.getGameState(), expectedGameState)) {
     errors.push('Game progress could not be read back from storage.');
   }
 
-  const gameSettings = repository.getGameSettings();
-  if (
-    gameSettings === undefined
-    || JSON.stringify(gameSettings) !== JSON.stringify(expectedGameSettings)
-  ) {
+  if (!sameStoredValue(repository.getGameSettings(), expectedGameSettings)) {
     errors.push('Game settings could not be read back from storage.');
   }
 
   if (journeyOutcome.touched && storage !== undefined && prepared.journey !== undefined) {
     const history = loadJourneyHistory(storage);
-    if (history.length !== prepared.journey.history.length) {
+    if (!sameStoredValue(history, prepared.journey.history)) {
       errors.push('Journey history could not be read back from storage.');
-    } else {
-      const expectedIds = prepared.journey.history.map((journey) => journey.id);
-      const actualIds = history.map((journey) => journey.id);
-      if (JSON.stringify(actualIds) !== JSON.stringify(expectedIds)) {
-        errors.push('Journey history identity/order could not be verified after restore.');
-      }
     }
 
     const active = loadActiveJourneySnapshot(storage);
@@ -435,8 +424,8 @@ function verifyWritten(
       }
     } else if (
       active === null
-      || active.journey.id !== prepared.journey.active.journey.id
       || active.savedAt !== prepared.journey.active.savedAt
+      || !sameStoredValue(active.journey, prepared.journey.active.journey)
     ) {
       errors.push('The unfinished Journey recovery could not be read back from storage.');
     }
