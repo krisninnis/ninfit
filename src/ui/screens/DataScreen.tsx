@@ -135,6 +135,12 @@ export function DataScreen({ onClose }: { onClose: () => void }) {
             {status.removed > 0
               ? `, and removed ${status.removed} that the backup did not contain`
               : ''}
+            {status.journeysRestored !== undefined
+              ? `, plus ${status.journeysRestored} Journey${status.journeysRestored === 1 ? '' : 's'}`
+              : ''}
+            {status.activeJourneyRestored
+              ? ', including an unfinished Journey recovery'
+              : ''}
             .
           </p>
           <button type="button" className="btn btn--primary btn--block" onClick={() => window.location.reload()}>
@@ -167,8 +173,8 @@ export function DataScreen({ onClose }: { onClose: () => void }) {
           Export JSON backup
         </button>
         <p className="footnote">
-          Includes your fitness history, profile, programme and game progress. This is the file
-          to keep, and the one to restore from.
+          Includes your fitness history, Journeys, profile, programme and game progress. This is
+          the file to keep, and the one to restore from.
         </p>
       </Section>
 
@@ -222,6 +228,14 @@ export function DataScreen({ onClose }: { onClose: () => void }) {
                 </span>
               </div>
               <div className="stat stat--row">
+                <span className="stat__label">NinFit version</span>
+                <span className="stat__value">{pending.summary.appVersion}</span>
+              </div>
+              <div className="stat stat--row">
+                <span className="stat__label">Backup format</span>
+                <span className="stat__value">Schema {pending.summary.schemaVersion}</span>
+              </div>
+              <div className="stat stat--row">
                 <span className="stat__label">Daily records</span>
                 <span className="stat__value">{pending.summary.dailyLogs}</span>
               </div>
@@ -234,6 +248,14 @@ export function DataScreen({ onClose }: { onClose: () => void }) {
                 <span className="stat__value">{pending.summary.weeklyPlans}</span>
               </div>
               <div className="stat stat--row">
+                <span className="stat__label">Journeys</span>
+                <span className="stat__value">
+                  {pending.summary.hasJourneyData
+                    ? `${pending.summary.journeys ?? 0}${pending.summary.hasActiveJourney ? ' + unfinished recovery' : ''}`
+                    : 'Not in this file'}
+                </span>
+              </div>
+              <div className="stat stat--row">
                 <span className="stat__label">Game progress</span>
                 <span className="stat__value">
                   {pending.summary.hasGameData
@@ -242,6 +264,12 @@ export function DataScreen({ onClose }: { onClose: () => void }) {
                 </span>
               </div>
             </div>
+            {!pending.summary.hasJourneyData ? (
+              <p className="footnote">
+                This backup predates Journey backup support. Your current Journey history will be
+                left alone rather than deleted by a file that could not have contained it.
+              </p>
+            ) : null}
             {!pending.summary.hasGameData ? (
               <p className="footnote">
                 This backup predates game progress. Your fitness history will be restored, and
@@ -276,6 +304,14 @@ export function DataScreen({ onClose }: { onClose: () => void }) {
         </p>
         <p className="footnote">
           Browsers can clear storage, so an occasional backup is worth having.
+        </p>
+        <p className="footnote">
+          Before replacing your phone, removing the installed app, or clearing browser/site data,
+          export a JSON backup and keep the file somewhere you trust.
+        </p>
+        <p className="footnote">
+          You should not need to clear site data just to get a newer NinFit build. Closing and
+          reopening the installed app while online is the safe first step.
         </p>
       </section>
 
