@@ -30,12 +30,13 @@ import { useEffect, useRef, useState } from 'react';
  * scale, translation, shaking or particles.
  */
 
-export type HatchPhase = 'idle' | 'cracking' | 'held' | 'flash' | 'emerging' | 'settling' | 'reduced-ready' | 'reduced-opening' | 'reduced-meet';
+export type HatchPhase = 'idle' | 'cracking' | 'held' | 'flash' | 'emerging' | 'settling' | 'landing' | 'reduced-ready' | 'reduced-opening' | 'reduced-meet';
 
 /** The shell shakes and strains before it gives. */
 const GATHER_MS = 850;
 const BREAK_MS = 1450;
 const EMERGENCE_MS = 2900;
+const LANDING_MS = 3600;
 /** Total time to the real transition. The flash occupies the remainder. */
 const HATCH_MS = 4200;
 const REDUCED_READY_MS = 700;
@@ -120,6 +121,7 @@ export function useHatchCinematic({
     }, BREAK_MS));
     timers.current.push(window.setTimeout(() => setPhase('emerging'), BREAK_MS + 250));
     timers.current.push(window.setTimeout(() => setPhase('settling'), EMERGENCE_MS));
+    timers.current.push(window.setTimeout(() => setPhase('landing'), LANDING_MS));
     timers.current.push(window.setTimeout(() => {
       setPhase('idle');
       running.current = false;
