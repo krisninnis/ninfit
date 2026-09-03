@@ -62,20 +62,34 @@ export function useHatchCinematic({
   const [phase, setPhase] = useState<HatchPhase>('idle');
   const timers = useRef<number[]>([]);
   const committed = useRef(false);
+  const running = useRef(false);
+  const onHatchRef = useRef(onHatch);
+  onHatchRef.current = onHatch;
 
   const clear = () => {
     for (const timer of timers.current) window.clearTimeout(timer);
     timers.current = [];
   };
 
-  // Unmounting mid-cinematic must not fire the transition into a dead tree.
-  useEffect(() => clear, []);
+  const commit = () => {
+    if (committed.current) return;
+    committed.current = true;
+    onHatchRef.current();
+  };
+
+  // Leaving mid-ceremony must not cancel the real hatch. Commit before teardown if
+  // the break has not happened yet; the ref guard keeps every path exactly-once.
+  useEffect(() => () => {
+    clear();
+    if (running.current) commit();
+  }, []);
 
   const request = () => {
     // Both guards matter. `canHatch` is the domain's answer, and the phase check is
     // what stops a second tap starting a second run - and therefore a second call
     // to `onHatch`.
     if (!canHatch || phase !== 'idle') return;
+    running.current = true;
 
     const reduceMotion =
       typeof window !== 'undefined' &&
@@ -87,11 +101,11 @@ export function useHatchCinematic({
       committed.current = false;
       setPhase('reduced-ready');
       timers.current.push(window.setTimeout(() => {
-        if (!committed.current) { committed.current = true; onHatch(); }
+        commit();
         setPhase('reduced-opening');
       }, REDUCED_READY_MS));
       timers.current.push(window.setTimeout(() => setPhase('reduced-meet'), REDUCED_MEET_MS));
-      timers.current.push(window.setTimeout(() => { setPhase('idle'); timers.current = []; }, REDUCED_TOTAL_MS));
+      timers.current.push(window.setTimeout(() => { setPhase('idle'); running.current = false; timers.current = []; }, REDUCED_TOTAL_MS));
       return;
     }
 
@@ -101,14 +115,14 @@ export function useHatchCinematic({
 
     timers.current.push(window.setTimeout(() => setPhase('held'), GATHER_MS));
     timers.current.push(window.setTimeout(() => {
-      onHatch();
+      commit();
       setPhase('flash');
-      committed.current = true;
     }, BREAK_MS));
     timers.current.push(window.setTimeout(() => setPhase('emerging'), BREAK_MS + 250));
     timers.current.push(window.setTimeout(() => setPhase('settling'), EMERGENCE_MS));
     timers.current.push(window.setTimeout(() => {
       setPhase('idle');
+      running.current = false;
       timers.current = [];
     }, HATCH_MS));
   };
@@ -116,9 +130,9 @@ export function useHatchCinematic({
   const skip = () => {
     if (phase === 'idle') return;
     clear();
-    if (!committed.current) { committed.current = true; onHatch(); }
+    commit();
     setPhase('reduced-meet');
-    timers.current.push(window.setTimeout(() => { setPhase('idle'); timers.current = []; }, 500));
+    timers.current.push(window.setTimeout(() => { setPhase('idle'); running.current = false; timers.current = []; }, 500));
   };
 
   return { phase, isRunning: phase !== 'idle', request, skip };
