@@ -17,7 +17,8 @@ export default defineConfig({
   test: {
     // The domain layer is pure TypeScript, so no DOM environment is needed.
     environment: 'node',
-    include: ['src/test/**/*.test.ts'],
+    pool: 'threads',
+    include: ['src/test/**/*.test.{ts,tsx}'],
     // Pin the suite to the user's timezone so the daylight-saving date tests are
     // meaningful. Under UTC, a local-date bug and a UTC-date bug look identical.
     env: { TZ: 'Europe/London' },
