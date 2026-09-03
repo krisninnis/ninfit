@@ -5,18 +5,18 @@ A short live checkpoint for a human or agent picking the project up cold.
 **Authority:** live Git, tests and repository contents outrank this file. If they
 disagree, believe Git and say so. See `skills/ninfit-handoff/SKILL.md`.
 
-Last updated: **2026-09-02**
+Last updated: **2026-09-03**
 
 ## Repository truth
 
 | | |
 |---|---|
 | Remote | `https://github.com/krisninnis/ninfit.git` |
-| `main` | `7b2edd7c528ee9691f0df2b63332ee2899a747a6` |
-| Latest merged PR | **#182 — Hatch timing contract tests** |
-| Verified baseline | **101 test files / 1976 tests** at the PR2 checkpoint; PR3 typecheck/build passed and PR4 Vercel passed. Full local suite requires the configured Supabase test environment. |
+| `main` | `2b5071f0978594e0742834b4e2943d40f0f119b5` |
+| Latest merged PR | **#189 — Minimal DOM component test lane** |
+| Verified baseline | **102 test files / 1979 tests**, TypeScript, production build and `git diff --check` passed locally and in GitHub Actions. Test-only Supabase placeholders are sufficient; a configured Supabase project is not required. |
 | Node | `24.x` (baseline above independently re-verified on Node 22.22 from a clean clone of this SHA) |
-| Deployment | GitHub/Vercel reported the post-merge `main` deployment green. Vercel runs `npm run build` only — see *CI gap* below. |
+| Deployment | GitHub Actions verification and Vercel both passed for PR #189 before merge. |
 
 Verify live Git before acting. Branches are cut from verified `origin/main`, never
 from a stale local `main`.
@@ -28,6 +28,12 @@ SHA above.
 
 | PR | Merge | What landed |
 |---|---|---|
+| #189 | `2b5071f` | **Minimal DOM component test lane** — jsdom/Testing Library opt-in for TSX tests, with executable Today heading coverage |
+| #188 | `7ee6177` | **Hatch commit durability** — a started ceremony commits exactly once even if its host unmounts before the break timer |
+| #187 | `fac8a11` | **Real PR whitespace gate** — Actions compares the actual base/head or before/after range |
+| #186 | `1ac466f` | **Today heading entity fix** — the visible heading now contains a real apostrophe rather than raw entity text |
+| #185 | `8b07449` | **Day 1 First Win** — calm first-step guidance around the existing authoritative activity action |
+| #184 | `45e8095` | **GitHub verification gate** — full tests, typecheck, production build and diff validation on Node 24 |
 | #79 | `5035d37` | **Adventure Map v1** — a projection of durable Journey history onto one private map |
 | #181 | `69c2523` | **Reduced-motion hatch ceremony** — three still states, real commit beat, accessible status copy and Skip control |
 | #182 | `7b2edd7` | **Hatch timing contract tests** — expectations aligned with the reduced-motion ceremony |
@@ -93,13 +99,14 @@ hatch ceremonies are implemented.
 
 ## Next exact action
 
-**Add the real GitHub Actions verification gate, then build the Day 1 First Win
-post-hatch movement experience.**
+**Complete the full-motion hatch ceremony presentation: emergence, settling and land.**
 
-The hatch implementation is now in `useHatchCinematic`, `EggArt`, `GameHeader` and
-`OnboardingScreen`. Keep the ceremony presentation-only: hatching happens at the end
+The timing, break-point mutation, early-unmount durability, reduced-motion ceremony,
+Skip path and Day 1 First Win are shipped. The full-motion hook schedules the complete
+4.2-second sequence, but its later phases still need distinct visual treatment and
+approved hatch art. Keep the ceremony presentation-only: hatching happens at the end
 of onboarding, grants no XP or trophy, is never automatic, and a hatched companion's
-species is permanent. Issue #144 remains the verification-gate blocker.
+species is permanent. Prove the Tortoise end-to-end before building families 2–5.
 
 ## Locked decisions relevant now
 
@@ -130,14 +137,12 @@ without explicit human instruction.
 
 ## Known blockers / follow-up
 
-### CI gap — tracked as issue #144
+### Verification gate
 
-There is no `.github/workflows`. The only PR status check is Vercel, which runs
-`npm run build` (`tsc --noEmit && vite build`) and **never runs Vitest**. A green PR
-means "it compiles". PR #79 was green on GitHub while failing
-`src/test/journeyCompanion.test.ts` against `main`; it was caught only by running the
-suite by hand. Until #144 lands, treat "mergeable and green" accordingly and verify
-every candidate locally.
+`.github/workflows/verify.yml` now runs `npm ci`, the full Vitest suite with test-only
+Supabase placeholders, TypeScript, the production build and a real base/head diff
+check on Node 24. Vercel remains the deployment/build check. Both must pass before a
+PR is merged.
 
 ### Offline support is shell-only
 
@@ -154,11 +159,11 @@ deliberately avoided adding another instance. This discovery is still owed.
 
 ### Runtime test coverage
 
-The suite is dominated by pure-domain and source-boundary coverage.
-`src/test/serviceWorkerUpdate.test.ts` is the first test that executes a real runtime
-artefact (`public/sw.js`). A shared-state/reward-delivery failure will still need a
-real component test layer; do not add jsdom or a renderer until discovery proves what
-must be exercised.
+The suite is still dominated by pure-domain and source-boundary coverage, but a
+minimal component lane now exists. TSX tests can opt into jsdom per file; the first
+one renders the real Today heading and queries its accessible role/name. Extend this
+lane for behaviour that source matching cannot prove, especially shared game state,
+reward delivery and ceremony lifecycle.
 
 ### Map rendering proof
 
@@ -194,17 +199,17 @@ in a sandbox without network.
 
 ```
 HANDOFF CHECKPOINT
-main SHA: 5035d37d501bf7fe1f2136b6d80c3ea348531d10
-latest merged PR: #79 — Adventure Map v1
-test baseline: 91 files / 1918 tests; TypeScript + production build passed; diff --check clean
-completed: P0 runtime train — #80 mobile update reliability (carrying #77's offline-shell refresh), #81 settings build identification, #79 Adventure Map v1; #77 closed as superseded
-current phase: Phase 8 reinforcement / Living Interface integration
-next exact action: premium egg / hatch implementation — not started
+main SHA: 2b5071f0978594e0742834b4e2943d40f0f119b5
+latest merged PR: #189 — Minimal DOM component test lane
+test baseline: 102 files / 1979 tests; TypeScript + production build passed; real diff check clean
+completed: hatch timing and reduced-motion ceremony; durable break commit; Day 1 First Win; GitHub verification gate; first executable component regression test
+current phase: Phase 9 mascot onboarding integration
+next exact action: complete the full-motion Tortoise hatch emergence, settling and land presentation; do not start families 2–5
 parked branches/work: preserve/journey-home-mobile-background-v1; future/ornate-mystery-egg-v1
-known blockers: no test CI (issue #144); offline is shell-only; shared game-state correctness unresolved; runtime coverage gap; pilot data-safety items
+known blockers: approved hatch art absent; offline is shell-only; shared game-state correctness unresolved; component coverage is minimal; pilot data-safety items
 new locked decisions: none
-deployment state: post-merge main deployment reported green by Vercel; Vercel runs build/typecheck only
-notes for next agent: a green PR does not mean the suite passes until #144 lands — run it yourself
+deployment state: PR #189 passed GitHub Actions and Vercel before merge
+notes for next agent: cut from live origin/main; require both verification checks; use DOM tests where rendered behaviour matters
 ```
 
 Read `docs/ROADMAP.md` for *what to build*, `docs/DECISIONS.md` for durable
