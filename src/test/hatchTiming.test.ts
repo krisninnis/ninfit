@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import hookSource from '../ui/hooks/useHatchCinematic.ts?raw';
+import onboardingSource from '../ui/screens/OnboardingScreen.tsx?raw';
+
+const eggStyles = readFileSync(join('src', 'styles', 'components', 'egg.css'), 'utf8');
 
 describe('hatch cinematic timing', () => {
   it('uses the held beat and commits at the break, before the ceremony ends', () => {
@@ -29,5 +34,14 @@ describe('hatch cinematic timing', () => {
     expect(hookSource).toMatch(/if \(reduceMotion\) \{[\s\S]*?commit\(\);[\s\S]*?return;/);
     const executable = hookSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
     expect(executable).not.toMatch(/eggState|familyId|hatchEgg/);
+  });
+
+  it('gives the later full-motion beats a visible, post-commit companion', () => {
+    expect(eggStyles).toContain('.egg-hatch--emerging .egg-hatch__companion');
+    expect(eggStyles).toContain('.egg-hatch--settling .egg-hatch__companion');
+    expect(eggStyles).toContain('.egg-hatch--landing .egg-hatch__companion');
+    expect(eggStyles).toContain('position: fixed');
+    expect(onboardingSource).toContain('journeyStarted && companionName !== undefined');
+    expect(onboardingSource).toContain('className="egg-hatch__companion"');
   });
 });
