@@ -1,6 +1,12 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+
+// Worker threads inherit Node's timezone when they are created, before Vitest's
+// per-test environment is applied. Set it while the config is loading so local
+// runs and UTC CI runners execute the date contracts identically.
+(globalThis as typeof globalThis & { process: { env: Record<string, string | undefined> } }).process.env.TZ =
+  'Europe/London';
 import pkg from './package.json' with { type: 'json' };
 
 export default defineConfig({
