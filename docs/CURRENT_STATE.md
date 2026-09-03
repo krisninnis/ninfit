@@ -12,101 +12,135 @@ Last updated: **2026-09-03**
 | | |
 |---|---|
 | Remote | `https://github.com/krisninnis/ninfit.git` |
-| `main` | `2b5071f0978594e0742834b4e2943d40f0f119b5` |
-| Latest merged PR | **#189 — Minimal DOM component test lane** |
-| Verified baseline | **102 test files / 1979 tests**, TypeScript, production build and `git diff --check` passed locally and in GitHub Actions. Test-only Supabase placeholders are sufficient; a configured Supabase project is not required. |
-| Node | `24.x` (baseline above independently re-verified on Node 22.22 from a clean clone of this SHA) |
-| Deployment | GitHub Actions verification and Vercel both passed for PR #189 before merge. |
+| `main` | `6cfa56309f59139a3fc9979cb66ed8f127dc83e7` |
+| Latest merged PR | **#192 — Complete full-motion hatch presentation** |
+| Open PRs at checkpoint | **None** |
+| Verified baseline | **104 test files / 1,983 tests**, TypeScript, production build and `git diff --check` passed for the accepted #192 head. |
+| Node | `24.x` |
+| Deployment | GitHub Actions Verification Gate and Vercel passed for #192 before merge; Vercel also reports success for current merged `main`. |
 
 Verify live Git before acting. Branches are cut from verified `origin/main`, never
 from a stale local `main`.
 
 ## Recently completed
 
-The P0 runtime train, most recent first. Everything below is merged and present in the
-SHA above.
+The current P0/P1 train, most recent first. Everything below is merged and present in
+the SHA above.
 
-| PR | Merge | What landed |
-|---|---|---|
-| #189 | `2b5071f` | **Minimal DOM component test lane** — jsdom/Testing Library opt-in for TSX tests, with executable Today heading coverage |
-| #188 | `7ee6177` | **Hatch commit durability** — a started ceremony commits exactly once even if its host unmounts before the break timer |
-| #187 | `fac8a11` | **Real PR whitespace gate** — Actions compares the actual base/head or before/after range |
-| #186 | `1ac466f` | **Today heading entity fix** — the visible heading now contains a real apostrophe rather than raw entity text |
-| #185 | `8b07449` | **Day 1 First Win** — calm first-step guidance around the existing authoritative activity action |
-| #184 | `45e8095` | **GitHub verification gate** — full tests, typecheck, production build and diff validation on Node 24 |
-| #79 | `5035d37` | **Adventure Map v1** — a projection of durable Journey history onto one private map |
-| #181 | `69c2523` | **Reduced-motion hatch ceremony** — three still states, real commit beat, accessible status copy and Skip control |
-| #182 | `7b2edd7` | **Hatch timing contract tests** — expectations aligned with the reduced-motion ceremony |
-| #81 | `145e4dd` | **Settings Build Identification** — version, channel and build fingerprint in Settings → About |
-| #80 | `815576e` | **Mobile Demo Update Reliability** — installed launches prefer the live deployment; the offline shell fallback stays current |
-| #77 | — | **Closed as superseded, not merged.** Its one unique behaviour (refreshing the cached offline root after a successful online navigation) and its executable service-worker harness were carried onto #80 before that merge |
-| #76 | `1350f03` | **Settings & Navigation Reorganisation** — Settings owns Appearance, App preferences, Privacy, Data |
-| #75 | `87c613b` | **MapLibre colour compatibility** — OKLCH theme tokens converted to RGB at the map paint boundary |
-| #73 | `80f9cbe` | **Tortoise starter clean idle runtime** |
+| PR | What landed |
+|---|---|
+| #192 | **Full-motion hatch presentation** — held, break, emergence, settling and landing across onboarding and Today recovery; revealed companion art is requested only after the authoritative hatch |
+| #191 | **Optional Supabase startup** — the local-first app remains usable when optional NinFit ID configuration is absent |
+| #190 | **Current-state refresh** after verification work |
+| #189 | **Minimal DOM component test lane** — jsdom/Testing Library opt-in for rendered TSX behaviour |
+| #188 | **Hatch commit durability** — a started ceremony commits exactly once even if its host unmounts before the break timer |
+| #187 | **Real PR whitespace gate** — Actions compares the actual base/head or before/after range |
+| #186 | **Today heading entity fix** |
+| #185 | **Day 1 First Win** — calm first-step guidance around the existing authoritative activity action |
+| #184 | **GitHub verification gate** — full tests, typecheck, production build and diff validation on Node 24 |
+| #182 | **Hatch timing contract tests** aligned with the reduced-motion ceremony |
+| #181 | **Reduced-motion hatch ceremony** — three still states, real commit beat, accessible status copy and Skip control |
+| #180 | **Break-point hatch commit** — authoritative mutation at 1,450 ms while the presentation continues to 4.2 s |
+| #179 | **Six-stage crack fidelity** — deterministic cumulative crack presentation over the shared temporary egg |
+| #178 | **P0 pilot evidence and compatibility coverage v2** — rebuilt useful evidence from stale #86/#87/#91/#92/#93 on current main |
+| #177 | **Restore read-back integrity v2** — semantic verification before restore success is reported |
+| #148 | **Data backup & restore transparency** — rebuilt #94/#95/#96 presentation intent for Settings → Data |
+| #176 | **P0 pilot documentation integration** — rebuilt useful documentation from stale #83/#84/#85/#88/#89/#90 |
+| #150 | **Fail-closed complete backup integrity** — rebuilt #97/#98/#99 safety intent coherently on current main |
+| #79 | **Adventure Map v1** — a projection of durable Journey history onto one private map |
+| #81 | **Settings Build Identification** |
+| #80 | **Mobile Demo Update Reliability** |
+| #76 | **Settings & Navigation Reorganisation** — Settings owns Appearance, App preferences, Privacy and Data |
+| #73 | **Tortoise starter clean idle runtime** |
 
-Earlier Journey work already in `main` includes truthful route segmentation, the live
-map, route privacy, completion/detail presentation and Journey postcards. Read live
-history rather than reconstructing those slices from conversation memory.
+The original #83–#100 branches are now **closed unmerged**. Their accepted intent was
+recreated through #176, #148, #150, #177 and #178; do not resurrect those stale
+siblings mechanically.
 
 ## Current product/architecture position
 
 NinFit remains **fitness-first**. Fitness truth is authoritative; programme/game and
 companion systems sit downstream.
 
+### P0 data/integration train
+
+The P0 cleanup requested by #142/#143 is complete in current `main`:
+
+- pilot documentation was reconciled rather than stale-merged
+- realistic backup/restore, interruption, corruption, write-failure and compatibility
+  evidence is present
+- Settings → Data explains Journey inclusion, active recovery, old/pre-Journey files,
+  app/schema metadata and device-loss risk without using metadata as a trust shortcut
+- supposedly complete backups fail closed when authoritative local/Journey data cannot
+  be read safely
+- restore read-back verification distinguishes backup/write/verify failure and does not
+  claim localStorage transactionality
+- legitimate old backups remain supported and do not destructively infer missing
+  Journey history
+
+### Premium egg and hatch
+
+The runtime ceremony from #134 is now substantially implemented:
+
+- questionnaire progress maps deterministically to six visual egg states
+- cracks are cumulative and species-neutral
+- the real hatch mutation happens at the break point, not at the end of presentation
+- a started hatch commits exactly once even if the host unmounts early
+- full motion runs for **4.2 seconds** through cracking, held, flash, emergence,
+  settling and landing
+- reduced motion uses three still states with opacity-only treatment and a Skip path
+- the selected companion asset is not inserted until after the authoritative hatch, so
+  pre-break asset requests cannot disclose species
+- onboarding and Today recovery share the same hatch hook
+- the normal reviewed standing mascot presentation takes over after the ceremony
+
+The remaining visual gap is important: `EggArt` and its SVG fracture paths are still
+explicitly **temporary presentation infrastructure**. There is no approved premium
+master egg / derived production crack-stage asset set yet. #192 also deliberately added
+no new generated hatch art.
+
 ### Living Adventure
 
-The Adventure Map is the first Living Fitness Adventure surface. It is a **projection,
-not a second store**:
+The Adventure Map remains a projection, not a second store:
 
-- it reads `loadJourneyHistory` and admits only `completed` / `imported` Journeys, so
-  an active Journey is never drawn as history
-- it reuses `journeyTrustedRouteSegments`; runs from different Journeys are never
-  joined, and a Journey with no segmentation evidence draws nothing rather than an
-  invented line
-- it computes no distance. Authoritative distance stays the `distance_m` metric
-- it writes nothing and persists nothing
-- being an on-device private view, it draws trusted segments raw. The disclosure
-  projection (`projectJourneyRouteForDisclosure`) remains reserved for the Journey
-  Postcard, the one artefact intended to leave the device
+- it reads durable Journey history and admits only completed/imported Journeys
+- trusted route segmentation is reused; gaps and separate Journeys are never joined
+- authoritative distance remains the stored `distance_m` metric
+- the map writes and persists nothing
+- exact route geometry remains private; disclosure surfaces use the separate privacy
+  projection
 
-### Settings
+### Settings and data
 
-Settings owns Appearance (System / Light / Dark, persisted), App preferences, Privacy
-and participation, Data & privacy, and About. About reports version, channel and a
-build fingerprint taken from the **entry** assets at start-up, so the same deployment
-reads identically on every phone regardless of which screens the session has opened.
+Settings remains the owner of Appearance (System / Light / Dark), app preferences,
+Privacy and participation, Data & privacy, and About. Data is not a primary navigation
+item. JSON is the restorable backup; CSV is explicitly non-restorable.
 
 ### PWA / phone demo
 
-`docs/PHONE_DEMO.md` is the install and update walkthrough. Current merged behaviour:
-
-- the worker registers with `updateViaCache: 'none'`; it is re-checked on load, when
-  the app returns to the foreground, and when the device comes back online
-- navigation is network-first with `cache: 'no-store'`, so relaunching the installed
-  app loads the current deployment
-- the cached root is rewritten after every successful online navigation, so an offline
-  launch shows the most recent build rather than the first one ever installed
-- **no automatic reload.** A new build never replaces the running document, so a live
-  Journey is not interrupted
-- activation retires only `ninfit-shell-*` caches; caches belonging to anything else
-  are left alone
+`docs/PHONE_DEMO.md` remains the install/update walkthrough. Installed launches prefer
+the current online deployment without automatically reloading a running document, so
+an active Journey is not interrupted. Offline support remains shell-only; do not claim
+that the full app works offline.
 
 ## Current phase
 
-**Phase 9 mascot onboarding integration.** The P0 safety/runtime train is merged,
-the Tortoise starter foundation is present, and the egg crack/full/reduced-motion
-hatch ceremonies are implemented.
+**Phase 9 mascot onboarding integration — production-art proof.**
+
+The P0 integration train is merged. The hatch state/timing/accessibility/durability
+contract is implemented. The next bottleneck is no longer ceremony mechanics; it is
+replacing the deliberately temporary egg drawing with reviewed production artwork.
 
 ## Next exact action
 
-**Complete the full-motion hatch ceremony presentation: emergence, settling and land.**
+**Create and human-review one species-neutral premium master egg for #134, then derive
+the deterministic crack-stage candidates from that same master.**
 
-The timing, break-point mutation, early-unmount durability, reduced-motion ceremony,
-Skip path and Day 1 First Win are shipped. The full-motion hook schedules the complete
-4.2-second sequence, but its later phases still need distinct visual treatment and
-approved hatch art. Keep the ceremony presentation-only: hatching happens at the end
-of onboarding, grants no XP or trophy, is never automatic, and a hatched companion's
-species is permanent. Prove the Tortoise end-to-end before building families 2–5.
+Stop before runtime wiring until the master and stages pass visual review. After
+approval, prove the resulting asset pipeline end-to-end with the **Starter Tortoise**
+only: stable composition, no species leak, mobile payload/alpha checks, full/reduced
+hatch handoff to the existing reviewed Tortoise REST/IDLE/WAVE system. Do not generate
+or wire families 2–5 before the Tortoise proof is accepted.
 
 ## Locked decisions relevant now
 
@@ -123,94 +157,94 @@ The complete index is `docs/DECISIONS.md`. Do not reopen these casually:
 - A hatched companion's species is permanent.
 - Health/body data remains neutral information, never a verdict.
 - Local fitness data remains authoritative; NinFit ID is optional identity only.
+- Generated artwork is reference/source material until human approved; only canonical
+  reviewed assets are wired into runtime code.
 
 ## Parked work — do not merge
 
 | Branch | SHA | Why parked |
 |---|---|---|
 | `preserve/journey-home-mobile-background-v1` | `c984009dd437694b4459b1f4f48b7a449e88d2bc` | Journey Home mobile scenery prototype; reference only |
-| `future/ornate-mystery-egg-v1` | `25dcfad80fbe6a189c0627443d2502dbbc851f5e` | Ornate Mystery Egg art route unfinished |
+| `future/ornate-mystery-egg-v1` | `25dcfad80fbe6a189c0627443d2502dbbc851f5e` | Ornate Mystery Egg art route unfinished; do not treat it as the approved #134 master |
 
-The user's checkout also carries helper/untracked delivery folders created during
+The user's checkout may also carry helper/untracked delivery folders created during
 delivery work. Do not clean, delete, stash or repurpose them from an agent session
 without explicit human instruction.
 
 ## Known blockers / follow-up
 
-### Verification gate
+### Production egg/hatch art
 
-`.github/workflows/verify.yml` now runs `npm ci`, the full Vitest suite with test-only
-Supabase placeholders, TypeScript, the production build and a real base/head diff
-check on Node 24. Vercel remains the deployment/build check. Both must pass before a
-PR is merged.
+This is the immediate #134 gate. The runtime currently uses the code-drawn egg and
+existing reviewed standing mascot art. The temporary egg must be **replaced**, not
+polished into a de-facto production asset. One master, derived stages, then Tortoise
+proof and human mobile review.
 
-### Offline support is shell-only
+### Runtime media/art failure fallback
 
-The precache holds `/`, the manifest and two icons — no JS or CSS. An offline launch
-paints the shell but the app does not boot. This is a deliberate current limit, not a
-regression; do not describe NinFit as working offline.
+The hatch mutation itself is independent of presentation media and therefore cannot be
+lost because an animation fails. When production hatch/egg assets are introduced,
+explicitly prove that a failed asset still leaves the authoritative hatched companion
+reachable using its reviewed standing fallback; never reroll or trap the user.
 
 ### Shared game state / reward delivery
 
 Still unresolved. The earlier checkpoint recorded a candidate correctness risk around
 multiple independent `useGame()` instances consuming newly granted `RewardEvent`s
-before the intended acknowledgement surface sees them. Recent Journey work
-deliberately avoided adding another instance. This discovery is still owed.
+before the intended acknowledgement surface sees them. Durable reward delivery reduced
+the presentation-loss risk, but the shared-state discovery itself remains owed. Extend
+the DOM lane where rendered behaviour is required.
 
-### Runtime test coverage
+### Offline support is shell-only
 
-The suite is still dominated by pure-domain and source-boundary coverage, but a
-minimal component lane now exists. TSX tests can opt into jsdom per file; the first
-one renders the real Today heading and queries its accessible role/name. Extend this
-lane for behaviour that source matching cannot prove, especially shared game state,
-reward delivery and ceremony lifecycle.
+The precache holds the shell/manifest/icons, not the application JS/CSS bundle. An
+offline launch can paint the shell without booting the full app. This is a deliberate
+current limitation.
 
 ### Map rendering proof
 
-MapLibre creates its canvas without `preserveDrawingBuffer` and `map.loaded()` does not
-resolve under headless software WebGL, so **automated pixel proof of drawn route lines
-is not obtainable**. Wiring, camera fit, paint-colour conversion and the absence of map
-errors are all verified; the drawn line itself needs a human on a real device.
+Automated headless software WebGL does not provide reliable pixel proof for the drawn
+route line. Wiring/camera/paint conversion are covered; the actual route line still
+needs human proof on a real device.
 
 ### Data safety before a real pilot
 
-Still outstanding from `docs/production-readiness.md`: exercise schema migration
-N → N+1; rehearse real-history backup/restore; decide browser quota / interrupted-write
-recovery behaviour; provide or explicitly accept a delete-all path.
+The P0 integrity/evidence train is substantially stronger, but
+`docs/production-readiness.md` still owns any remaining real-device pilot acceptance,
+including schema N → N+1 and deletion-path decisions. Do not infer those gates passed
+merely because unit evidence exists.
 
 ### Account maturity
 
 Password recovery remains a gap before account promotion. Optional NinFit ID must not
 be described as cloud fitness backup/sync until that feature exists.
 
-### Art lane
-
-Production mascot/trophy art remains a separate lane. Placeholder glyphs are temporary
-presentation infrastructure, not canonical mascot assets.
-
 ## Verified mobile/responsive baseline
 
-Checked at 360, 390, 430, 768, 1024 and 1440 across Today, Week, Journey, Adventure
-Map, Progress, Profile, Settings and Settings → Data: no horizontal overflow, every
-screen renders, navigation usable, no console or page errors beyond blocked map tiles
-in a sandbox without network.
+The established app baseline has been checked at 360, 390, 430, 768, 1024 and 1440
+across Today, Week, Journey, Adventure Map, Progress, Profile, Settings and Settings →
+Data. #192 is a visible hatch change and therefore still needs human real-device visual
+acceptance for the final production-art proof; passing CI/Vercel is not a substitute for
+art approval.
 
 ## Handoff checkpoint
 
 ```
 HANDOFF CHECKPOINT
-main SHA: 2b5071f0978594e0742834b4e2943d40f0f119b5
-latest merged PR: #189 — Minimal DOM component test lane
-test baseline: 102 files / 1979 tests; TypeScript + production build passed; real diff check clean
-completed: hatch timing and reduced-motion ceremony; durable break commit; Day 1 First Win; GitHub verification gate; first executable component regression test
-current phase: Phase 9 mascot onboarding integration
-next exact action: complete the full-motion Tortoise hatch emergence, settling and land presentation; do not start families 2–5
+main SHA: 6cfa56309f59139a3fc9979cb66ed8f127dc83e7
+latest merged PR: #192 — Complete full-motion hatch presentation
+open PRs: none at checkpoint
+test baseline: 104 files / 1983 tests; TypeScript + production build + diff check passed on accepted #192 head
+completed: P0 #83–#100 intent rebuilt on current main; six-stage cracks; full/reduced hatch timing; break commit; early-unmount durability; Day 1 First Win; optional-Supabase startup; verification gate
+current phase: Phase 9 mascot onboarding integration — production-art proof
+next exact action: create/review one premium species-neutral master egg, derive consistent crack stages, then prove Tortoise end-to-end before families 2–5
 parked branches/work: preserve/journey-home-mobile-background-v1; future/ornate-mystery-egg-v1
-known blockers: approved hatch art absent; offline is shell-only; shared game-state correctness unresolved; component coverage is minimal; pilot data-safety items
+known blockers: approved premium egg/hatch art absent; media fallback proof due when real assets land; offline is shell-only; shared game-state discovery unresolved; pilot real-device/data-safety follow-up remains
 new locked decisions: none
-deployment state: PR #189 passed GitHub Actions and Vercel before merge
-notes for next agent: cut from live origin/main; require both verification checks; use DOM tests where rendered behaviour matters
+deployment state: #192 Verification Gate and Vercel passed before merge; current-main Vercel status success
+notes for next agent: cut from live origin/main; do not resurrect #83–#100; temporary EggArt is not production art; generated assets require human review before runtime wiring
 ```
 
 Read `docs/ROADMAP.md` for *what to build*, `docs/DECISIONS.md` for durable
-decisions, and `skills/ninfit-delivery-loop/SKILL.md` for *how work is done*.
+decisions, `skills/ninfit-visual-asset-pipeline/SKILL.md` for the art gate, and
+`skills/ninfit-delivery-loop/SKILL.md` for *how work is done*.
