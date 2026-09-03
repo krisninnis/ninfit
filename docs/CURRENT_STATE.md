@@ -24,34 +24,34 @@ from a stale local `main`.
 
 ## Recently completed
 
-The current P0/P1 train, most recent first. Everything marked merged is present in the
-SHA above.
+The current P0/P1 train, most recent first. Everything below is merged and present in
+the SHA above.
 
-| PR | Merge/main position | What landed |
-|---|---|---|
-| #192 | `6cfa563` | **Full-motion hatch presentation** — held, break, emergence, settling and landing across onboarding and Today recovery; revealed companion art is requested only after the authoritative hatch |
-| #191 | before #192 | **Optional Supabase startup** — the local-first app remains usable when optional NinFit ID configuration is absent |
-| #190 | before #191 | **Current-state refresh** after verification work |
-| #189 | `2b5071f` | **Minimal DOM component test lane** — jsdom/Testing Library opt-in for rendered TSX behaviour |
-| #188 | `7ee6177` | **Hatch commit durability** — a started ceremony commits exactly once even if its host unmounts before the break timer |
-| #187 | `fac8a11` | **Real PR whitespace gate** — Actions compares the actual base/head or before/after range |
-| #186 | `1ac466f` | **Today heading entity fix** |
-| #185 | `8b07449` | **Day 1 First Win** — calm first-step guidance around the existing authoritative activity action |
-| #184 | `45e8095` | **GitHub verification gate** — full tests, typecheck, production build and diff validation on Node 24 |
-| #182 | `7b2edd7` | **Hatch timing contract tests** aligned with the reduced-motion ceremony |
-| #181 | `69c2523` | **Reduced-motion hatch ceremony** — three still states, real commit beat, accessible status copy and Skip control |
-| #180 | before #181 | **Break-point hatch commit** — authoritative mutation at 1,450 ms while the presentation continues to 4.2 s |
-| #179 | before #180 | **Six-stage crack fidelity** — deterministic cumulative crack presentation over the shared temporary egg |
-| #178 | before #179 | **P0 pilot evidence and compatibility coverage v2** — rebuilt useful evidence from stale #86/#87/#91/#92/#93 on current main |
-| #177 | before #178 | **Restore read-back integrity v2** — semantic verification before restore success is reported |
-| #176 | before #177 | **P0 pilot documentation integration** — rebuilt useful documentation from stale #83/#84/#85/#88/#89/#90 |
-| #150 | before #176 | **Fail-closed complete backup integrity** — rebuilt #97/#98/#99 safety intent coherently on current main |
-| #148 | before #150 | **Data backup & restore transparency** — rebuilt #94/#95/#96 presentation intent for Settings → Data |
-| #79 | `5035d37` | **Adventure Map v1** — a projection of durable Journey history onto one private map |
-| #81 | `145e4dd` | **Settings Build Identification** |
-| #80 | `815576e` | **Mobile Demo Update Reliability** |
-| #76 | `1350f03` | **Settings & Navigation Reorganisation** — Settings owns Appearance, App preferences, Privacy and Data |
-| #73 | `80f9cbe` | **Tortoise starter clean idle runtime** |
+| PR | What landed |
+|---|---|
+| #192 | **Full-motion hatch presentation** — held, break, emergence, settling and landing across onboarding and Today recovery; revealed companion art is requested only after the authoritative hatch |
+| #191 | **Optional Supabase startup** — the local-first app remains usable when optional NinFit ID configuration is absent |
+| #190 | **Current-state refresh** after verification work |
+| #189 | **Minimal DOM component test lane** — jsdom/Testing Library opt-in for rendered TSX behaviour |
+| #188 | **Hatch commit durability** — a started ceremony commits exactly once even if its host unmounts before the break timer |
+| #187 | **Real PR whitespace gate** — Actions compares the actual base/head or before/after range |
+| #186 | **Today heading entity fix** |
+| #185 | **Day 1 First Win** — calm first-step guidance around the existing authoritative activity action |
+| #184 | **GitHub verification gate** — full tests, typecheck, production build and diff validation on Node 24 |
+| #182 | **Hatch timing contract tests** aligned with the reduced-motion ceremony |
+| #181 | **Reduced-motion hatch ceremony** — three still states, real commit beat, accessible status copy and Skip control |
+| #180 | **Break-point hatch commit** — authoritative mutation at 1,450 ms while the presentation continues to 4.2 s |
+| #179 | **Six-stage crack fidelity** — deterministic cumulative crack presentation over the shared temporary egg |
+| #178 | **P0 pilot evidence and compatibility coverage v2** — rebuilt useful evidence from stale #86/#87/#91/#92/#93 on current main |
+| #177 | **Restore read-back integrity v2** — semantic verification before restore success is reported |
+| #148 | **Data backup & restore transparency** — rebuilt #94/#95/#96 presentation intent for Settings → Data |
+| #176 | **P0 pilot documentation integration** — rebuilt useful documentation from stale #83/#84/#85/#88/#89/#90 |
+| #150 | **Fail-closed complete backup integrity** — rebuilt #97/#98/#99 safety intent coherently on current main |
+| #79 | **Adventure Map v1** — a projection of durable Journey history onto one private map |
+| #81 | **Settings Build Identification** |
+| #80 | **Mobile Demo Update Reliability** |
+| #76 | **Settings & Navigation Reorganisation** — Settings owns Appearance, App preferences, Privacy and Data |
+| #73 | **Tortoise starter clean idle runtime** |
 
 The original #83–#100 branches are now **closed unmerged**. Their accepted intent was
 recreated through #176, #148, #150, #177 and #178; do not resurrect those stale
