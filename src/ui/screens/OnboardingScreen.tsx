@@ -55,6 +55,8 @@ interface OnboardingScreenProps {
    * this screen cannot show a species early even if it wanted to.
    */
   companionName?: string;
+  /** Reviewed standing frame, supplied only after the domain reveals the family. */
+  companionArtSrc?: string;
 }
 
 type AnswerValue = string | string[] | undefined;
@@ -154,6 +156,7 @@ export function OnboardingScreen({
   onFinished,
   onDismiss,
   companionName,
+  companionArtSrc,
 }: OnboardingScreenProps) {
   const context = useMemo(() => getAppContext(), []);
 
@@ -256,6 +259,15 @@ export function OnboardingScreen({
           energy={energy}
           crackStage={crackStageForProgress(progress.fraction)}
         />
+        {journeyStarted && companionName !== undefined ? (
+          companionArtSrc !== undefined ? (
+            <img className="egg-hatch__companion" src={companionArtSrc} alt="" aria-hidden="true" />
+          ) : (
+            <span className="egg-hatch__companion egg-hatch__companion--fallback" aria-hidden="true">
+              {companionName.slice(0, 1)}
+            </span>
+          )
+        ) : null}
         {hatch.phase === 'flash' ? <span className="egg__hatchFlash" aria-hidden="true" /> : null}
       </div>
 

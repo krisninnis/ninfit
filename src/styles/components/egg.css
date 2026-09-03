@@ -110,6 +110,113 @@
     position: relative;
   }
 
+  /*
+   * The running ceremony becomes one calm, full-viewport layer in both hosts. The
+   * selected mascot asset is not added to the DOM until the authoritative hatch has
+   * committed, so its request cannot reveal a species before the break.
+   */
+  .egg-hatch--cracking,
+  .egg-hatch--held,
+  .egg-hatch--flash,
+  .egg-hatch--emerging,
+  .egg-hatch--settling,
+  .egg-hatch--landing,
+  .egg-hatch--reduced-ready,
+  .egg-hatch--reduced-opening,
+  .egg-hatch--reduced-meet {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    padding: max(1.5rem, env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right))
+      max(1.5rem, env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left));
+    background: color-mix(in oklab, var(--ft-surface-page) 92%, var(--ft-accent-soft));
+  }
+
+  .egg-hatch--cracking .egg,
+  .egg-hatch--held .egg,
+  .egg-hatch--flash .egg,
+  .egg-hatch--emerging .egg,
+  .egg-hatch--settling .egg,
+  .egg-hatch--landing .egg,
+  .egg-hatch--reduced-ready .egg,
+  .egg-hatch--reduced-opening .egg,
+  .egg-hatch--reduced-meet .egg {
+    width: min(56vmin, 420px);
+    height: min(70vmin, 525px);
+  }
+
+  .egg-hatch--held .egg {
+    animation: none;
+    opacity: 0.78;
+    transform: scale(1.08);
+  }
+
+  .egg-hatch__companion {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: -1;
+    width: min(56vmin, 420px);
+    max-height: min(70vmin, 525px);
+    object-fit: contain;
+    opacity: 0;
+    transform: translate(-50%, -30%);
+    pointer-events: none;
+  }
+
+  .egg-hatch__companion--fallback {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--ft-surface-raised);
+    color: var(--ft-text-primary);
+    font-size: clamp(4rem, 18vmin, 9rem);
+  }
+
+  .egg-hatch--flash .egg {
+    opacity: 0;
+    transition: opacity 180ms ease-out;
+  }
+
+  .egg-hatch--emerging .egg,
+  .egg-hatch--settling .egg,
+  .egg-hatch--landing .egg {
+    opacity: 0;
+  }
+
+  .egg-hatch--emerging .egg-hatch__companion {
+    z-index: 1;
+    animation: egg-hatch-emerge 1200ms cubic-bezier(0.2, 0.7, 0.25, 1) both;
+  }
+
+  .egg-hatch--settling .egg-hatch__companion {
+    z-index: 1;
+    animation: egg-hatch-settle 700ms ease-out both;
+  }
+
+  .egg-hatch--landing .egg-hatch__companion,
+  .egg-hatch--reduced-meet .egg-hatch__companion {
+    z-index: 1;
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+
+  @keyframes egg-hatch-emerge {
+    from { opacity: 0; transform: translate(-50%, 8%); }
+    24% { opacity: 1; }
+    to { opacity: 1; transform: translate(-50%, -50%); }
+  }
+
+  @keyframes egg-hatch-settle {
+    from { opacity: 1; transform: translate(-50%, -53%); }
+    55% { transform: translate(-50%, -48%); }
+    to { opacity: 1; transform: translate(-50%, -50%); }
+  }
+
   .egg-hatch__reduced {
     position: absolute;
     inset: auto 0 -2.5rem;
@@ -170,6 +277,8 @@
       transition: none;
     }
     .egg-hatch--cracking .egg,
+    .egg-hatch--emerging .egg-hatch__companion,
+    .egg-hatch--settling .egg-hatch__companion,
     .egg__hatchFlash {
       animation: none;
     }
@@ -178,6 +287,12 @@
     .egg-hatch--reduced-meet .egg {
       animation: none;
       transform: none;
+    }
+    .egg-hatch--reduced-opening .egg {
+      opacity: 0;
+    }
+    .egg-hatch--reduced-meet .egg-hatch__companion {
+      transition: opacity 180ms ease-out;
     }
     .egg-hatch__reduced {
       transition: opacity 180ms ease-out;

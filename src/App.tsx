@@ -22,6 +22,7 @@ import { getAppContext } from './app/bootstrap';
 import { hasSeenIntro, markIntroSeen, shouldPlayIntro } from './ui/startup/introState';
 import { useGame } from './ui/hooks/useGame';
 import { visibleMascotFamily } from './domain/game/mascot';
+import { mascotStageArt } from './ui/mascotStageArt';
 import { applyThemePreference } from './ui/theme';
 import {
   ACCOUNT_HASH,
@@ -96,6 +97,10 @@ export default function App() {
   }
 
   if ((game.needsOnboarding || revealingCompanion) && !dismissedOnboarding) {
+    const visibleFamily = visibleMascotFamily(game.state.mascot);
+    const revealedArt = visibleFamily
+      ? mascotStageArt(visibleFamily.id, game.state.mascot.stage)
+      : undefined;
     return (
       <div className="app">
         <main className="app__main" ref={mainRef}>
@@ -110,7 +115,8 @@ export default function App() {
               navigate(ACCOUNT_HASH);
             }}
             onDismiss={() => setDismissedOnboarding(true)}
-            companionName={visibleMascotFamily(game.state.mascot)?.name}
+            companionName={visibleFamily?.name}
+            companionArtSrc={revealedArt?.src}
           />
         </main>
       </div>
