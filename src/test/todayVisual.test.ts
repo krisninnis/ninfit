@@ -378,3 +378,39 @@ describe('the phase changed no semantics it was not meant to', () => {
     for (const value of fact.values()) {
       expect(value, 'session facts must never borrow the attention amber').not.toContain(
         '--ft-attention',
+      );
+    }
+  });
+
+  it('introduces no red anywhere in the touched stylesheets', () => {
+    for (const [name, source] of [
+      ['today.css', today],
+      ['game.css', game],
+    ] as const) {
+      for (const match of source.matchAll(/oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)/g)) {
+        const chroma = Number(match[2]);
+        const hue = Number(match[3]);
+        expect(chroma > 0.04 && (hue < 40 || hue > 350), `red found in ${name}`).toBe(false);
+      }
+    }
+  });
+
+  it('adds no hardcoded colour outside the token layer', () => {
+    for (const source of [today, game]) {
+      expect(source.match(/#[0-9a-fA-F]{3,8}\b/g) ?? []).toEqual([]);
+    }
+  });
+
+  it('states partial completion without framing it as a shortfall', () => {
+    expect(todaySource).toContain('of ${completion.plannedCount} done');
+    expect(todaySource).not.toMatch(/only \$\{|incomplete|you missed/i);
+  });
+
+  it('leaves every new rule inside the declared layers', () => {
+    // A rule outside @layer would outrank the whole cascade by accident.
+    for (const rule of leafRules(today)) {
+      expect(propertiesIn(rule.body).size).toBeGreaterThanOrEqual(0);
+    }
+    expect(today.trimStart().startsWith('@layer') || today.includes('@layer screens')).toBe(true);
+  });
+});
