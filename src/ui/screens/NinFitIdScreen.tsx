@@ -1,4 +1,5 @@
 import { Suspense, lazy, useState } from 'react'
+import { isSupabaseConfigured } from '../../config/supabase'
 import type { AuthMode } from '../account/accountFlow'
 
 /**
@@ -27,6 +28,8 @@ interface NinFitIdScreenProps {
   returningFromConfirmation?: boolean
   /** Leave the ID experience and get on with training. */
   onSkip: () => void
+  /** Test seam; production reads the build's public Supabase configuration. */
+  supabaseConfigured?: boolean
 }
 
 type Stage = { kind: 'choice' } | { kind: 'email'; mode: AuthMode }
@@ -34,6 +37,7 @@ type Stage = { kind: 'choice' } | { kind: 'email'; mode: AuthMode }
 export function NinFitIdScreen({
   returningFromConfirmation = false,
   onSkip,
+  supabaseConfigured = isSupabaseConfigured,
 }: NinFitIdScreenProps) {
   // Arriving from a confirmation link goes straight to the auth half, which resolves
   // the real session before claiming anything.
@@ -44,6 +48,34 @@ export function NinFitIdScreen({
   )
 
   if (stage.kind === 'email') {
+    if (!supabaseConfigured) {
+      return (
+        <div className="ninfit-id">
+          <div className="account-journey account-journey--quiet" role="status">
+            <span className="account-journey__eyebrow">Your NinFit</span>
+            <h1 className="account-journey__title">NinFit ID is not available locally.</h1>
+            <p className="account-journey__status">
+              The fitness app still works normally and keeps your information on this device.
+            </p>
+            <div className="account-journey__actions">
+              {!returningFromConfirmation ? (
+                <button
+                  type="button"
+                  className="btn btn--secondary"
+                  onClick={() => setStage({ kind: 'choice' })}
+                >
+                  Back
+                </button>
+              ) : null}
+              <button type="button" className="btn btn--primary" onClick={onSkip}>
+                Continue to Today
+              </button>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div className="ninfit-id">
         <Suspense
