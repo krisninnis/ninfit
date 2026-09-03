@@ -128,6 +128,10 @@ function totalMinutes(activities: readonly PlannedActivity[]): number {
   return activities.reduce((sum, activity) => sum + activity.durationMinutes, 0);
 }
 
+export function TodayPlanHeading({ isFirstDay }: { isFirstDay: boolean }) {
+  return <h2 className="plan__title">{isFirstDay ? 'Your first step' : 'Today’s session'}</h2>;
+}
+
 /**
  * The same test `StartupCinematic` and `useHatchCinematic` use, for the same reason.
  *
@@ -424,7 +428,7 @@ export function TodayScreen() {
       {view.status === 'planned' ? (
         <section className="card card--action plan plan--hero">
           <div className="plan__head">
-            <h2 className="plan__title">{isFirstDay ? 'Your first step' : 'Today’s session'}</h2>
+            <TodayPlanHeading isFirstDay={isFirstDay} />
             {/* Duration and intensity as two glanceable facts, not two sentences. */}
             <p className="plan__facts">
               {plannedMinutes > 0 ? <span className="plan__fact">{plannedMinutes} min</span> : null}
