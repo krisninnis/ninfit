@@ -9,6 +9,8 @@ describe('hatch cinematic timing', () => {
     expect(hookSource).toMatch(/setTimeout\(\(\) => \{\s*commit\(\);\s*setPhase\('flash'\);/);
     expect(hookSource).toContain("setPhase('emerging')");
     expect(hookSource).toContain("setPhase('settling')");
+    expect(hookSource).toContain("const LANDING_MS = 3600");
+    expect(hookSource).toContain("setPhase('landing')");
   });
 
   it('commits exactly once when a running ceremony unmounts before the break', () => {
