@@ -171,7 +171,7 @@ export function GameHeader({
           Both are placeholders until the mascot art pipeline produces real assets,
           and both should be replaced rather than refined.
         */}
-        {family === undefined ? (
+        {family === undefined || hatch.isRunning ? (
           <>
             <EggArt
               ready={state.mascot.eggState === 'ready' && !hatch.isRunning}
@@ -193,6 +193,15 @@ export function GameHeader({
             {family.glyph}
           </span>
         )}
+        {hatch.isRunning && family !== undefined ? (
+          standingArt !== undefined ? (
+            <img className="egg-hatch__companion" src={standingArt.src} alt="" aria-hidden="true" />
+          ) : (
+            <span className="egg-hatch__companion egg-hatch__companion--fallback" aria-hidden="true">
+              {family.glyph}
+            </span>
+          )
+        ) : null}
       </div>
 
       <div className="game__body">
