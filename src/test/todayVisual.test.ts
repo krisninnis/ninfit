@@ -289,7 +289,7 @@ describe('the companion stays a strip', () => {
     expect(gameHeaderSource).toContain('useHatchCinematic');
     expect(hatchHookSource).toContain("setPhase('cracking')");
     expect(hatchHookSource).toContain("setPhase('flash')");
-    expect(hatchHookSource).toContain('onHatch();');
+    expect(hatchHookSource).toContain('onHatchRef.current();');
   });
 
   it('prevents repeated hatch requests while the reveal is running', () => {
@@ -297,9 +297,9 @@ describe('the companion stays a strip', () => {
     expect(gameHeaderSource).toContain('disabled: hatch.isRunning');
   });
 
-  it('lets reduced-motion users hatch without waiting through the cinematic', () => {
+  it('gives reduced-motion users the timed still-state ceremony', () => {
     expect(hatchHookSource).toContain('prefers-reduced-motion: reduce');
-    expect(hatchHookSource).toMatch(/if \(reduceMotion\) \{[\s\S]*?onHatch\(\);[\s\S]*?return;/);
+    expect(hatchHookSource).toMatch(/if \(reduceMotion\) \{[\s\S]*?commit\(\);[\s\S]*?return;/);
   });
 
   it('asks the domain whether the egg may open, and never decides for itself', () => {
