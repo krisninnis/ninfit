@@ -1,6 +1,14 @@
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from './client'
 
+function configuredSupabase() {
+  if (!supabase) {
+    throw new Error('NinFit ID is not configured in this build.')
+  }
+
+  return supabase
+}
+
 export type AuthCredentials = {
   email: string
   password: string
@@ -54,6 +62,7 @@ export async function signUp({
   password,
   displayName,
 }: SignUpCredentials): Promise<SignUpResult> {
+  const supabase = configuredSupabase()
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -79,6 +88,7 @@ export async function signIn({
   email,
   password,
 }: AuthCredentials): Promise<Session> {
+  const supabase = configuredSupabase()
   const { data, error } =
     await supabase.auth.signInWithPassword({
       email,
@@ -97,6 +107,7 @@ export async function signIn({
 }
 
 export async function signOut(): Promise<void> {
+  const supabase = configuredSupabase()
   const { error } = await supabase.auth.signOut()
 
   if (error) {
@@ -105,6 +116,7 @@ export async function signOut(): Promise<void> {
 }
 
 export async function getSession(): Promise<Session | null> {
+  const supabase = configuredSupabase()
   const { data, error } = await supabase.auth.getSession()
 
   if (error) {
@@ -117,6 +129,7 @@ export async function getSession(): Promise<Session | null> {
 export function onAuthStateChange(
   listener: (session: Session | null) => void,
 ): () => void {
+  const supabase = configuredSupabase()
   const {
     data: { subscription },
   } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -126,6 +139,7 @@ export function onAuthStateChange(
   return () => subscription.unsubscribe()
 }
 export async function resendConfirmation(email: string): Promise<void> {
+  const supabase = configuredSupabase()
   const { error } = await supabase.auth.resend({
     type: 'signup',
     email: email.trim(),
