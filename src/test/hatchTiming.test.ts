@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import hookSource from '../ui/hooks/useHatchCinematic.ts?raw';
 import onboardingSource from '../ui/screens/OnboardingScreen.tsx?raw';
+import companionMediaSource from '../ui/components/HatchCompanionMedia.tsx?raw';
 
 const eggStyles = readFileSync(join('src', 'styles', 'components', 'egg.css'), 'utf8');
 
@@ -42,6 +43,10 @@ describe('hatch cinematic timing', () => {
     expect(eggStyles).toContain('.egg-hatch--landing .egg-hatch__companion');
     expect(eggStyles).toContain('position: fixed');
     expect(onboardingSource).toContain('journeyStarted && companionName !== undefined');
-    expect(onboardingSource).toContain('className="egg-hatch__companion"');
+    expect(onboardingSource).toContain('<HatchCompanionMedia');
+    expect(companionMediaSource).toContain('egg-hatch__companion');
+    expect(companionMediaSource).toContain("phase === 'emerging'");
+    expect(companionMediaSource).toContain("phase === 'settling'");
+    expect(companionMediaSource).toContain("phase === 'landing'");
   });
 });

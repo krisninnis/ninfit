@@ -1,6 +1,7 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 import { getAppContext } from '../../app/bootstrap';
 import { EggArt } from '../components/EggArt';
+import { HatchCompanionMedia } from '../components/HatchCompanionMedia';
 import { useHatchCinematic } from '../hooks/useHatchCinematic';
 import { crackStageForProgress } from '../../domain/game/egg';
 import { FITNESS_PATHS, FITNESS_STAGE_LABELS, findPath } from '../../domain/game/paths';
@@ -16,47 +17,16 @@ import {
 import type { FitnessPathId, OnboardingAnswers } from '../../domain/game/types';
 import type { FinishOnboardingInput } from '../../app/game';
 
-/**
- * Onboarding, one question at a time.
- *
- * The flow is adaptive, so the stage list is recomputed from the answers after every
- * change and a follow-up can appear or vanish mid-flow. That is also why there is no
- * fixed "step x of y" label: the total genuinely moves, and a bar over what is currently
- * resolved is the truthful version.
- *
- * Answers live in component state, so going Back and forward again never loses one.
- * Nothing is written until the user accepts a path, so a half-finished flow is never
- * stored as a completed classification.
- *
- * The mascot stays secret throughout. No animal, family or silhouette appears here
- * until the egg has actually hatched - `visibleMascotFamily` in the domain is what
- * enforces that, and this screen is only ever handed a name once it has.
- *
- * ONBOARDING NOW ENDS WITH THE HATCH.
- *
- * The egg cracks as the questionnaire progresses, and finishing it - choosing a path
- * and pressing "Start my journey" - is what opens it. Hatching used to be earned
- * with six qualifying activity days on Today, which meant nobody met their companion
- * in their first week. Real fitness now begins the mascot's GROWTH instead, which is
- * the thing activity should be buying.
- */
-
 interface OnboardingScreenProps {
-  /**
-   * Record the finished onboarding and perform the real hatch. Called once, at the
-   * end of the cinematic, never before it.
-   */
   onStartJourney: (input: FinishOnboardingInput) => void;
-  /** Leave the first-run journey, after the companion has been introduced. */
   onFinished: () => void;
   onDismiss: () => void;
-  /**
-   * The hatched companion's name. Undefined until the real hatch has happened, so
-   * this screen cannot show a species early even if it wanted to.
-   */
+  /** Undefined until the authoritative hatch has revealed the family. */
   companionName?: string;
   /** Reviewed standing frame, supplied only after the domain reveals the family. */
   companionArtSrc?: string;
+  /** Optional one-shot reveal motion, supplied on the same post-hatch boundary. */
+  companionMotionSrc?: string;
 }
 
 type AnswerValue = string | string[] | undefined;
@@ -68,7 +38,6 @@ function readAnswer(answers: OnboardingAnswers, id: string): AnswerValue {
   return String(value);
 }
 
-/** Options carry strings; the few typed fields convert back here. */
 function coerce(id: string, raw: string): unknown {
   if (id === 'returningAfterBreak') return raw === 'true';
   if (id === 'availableMinutes') return Number(raw);
@@ -138,7 +107,6 @@ function QuestionStage({
                 }}
               >
                 <span className="step__optionLabel">{option.label}</span>
-                {/* A tick as well as colour, so selection is never colour alone. */}
                 <span className="step__optionMark" aria-hidden="true">
                   {selected ? '✓' : ''}
                 </span>
@@ -157,22 +125,14 @@ export function OnboardingScreen({
   onDismiss,
   companionName,
   companionArtSrc,
+  companionMotionSrc,
 }: OnboardingScreenProps) {
   const context = useMemo(() => getAppContext(), []);
-
-  // Prefilled from what the tracker already knows. Private health notes are never
-  // read, and nothing about the person is inferred from them.
   const [answers, setAnswers] = useState<OnboardingAnswers>(() =>
     prefillFromExistingData(context.repository.getProfile(), context.repository.getBaseline()),
   );
   const [index, setIndex] = useState(0);
   const [showAllPaths, setShowAllPaths] = useState(false);
-  /*
-   * The path the user has settled on. Undefined means "still the recommendation",
-   * which keeps the common case a single press rather than an accept-then-confirm.
-   * Choosing another path only CHANGES this - it never starts the journey, so the
-   * final action stays explicit either way.
-   */
   const [chosenPathId, setChosenPathId] = useState<FitnessPathId | undefined>(undefined);
   const [journeyStarted, setJourneyStarted] = useState(false);
 
@@ -195,16 +155,12 @@ export function OnboardingScreen({
 
   const goBack = () => setIndex((value) => Math.max(0, value - 1));
   const goNext = () => setIndex((value) => Math.min(stages.length - 1, value + 1));
-
   const finalPathId = chosenPathId ?? recommendation?.pathId;
 
   /*
-   * The same cinematic Today uses for the recovery hatch. It decides WHEN, never
-   * whether: the domain still refuses to open an egg that is not ready, and the real
-   * mutation happens once, in `hatchEgg`, at the end of this.
-   *
-   * Nothing is written before the cinematic runs. Recording onboarding early would
-   * flip `needsOnboarding` and unmount this screen mid-animation.
+   * Onboarding and Today share the same timing/authority hook. `onStartJourney` is
+   * called only at its real break point. The family and both companion media props
+   * remain undefined until App re-renders from that authoritative state change.
    */
   const hatch = useHatchCinematic({
     canHatch: recommendation !== undefined && finalPathId !== undefined && !journeyStarted,
@@ -219,34 +175,13 @@ export function OnboardingScreen({
     },
   });
 
-  /*
-   * The domain has revealed the family. `companionName` is derived from
-   * `visibleMascotFamily`, which answers undefined until `eggState` is 'hatched', so
-   * this cannot be true before the authoritative hatch - there is no
-   * presentation-only version of it.
-   */
   const hatched = journeyStarted && companionName !== undefined;
-
   const canContinue =
     stage.kind !== 'question' || !isRequiredQuestion(stage.question.id) || isAnswered(answers, stage.question);
-
-  /**
-   * How far along the journey feels, 0 to 1.
-   *
-   * Reused from the progress model rather than being a second, parallel notion of
-   * "how far in are we" that could drift out of step with the bar. It drives the
-   * background wash and the egg's presence, both of which are decoration computed
-   * from a value that is already tested.
-   */
   const energy = progress.fraction;
 
   return (
     <div className="step" style={{ '--energy': energy } as CSSProperties}>
-      {/*
-        The egg sits above the progress bar and stays in the same place for the whole
-        flow, so it reads as one object travelling with the user rather than an
-        illustration that changes per screen. It is identical on every path.
-      */}
       <div className={`step__egg${hatch.isRunning ? ` egg-hatch--${hatch.phase}` : ''}`}>
         {hatch.phase.startsWith('reduced-') ? (
           <div className="egg-hatch__reduced" role="status" aria-live="polite">
@@ -254,29 +189,7 @@ export function OnboardingScreen({
             <button type="button" className="egg-hatch__skip" onClick={hatch.skip}>Skip</button>
           </div>
         ) : null}
-        {/*
-          The shell cracks as the questionnaire progresses. The stage is derived from
-          the SAME progress fraction that drives the bar, so the two can never
-          disagree, and it is never stored: it is a picture of where the user is in a
-          form they are still filling in, not a fact about them.
 
-          It reads no activity and no reward keys. Cracking is onboarding's, growth
-          is fitness's.
-        */}
-        {/*
-          THE HANDOVER.
-
-          Once the ceremony has finished and the domain has revealed a family, this
-          slot belongs to the reviewed standing companion - not to the egg. It used to
-          keep drawing the egg above the words "Your companion", because the only
-          companion element here was the ceremony's, which is `opacity: 0` outside a
-          running ceremony. Nobody noticed while the egg was a placeholder drawing;
-          with reviewed artwork it reads as the wrong animal entirely.
-
-          This mirrors `GameHeader`'s `family === undefined || hatch.isRunning` exactly,
-          which is the point: onboarding and Today's recovery route are one behaviour,
-          not two that resemble each other.
-        */}
         {!hatched || hatch.isRunning ? (
           <EggArt
             energy={energy}
@@ -289,36 +202,33 @@ export function OnboardingScreen({
             {companionName?.slice(0, 1)}
           </span>
         )}
-        {/*
-          The ceremony's own companion layer, which travels from the shell to centre
-          screen. It exists only while the ceremony runs; the standing art above is
-          what remains afterwards.
-        */}
+
         {hatched && hatch.isRunning ? (
-          companionArtSrc !== undefined ? (
-            <img className="egg-hatch__companion" src={companionArtSrc} alt="" aria-hidden="true" />
-          ) : (
-            <span className="egg-hatch__companion egg-hatch__companion--fallback" aria-hidden="true">
-              {companionName?.slice(0, 1)}
-            </span>
-          )
+          <HatchCompanionMedia
+            phase={hatch.phase}
+            standingSrc={companionArtSrc}
+            motionSrc={companionMotionSrc}
+            fallbackMark={companionName?.slice(0, 1)}
+          />
         ) : null}
+
         {hatch.phase === 'flash' ? <span className="egg__hatchFlash" aria-hidden="true" /> : null}
       </div>
 
       {stage.kind !== 'welcome' ? (
-        <div className="step__progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress.fraction * 100)} aria-label="Onboarding progress">
+        <div
+          className="step__progress"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(progress.fraction * 100)}
+          aria-label="Onboarding progress"
+        >
           <span className="step__progressFill" style={{ width: `${progress.fraction * 100}%` }} />
         </div>
       ) : null}
 
       <div className="step__body" key={journeyStarted ? 'reveal' : safeIndex}>
-        {/*
-          THE REVEAL. Only reachable after the real hatch: `companionName` comes from
-          `visibleMascotFamily`, which returns undefined until `eggState` is
-          'hatched'. There is no presentation-only version of this state, so what is
-          on screen and what is stored cannot disagree.
-        */}
         {journeyStarted && companionName !== undefined ? (
           <section className="step__panel">
             <span className="onboard__label">Your companion</span>
@@ -356,18 +266,6 @@ export function OnboardingScreen({
         ) : null}
 
         {!journeyStarted && stage.kind === 'recommendation' && recommendation !== undefined ? (
-          /*
-           * THE ONE PLACE A PATH BECOMES VISIBLE DURING ONBOARDING.
-           *
-           * `data-path` is scoped to this section and rendered only on this stage, so
-           * the accent cannot appear on any earlier screen: there is no element to
-           * carry it until the recommendation exists. Everything outside this section
-           * - the egg, the background wash, the progress bar, the navigation - stays
-           * on the neutral accent, which is why the reveal reads as a moment.
-           *
-           * It names the PATH, not the animal. The mascot stays sealed until the user
-           * opens the egg later on Today, which is a separate and explicit action.
-           */
           <section className="step__panel step__reveal" data-path={finalPathId}>
             <span className="onboard__label">
               {chosenPathId === undefined ? 'Based on your answers' : 'Your choice'}
@@ -387,10 +285,6 @@ export function OnboardingScreen({
               the game at level 1, whatever their starting point. You can change direction later.
             </p>
 
-            {/*
-              THE EXPLICIT ACTION. Choosing a path above only selects it; this is the
-              only control that starts anything, and it is what opens the egg.
-            */}
             <button
               type="button"
               className="btn btn--primary btn--block"

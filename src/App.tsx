@@ -117,6 +117,7 @@ export default function App() {
             onDismiss={() => setDismissedOnboarding(true)}
             companionName={visibleFamily?.name}
             companionArtSrc={revealedArt?.src}
+            companionMotionSrc={revealedArt?.motionSrc}
           />
         </main>
       </div>
