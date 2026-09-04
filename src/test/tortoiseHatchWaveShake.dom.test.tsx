@@ -87,6 +87,6 @@ describe('post-break Starter Tortoise wave', () => {
     expect(gameHeaderSource).toContain('motionSrc={standingArt?.motionSrc}');
     expect(onboardingSource).not.toMatch(/tortoise-starter-wave/i);
     expect(gameHeaderSource).not.toMatch(/tortoise-starter-wave/i);
-    expect(styles).toContain('CSS never crops, masks or obscures it');
+    expect(styles).toMatch(/CSS\s+never crops, masks or obscures it/);
   });
 });
