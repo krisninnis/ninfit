@@ -9,6 +9,7 @@ import { mascotMessage, type MascotContext } from '../../domain/game/messages';
 import type { GameSettings, GameState } from '../../domain/game/types';
 import { levelProgress } from '../../domain/game/xp';
 import { EggArt } from './EggArt';
+import { HatchCompanionMedia } from './HatchCompanionMedia';
 import { mascotStageArt } from '../mascotStageArt';
 import { useHatchCinematic } from '../hooks/useHatchCinematic';
 import {
@@ -162,15 +163,7 @@ export function GameHeader({
             <button type="button" className="egg-hatch__skip" onClick={hatch.skip}>Skip</button>
           </div>
         ) : null}
-        {/*
-          TEMPORARY PRESENTATION FALLBACK.
 
-          `EggArt` is drawn in code and `family.glyph` is a single letter - neither is
-          mascot artwork, and neither defines anything. The family name beside it is
-          the real answer to "who is this", which is why the glyph is `aria-hidden`.
-          Both are placeholders until the mascot art pipeline produces real assets,
-          and both should be replaced rather than refined.
-        */}
         {family === undefined || hatch.isRunning ? (
           <>
             <EggArt
@@ -193,14 +186,14 @@ export function GameHeader({
             {family.glyph}
           </span>
         )}
+
         {hatch.isRunning && family !== undefined ? (
-          standingArt !== undefined ? (
-            <img className="egg-hatch__companion" src={standingArt.src} alt="" aria-hidden="true" />
-          ) : (
-            <span className="egg-hatch__companion egg-hatch__companion--fallback" aria-hidden="true">
-              {family.glyph}
-            </span>
-          )
+          <HatchCompanionMedia
+            phase={hatch.phase}
+            standingSrc={standingArt?.src}
+            motionSrc={standingArt?.motionSrc}
+            fallbackMark={family.glyph}
+          />
         ) : null}
       </div>
 
@@ -212,10 +205,6 @@ export function GameHeader({
           <span className="game__level">Level {progress.level}</span>
         </div>
 
-        {/*
-          The bar carries the whole XP story visually; the count is a small aside.
-          The accessible name holds both, so nothing is lost by shrinking the text.
-        */}
         <div
           className="xpbar"
           role="img"
@@ -248,11 +237,6 @@ export function GameHeader({
         ) : null}
       </div>
 
-      {/*
-        Hatching and evolving stay here, but as a compact secondary control. They are
-        real moments and must remain reachable - they are simply not allowed to be the
-        biggest button on a screen whose job is today's session.
-      */}
       {action !== undefined ? (
         <button
           type="button"
