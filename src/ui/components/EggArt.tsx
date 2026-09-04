@@ -48,6 +48,11 @@ import {
  * and a slightly stronger neutral glow. It changes how alive the egg looks, never
  * what it is. There is no per-path variant and there must never be one.
  *
+ * Every cracked production stage also carries a species-neutral motion class. The
+ * movement lives on the visible image rather than the root so onboarding's energy
+ * transform remains intact. CSS scales the wobble gently from the first hairline
+ * crack through the hatch-ready stage, while reduced-motion removes it entirely.
+ *
  * Nothing here is announced: it is `aria-hidden`, because a screen reader user is
  * told about the egg in the surrounding copy rather than being handed a decorative
  * SVG. No label, alt text or title can therefore leak either.
@@ -81,14 +86,21 @@ export function EggArt({
 
   if (!artFailed && hasCompleteEggStageArt()) {
     return (
-      <div className={className} data-egg-art="production" aria-hidden="true" style={style}>
+      <div
+        className={className}
+        data-egg-art="production"
+        data-egg-visible-stage={visibleStage}
+        aria-hidden="true"
+        style={style}
+      >
         {EGG_CRACK_STAGES.map((stage) => {
           const art = eggStageArt(stage);
           if (art === undefined) return null;
+          const activeCrack = stage === visibleStage && stage > 0;
           return (
             <img
               key={stage}
-              className="egg__art"
+              className={`egg__art${activeCrack ? ' egg__art--cracked' : ''}`}
               data-egg-art-stage={stage}
               style={{ opacity: stage === visibleStage ? 1 : 0 }}
               src={art.src}
@@ -107,6 +119,7 @@ export function EggArt({
   return (
     <svg
       className={className}
+      data-egg-visible-stage={visibleStage}
       viewBox="0 0 80 100"
       aria-hidden="true"
       style={style}
