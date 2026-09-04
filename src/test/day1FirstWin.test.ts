@@ -7,7 +7,7 @@ function activity(
   id: string,
   type: PlannedActivity['type'],
   durationMinutes: number,
-  label = type,
+  label: string = type,
 ): PlannedActivity {
   return {
     id,
