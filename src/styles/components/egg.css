@@ -42,43 +42,73 @@
    * deliberate: pressure from inside, not a permanently vibrating notification.
    */
   .egg__art--cracked {
-    --egg-stage-angle: 1.5deg;
-    --egg-stage-shift: 0.5px;
+    --egg-stage-angle-neg: -1.5deg;
+    --egg-stage-angle-pos: 1.5deg;
+    --egg-stage-angle-neg-soft: -0.9deg;
+    --egg-stage-angle-pos-soft: 0.7deg;
+    --egg-stage-shift-neg: -0.5px;
+    --egg-stage-shift-pos: 0.5px;
+    --egg-stage-shift-neg-soft: -0.3px;
+    --egg-stage-shift-pos-soft: 0.2px;
     --egg-stage-shake-duration: 2.8s;
     animation: egg-stage-shake var(--egg-stage-shake-duration) ease-in-out infinite;
     transform-origin: 50% 90%;
   }
 
   .egg[data-egg-visible-stage='2'] .egg__art--cracked {
-    --egg-stage-angle: 2deg;
-    --egg-stage-shift: 0.75px;
+    --egg-stage-angle-neg: -2deg;
+    --egg-stage-angle-pos: 2deg;
+    --egg-stage-angle-neg-soft: -1.2deg;
+    --egg-stage-angle-pos-soft: 0.9deg;
+    --egg-stage-shift-neg: -0.75px;
+    --egg-stage-shift-pos: 0.75px;
+    --egg-stage-shift-neg-soft: -0.45px;
+    --egg-stage-shift-pos-soft: 0.3px;
     --egg-stage-shake-duration: 2.4s;
   }
 
   .egg[data-egg-visible-stage='3'] .egg__art--cracked {
-    --egg-stage-angle: 2.6deg;
-    --egg-stage-shift: 1px;
+    --egg-stage-angle-neg: -2.6deg;
+    --egg-stage-angle-pos: 2.6deg;
+    --egg-stage-angle-neg-soft: -1.6deg;
+    --egg-stage-angle-pos-soft: 1.2deg;
+    --egg-stage-shift-neg: -1px;
+    --egg-stage-shift-pos: 1px;
+    --egg-stage-shift-neg-soft: -0.6px;
+    --egg-stage-shift-pos-soft: 0.45px;
     --egg-stage-shake-duration: 2s;
   }
 
   .egg[data-egg-visible-stage='4'] .egg__art--cracked {
-    --egg-stage-angle: 3.2deg;
-    --egg-stage-shift: 1.25px;
+    --egg-stage-angle-neg: -3.2deg;
+    --egg-stage-angle-pos: 3.2deg;
+    --egg-stage-angle-neg-soft: -2deg;
+    --egg-stage-angle-pos-soft: 1.5deg;
+    --egg-stage-shift-neg: -1.25px;
+    --egg-stage-shift-pos: 1.25px;
+    --egg-stage-shift-neg-soft: -0.8px;
+    --egg-stage-shift-pos-soft: 0.55px;
     --egg-stage-shake-duration: 1.7s;
   }
 
   .egg[data-egg-visible-stage='5'] .egg__art--cracked {
-    --egg-stage-angle: 3.8deg;
-    --egg-stage-shift: 1.5px;
+    --egg-stage-angle-neg: -3.8deg;
+    --egg-stage-angle-pos: 3.8deg;
+    --egg-stage-angle-neg-soft: -2.4deg;
+    --egg-stage-angle-pos-soft: 1.8deg;
+    --egg-stage-shift-neg: -1.5px;
+    --egg-stage-shift-pos: 1.5px;
+    --egg-stage-shift-neg-soft: -0.9px;
+    --egg-stage-shift-pos-soft: 0.7px;
     --egg-stage-shake-duration: 1.45s;
   }
 
   @keyframes egg-stage-shake {
     0%, 52%, 100% { transform: translateX(0) rotate(0deg); }
-    8% { transform: translateX(calc(-1 * var(--egg-stage-shift))) rotate(calc(-1 * var(--egg-stage-angle))); }
-    16% { transform: translateX(var(--egg-stage-shift)) rotate(var(--egg-stage-angle)); }
-    24% { transform: translateX(calc(-0.65 * var(--egg-stage-shift))) rotate(calc(-0.65 * var(--egg-stage-angle))); }
-    32% { transform: translateX(calc(0.45 * var(--egg-stage-shift))) rotate(calc(0.45 * var(--egg-stage-angle))); }
+    8% { transform: translateX(var(--egg-stage-shift-neg)) rotate(var(--egg-stage-angle-neg)); }
+    16% { transform: translateX(var(--egg-stage-shift-pos)) rotate(var(--egg-stage-angle-pos)); }
+    24% { transform: translateX(var(--egg-stage-shift-neg-soft)) rotate(var(--egg-stage-angle-neg-soft)); }
+    32% { transform: translateX(var(--egg-stage-shift-pos-soft)) rotate(var(--egg-stage-angle-pos-soft)); }
     40% { transform: translateX(0) rotate(0deg); }
   }
 
