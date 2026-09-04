@@ -324,7 +324,22 @@ describe('the mascot stays secret', () => {
   });
 
   it('gives the egg no label, alt text or title that could hint at the animal', () => {
-    expect(eggSource).not.toMatch(/aria-label|alt=|<title|<desc/);
+    /*
+     * RE-POINTED FOR #195, NOT WEAKENED.
+     *
+     * The reviewed stages are <img> elements, and a decorative image is spelled
+     * `alt=""` - an empty alt is precisely how you say "this carries no meaning",
+     * which is the thing this test is protecting. So the rule became "no NON-EMPTY
+     * alt" rather than "no alt at all". Anything with characters in it still fails,
+     * and so does an aria-label, a <title> or a <desc>, exactly as before.
+     */
+    expect(eggSource).not.toMatch(/aria-label/);
+    expect(eggSource).not.toMatch(/<title|<desc/);
+    expect(eggSource).not.toMatch(/alt="[^"]+"/);
+    expect(eggSource).not.toMatch(/alt=\{/);
+    for (const match of eggSource.match(/alt=[^\s/>]*/g) ?? []) {
+      expect(match, 'the egg may only carry an empty alt').toBe('alt=""');
+    }
     expect(eggSource).toMatch(/aria-hidden="true"/);
     expect(eggSource).not.toMatch(/Tortoise|Bear|\bFox\b|Otter|Wolf|familyId/);
   });

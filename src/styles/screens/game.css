@@ -96,7 +96,11 @@
   min-width: 0;
 }
 
-.game__art .egg {
+/*
+ * The RESTING size, as on onboarding: `screens` beats `components`, so without the
+ * `:not()` this 36px strip size also won during the full-viewport hatch ceremony.
+ */
+.game__art:not([class*='egg-hatch--']) .egg {
   width: 36px;
   height: 44px;
 }

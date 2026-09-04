@@ -142,6 +142,9 @@ the 201 × 251 ceremony size a 360px viewport actually produces.
 
 ## Deferred to the next slice, after approval
 
+Human visual approval was given for PR #195. The wiring slice is
+`premium-egg-hatch-runtime-v1.md`, which carries out the plan below.
+
 Runtime integration is mechanical when it comes and is deliberately not in this
 branch:
 

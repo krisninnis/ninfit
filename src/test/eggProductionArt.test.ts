@@ -16,6 +16,11 @@ import {
   eggStageSvg,
 } from '../art/egg/eggMaster';
 import { MAX_CRACK_STAGE } from '../domain/game/egg';
+import {
+  EGG_STAGE_ART,
+  eggStageArt,
+  hasCompleteEggStageArt,
+} from '../ui/eggStageArt';
 
 /**
  * PREMIUM EGG PRODUCTION ART - THE GUARD (#134).
@@ -354,12 +359,13 @@ describe('the set is safe to load on a phone', () => {
   });
 });
 
-describe('the assets are not wired into the runtime yet', () => {
+describe('the assets reach the runtime through one boundary', () => {
   /*
    * `skills/ninfit-visual-asset-pipeline`: generated artwork is source material until
-   * a human has approved it, and only approved artwork is wired in. This slice stops
-   * at the assets. These tests fail if a later change quietly crosses that line
-   * without the review that is supposed to authorise it.
+   * a human has approved it, and only approved artwork is wired in. Human visual
+   * approval was given for PR #195, so these tests changed from "nothing is wired in"
+   * to "exactly one thing is". What they still forbid is the failure the pipeline
+   * actually warns about: image URLs scattered through screen components.
    */
   const walk = (dir: string): string[] =>
     readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -368,37 +374,83 @@ describe('the assets are not wired into the runtime yet', () => {
       return entry.isFile() && /\.tsx?$/.test(entry.name) ? [full] : [];
     });
 
-  it('is imported by nothing the application runs', () => {
-    const consumers = walk('src')
-      .filter((file) => !file.startsWith(join('src', 'art')))
-      .filter((file) => !file.startsWith(join('src', 'test')))
-      .filter((file) => readFileSync(file, 'utf8').includes('art/egg/eggMaster'));
+  const strip = (source: string) =>
+    source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
 
-    expect(consumers, `wired in by: ${consumers.join(', ')}`).toEqual([]);
+  const runtime = walk('src').filter(
+    (file) => !file.startsWith(join('src', 'test')) && !file.startsWith(join('src', 'art')),
+  );
+
+  it('keeps the art SOURCE out of the application entirely', () => {
+    /*
+     * The generator's master is build-time material. The runtime consumes the six
+     * committed files, never the module that produced them - which is what keeps the
+     * geometry, the palette and the fracture layers out of the shipped bundle.
+     *
+     * Comments are stripped first: a doc comment that tells the next reader where the
+     * artwork came from is documentation, and a guard that punished it would teach
+     * people to stop writing it.
+     */
+    const consumers = runtime.filter((file) =>
+      strip(readFileSync(file, 'utf8')).includes('art/egg/eggMaster'),
+    );
+    expect(consumers, `imported by: ${consumers.join(', ')}`).toEqual([]);
   });
 
-  it('is referenced by no runtime source or stylesheet', () => {
-    const runtime = walk('src').filter(
-      (file) => !file.startsWith(join('src', 'test')) && !file.startsWith(join('src', 'art')),
-    );
+  it('names an egg asset in exactly one place, the registry', () => {
+    const namers = runtime.filter((file) => strip(readFileSync(file, 'utf8')).includes('/egg/'));
+    expect(namers).toEqual([join('src', 'ui', 'eggStageArt.ts')]);
 
-    for (const file of runtime) {
-      expect(readFileSync(file, 'utf8'), `${file} names an egg asset`).not.toContain('/egg/');
-    }
-
+    // And not in CSS either: a `url()` in the stylesheet would be a second registry
+    // with no fallback and no test.
     const styles = readFileSync(join('src', 'styles', 'components', 'egg.css'), 'utf8');
     expect(styles).not.toContain('/egg/');
     expect(styles).not.toMatch(/url\(/);
   });
 
-  it('leaves the temporary EggArt drawing exactly where it was', () => {
-    // The placeholder stays load-bearing until the swap is authorised, so the
-    // ceremony merged through #192 is untouched by this slice.
+  it('declares the whole reviewed set and nothing that is not on disk', () => {
+    expect(Object.keys(EGG_STAGE_ART).map(Number).sort()).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(hasCompleteEggStageArt()).toBe(true);
+
+    for (const stage of EGG_STAGES) {
+      const art = eggStageArt(stage);
+      expect(art?.src).toBe(eggStageAssetPath(stage));
+      // A registry entry pointing at a file that is not shipped is a 404 in the one
+      // moment the product exists for.
+      expect(existsSync(join('public', art?.src.replace(/^\//, '') ?? ''))).toBe(true);
+    }
+  });
+
+  it('resolves stages through the registry rather than learning a filename', () => {
+    const eggArt = readFileSync(join('src', 'ui', 'components', 'EggArt.tsx'), 'utf8');
+    expect(eggArt).toContain("from '../eggStageArt'");
+    expect(eggArt).toContain('eggStageArt(stage)');
+    expect(eggArt).toContain('src={art.src}');
+    // The failure the pipeline skill names by name.
+    expect(eggArt).not.toContain('/egg/');
+    expect(eggArt).not.toMatch(/\.svg['"`]/);
+  });
+
+  it('keeps the code drawing as the media-failure fallback, not as the presentation', () => {
+    /*
+     * `docs/CURRENT_STATE` requires that a failed asset still leaves the authoritative
+     * hatched companion reachable. The drawing is how that requirement is met, so it
+     * stays - demoted, never deleted. Deleting it would turn a 404 into a blank square
+     * in the middle of the hatch.
+     */
     const eggArt = readFileSync(join('src', 'ui', 'components', 'EggArt.tsx'), 'utf8');
     expect(eggArt).toContain('className="egg__shell"');
     expect((eggArt.match(/data-egg-stage="/g) ?? []).length).toBe(5);
-    expect(eggArt).not.toContain('eggMaster');
-    expect(eggArt).not.toContain('<img');
+    expect(eggArt).toContain('onError={() => setArtFailed(true)}');
+    expect(eggArt).toContain('if (!artFailed && hasCompleteEggStageArt())');
+  });
+
+  it('changes the artwork and not the crack-stage contract', () => {
+    const eggArt = readFileSync(join('src', 'ui', 'components', 'EggArt.tsx'), 'utf8');
+    // Same props, same clamp, same 0-5 range the domain produces.
+    expect(eggArt).toContain('crackStage = 0');
+    expect(eggArt).toContain('Math.floor(crackStage)');
+    expect(MAX_CRACK_STAGE).toBe(5);
   });
 });
 

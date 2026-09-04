@@ -54,9 +54,47 @@
   padding-top: var(--ft-space-2);
 }
 
-.step__egg .egg {
+/*
+ * The RESTING size, and only the resting size.
+ *
+ * `screens` beats `components` in the cascade order declared in `styles/index.css`,
+ * so this rule used to win while the hatch ceremony was running too - which is why a
+ * full-viewport ceremony drew a 58px egg in the middle of an otherwise empty screen.
+ * Found by the #134 visual proof; it has been true since the ceremony landed.
+ *
+ * The ceremony owns the egg's size while it runs, this screen owns it the rest of
+ * the time, and the `:not()` is where that boundary is written down rather than
+ * being re-derived from layer order.
+ */
+.step__egg:not([class*='egg-hatch--']) .egg {
   width: 58px;
   height: 72px;
+}
+
+/*
+ * The revealed companion, standing where the egg was.
+ *
+ * Deliberately a little larger than the egg it replaces: this is the one moment the
+ * whole flow exists for. No frame, no disc, no card - the reviewed artwork is a
+ * finished figure and a ring behind it would be a frame around a picture, which is
+ * the rule Today already follows.
+ */
+.step__companionArt {
+  width: 112px;
+  height: 112px;
+  object-fit: contain;
+}
+
+.step__companionMark {
+  display: grid;
+  place-items: center;
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  background: var(--ft-surface-sunken);
+  border: 1px solid var(--ft-border-subtle);
+  color: var(--ft-text-primary);
+  font-size: 2.5rem;
 }
 
 .step__progress {
@@ -251,7 +289,7 @@
     gap: var(--ft-space-5);
   }
 
-  .step__egg .egg {
+  .step__egg:not([class*='egg-hatch--']) .egg {
     width: 78px;
     height: 96px;
   }
