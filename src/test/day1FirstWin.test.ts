@@ -22,7 +22,7 @@ describe('Day 1 first-win selector', () => {
   const yoga = activity('yoga-1', 'yoga', 10, 'beginner yoga');
   const walk = activity('walk-1', 'walk', 5, 'easy walk');
 
-  it('uses an explicit supported preference when that activity already exists in the plan', () => {
+  it('uses an explicit supported preference when that activity already exists in the realistic pool', () => {
     const answers: OnboardingAnswers = { preferredActivities: ['walking'] };
 
     const result = selectDay1FirstWin([yoga, walk], answers);
@@ -40,6 +40,21 @@ describe('Day 1 first-win selector', () => {
 
     expect(selectDay1FirstWin([walk, yoga], answers)?.activityId).toBe('yoga-1');
     expect(selectDay1FirstWin([yoga, walk], answers)?.activityId).toBe('yoga-1');
+  });
+
+  it('does not let a preference override the time the user said they can give', () => {
+    const longerPreferredYoga = activity('yoga-20', 'yoga', 20, 'yoga');
+    const fittingWalk = activity('walk-10', 'walk', 10, 'walk');
+
+    const result = selectDay1FirstWin([longerPreferredYoga, fittingWalk], {
+      preferredActivities: ['yoga'],
+      availableMinutes: 10,
+    });
+
+    expect(result?.activityId).toBe('walk-10');
+    expect(result?.explanation).toBe(
+      'This 10-minute step fits within the time you said you can usually give it.',
+    );
   });
 
   it('does not invent mappings for strength, cycling or swimming preferences', () => {
