@@ -1,4 +1,10 @@
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
+
+import {
+  EGG_CRACK_STAGES,
+  eggStageArt,
+  hasCompleteEggStageArt,
+} from '../eggStageArt';
 
 /**
  * The Mystery Egg.
@@ -8,6 +14,32 @@ import type { CSSProperties } from 'react';
  * animal to leak out of, and the whole point of the egg is that it gives nothing
  * away. Everything about it is universal: the same shell, the same specks, the same
  * neutral tokens, whatever path the person is on.
+ *
+ * TWO PRESENTATIONS, ONE CONTRACT.
+ *
+ * Since #195 the shell is the reviewed premium artwork: six SVG stages derived from
+ * one canonical master, resolved through `eggStageArt`. The code-drawn shell below is
+ * no longer the presentation - it is the FALLBACK, and it is load-bearing in exactly
+ * two situations: the reviewed set is incomplete, or a stage failed to load on the
+ * person's device.
+ *
+ * That second case is why the drawing is kept rather than deleted. `docs/CURRENT_STATE`
+ * requires that a failed asset still leaves the authoritative hatched companion
+ * reachable - never a reroll, never a trap, never a lost answer. The hatch mutation
+ * already lives in `useHatchCinematic`/`hatchEgg` and is independent of any media, so
+ * an image that 404s costs the person some polish and nothing else. A component that
+ * rendered nothing when its artwork failed would turn that guarantee into a blank
+ * square in the middle of the one moment the product exists for.
+ *
+ * `crackStage` is unchanged: 0 to 5, the domain's own range. The artwork replaced the
+ * drawing, not the API.
+ *
+ * All six stages are mounted at once and cross-faded on opacity. Two reasons, both
+ * about the same 1,450ms: swapping one element's `src` shows a decode gap, and the
+ * gap would land on the break - the single frame that has to be perfect. Mounting
+ * them together also means the ceremony never waits on a network request it could
+ * have made during the questionnaire. The whole set is ~69KB, which is what the
+ * budget in `docs/specs/active/premium-egg-production-assets-v1.md` was set for.
  *
  * The specks use `--ft-accent`, which is the neutral sage everywhere the egg is
  * shown before a path exists. It is never rendered inside a `[data-path]` subtree.
@@ -29,6 +61,13 @@ export function EggArt({
   energy?: number;
   crackStage?: number;
 }) {
+  /*
+   * One failure sends the whole presentation back to the drawing, rather than leaving
+   * reviewed artwork at stage 2 and a code drawing at stage 3. A shell that changes
+   * rendering language halfway through the questionnaire reads as a bug even when
+   * every individual asset is fine.
+   */
+  const [artFailed, setArtFailed] = useState(false);
   const style = energy === undefined ? undefined : ({ '--egg-energy': energy } as CSSProperties);
   const energised = energy === undefined ? '' : ' egg--energised';
 
@@ -38,10 +77,36 @@ export function EggArt({
     ? Math.max(0, Math.min(5, Math.floor(crackStage)))
     : 0;
   const stageStyle = (stage: number) => ({ opacity: stage <= visibleStage ? 1 : 0 });
+  const className = `egg${ready ? ' egg--ready' : ''}${energised}`;
+
+  if (!artFailed && hasCompleteEggStageArt()) {
+    return (
+      <div className={className} data-egg-art="production" aria-hidden="true" style={style}>
+        {EGG_CRACK_STAGES.map((stage) => {
+          const art = eggStageArt(stage);
+          if (art === undefined) return null;
+          return (
+            <img
+              key={stage}
+              className="egg__art"
+              data-egg-art-stage={stage}
+              style={{ opacity: stage === visibleStage ? 1 : 0 }}
+              src={art.src}
+              alt=""
+              aria-hidden="true"
+              decoding="async"
+              draggable={false}
+              onError={() => setArtFailed(true)}
+            />
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <svg
-      className={`egg${ready ? ' egg--ready' : ''}${energised}`}
+      className={className}
       viewBox="0 0 80 100"
       aria-hidden="true"
       style={style}

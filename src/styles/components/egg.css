@@ -19,6 +19,36 @@
     height: 84px;
   }
 
+  /*
+   * The reviewed production shell (#134 / #195).
+   *
+   * All six stages occupy the same box and are cross-faded on opacity, so the swap
+   * between them cannot shift layout and cannot show a decode gap. `object-fit:
+   * contain` is the img equivalent of the SVG's `preserveAspectRatio="xMidYMid meet"`
+   * - the two presentations therefore letterbox identically inside whatever box a
+   * screen gives `.egg`, which is what lets the fallback stand in without anything
+   * moving.
+   *
+   * The box itself is still sized by `.egg` and by the screens' overrides. Nothing
+   * here decides how big the egg is.
+   */
+  .egg[data-egg-art='production'] {
+    position: relative;
+    display: block;
+  }
+
+  .egg__art {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    opacity: 0;
+    transition: opacity 240ms ease-out;
+    pointer-events: none;
+    user-select: none;
+  }
+
   .egg__shell {
     fill: var(--ft-surface-raised);
     stroke: var(--ft-border-strong);
@@ -274,6 +304,14 @@
 
   @media (prefers-reduced-motion: reduce) {
     .egg__stage {
+      transition: none;
+    }
+    /*
+     * The stage still CHANGES; only the cross-fade goes. Someone who asked for less
+     * movement still sees the shell at the right point in the questionnaire, which is
+     * the difference between removing decoration and removing meaning.
+     */
+    .egg__art {
       transition: none;
     }
     .egg-hatch--cracking .egg,
