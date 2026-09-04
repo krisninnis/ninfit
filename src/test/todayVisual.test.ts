@@ -264,11 +264,14 @@ describe('the companion stays a strip', () => {
   });
 
   it('sizes the egg well below its onboarding size', () => {
-    const art = baseRule(game, '.game__art .egg');
+    const art = baseRule(game, ".game__art:not([class*='egg-hatch--']) .egg");
     const height = Number.parseInt(art.get('height') as string, 10);
 
     expect(height).toBeGreaterThan(0);
     expect(height, 'the companion must not dominate Today').toBeLessThanOrEqual(48);
+    // ...and steps out of the way entirely while the ceremony owns the viewport.
+    expect(game).toContain(".game__art:not([class*='egg-hatch--']) .egg");
+    expect(game).not.toMatch(/\.game__art \.egg\s*\{/);
   });
 
   it('keeps the hatch and evolve moments reachable, just not dominant', () => {

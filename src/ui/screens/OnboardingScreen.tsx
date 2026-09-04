@@ -219,6 +219,14 @@ export function OnboardingScreen({
     },
   });
 
+  /*
+   * The domain has revealed the family. `companionName` is derived from
+   * `visibleMascotFamily`, which answers undefined until `eggState` is 'hatched', so
+   * this cannot be true before the authoritative hatch - there is no
+   * presentation-only version of it.
+   */
+  const hatched = journeyStarted && companionName !== undefined;
+
   const canContinue =
     stage.kind !== 'question' || !isRequiredQuestion(stage.question.id) || isAnswered(answers, stage.question);
 
@@ -255,16 +263,43 @@ export function OnboardingScreen({
           It reads no activity and no reward keys. Cracking is onboarding's, growth
           is fitness's.
         */}
-        <EggArt
-          energy={energy}
-          crackStage={crackStageForProgress(progress.fraction)}
-        />
-        {journeyStarted && companionName !== undefined ? (
+        {/*
+          THE HANDOVER.
+
+          Once the ceremony has finished and the domain has revealed a family, this
+          slot belongs to the reviewed standing companion - not to the egg. It used to
+          keep drawing the egg above the words "Your companion", because the only
+          companion element here was the ceremony's, which is `opacity: 0` outside a
+          running ceremony. Nobody noticed while the egg was a placeholder drawing;
+          with reviewed artwork it reads as the wrong animal entirely.
+
+          This mirrors `GameHeader`'s `family === undefined || hatch.isRunning` exactly,
+          which is the point: onboarding and Today's recovery route are one behaviour,
+          not two that resemble each other.
+        */}
+        {!hatched || hatch.isRunning ? (
+          <EggArt
+            energy={energy}
+            crackStage={crackStageForProgress(progress.fraction)}
+          />
+        ) : companionArtSrc !== undefined ? (
+          <img className="step__companionArt" src={companionArtSrc} alt="" aria-hidden="true" />
+        ) : (
+          <span className="step__companionMark" aria-hidden="true">
+            {companionName?.slice(0, 1)}
+          </span>
+        )}
+        {/*
+          The ceremony's own companion layer, which travels from the shell to centre
+          screen. It exists only while the ceremony runs; the standing art above is
+          what remains afterwards.
+        */}
+        {hatched && hatch.isRunning ? (
           companionArtSrc !== undefined ? (
             <img className="egg-hatch__companion" src={companionArtSrc} alt="" aria-hidden="true" />
           ) : (
             <span className="egg-hatch__companion egg-hatch__companion--fallback" aria-hidden="true">
-              {companionName.slice(0, 1)}
+              {companionName?.slice(0, 1)}
             </span>
           )
         ) : null}

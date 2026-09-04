@@ -114,8 +114,25 @@ describe('the egg gives nothing away', () => {
   it('is rendered outside anything themed, and sized for each breakpoint', () => {
     expect(onboarding).toMatch(/\.step__egg\s*\{/);
     // 72px tall on a phone per DESIGN.md, larger on a tablet.
-    expect(onboarding).toMatch(/\.step__egg \.egg\s*\{[^}]*height:\s*72px/);
-    expect(onboarding).toMatch(/min-width:\s*768px[\s\S]*\.step__egg \.egg\s*\{[^}]*height:\s*96px/);
+    expect(onboarding).toMatch(/\.step__egg[^{]*\.egg\s*\{[^}]*height:\s*72px/);
+    expect(onboarding).toMatch(/min-width:\s*768px[\s\S]*\.step__egg[^{]*\.egg\s*\{[^}]*height:\s*96px/);
+  });
+
+  it('hands the egg to the ceremony while the ceremony is running', () => {
+    /*
+     * `screens` beats `components`, so an unqualified `.step__egg .egg` also won
+     * during the hatch - and drew a 58px egg inside a full-viewport overlay. Both
+     * resting sizes must therefore exclude the running ceremony, or the ceremony's
+     * own `min(56vmin, 420px)` can never take effect.
+     */
+    for (const size of ['72px', '96px']) {
+      const at = onboarding.indexOf(`height: ${size}`);
+      expect(at, `no rule sets the egg to ${size}`).toBeGreaterThan(-1);
+      const selector = onboarding.slice(onboarding.lastIndexOf('}', at) + 1, at);
+      expect(selector, `the ${size} rule still applies during the ceremony`).toContain(
+        ":not([class*='egg-hatch--'])",
+      );
+    }
   });
 
   /**
