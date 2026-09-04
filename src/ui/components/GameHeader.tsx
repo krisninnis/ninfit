@@ -61,24 +61,11 @@ import {
 interface GameHeaderProps {
   state: GameState;
   settings: GameSettings;
-  /**
-   * What the companion has noticed, decided by the domain. Passed in rather than
-   * computed here so the message can reflect the day, and so there is exactly one
-   * place the precedence between "you finished" and "welcome back" is written down.
-   */
   context: MascotContext;
-  /**
-   * Identity of the freshly granted sync delta. Empty on repeat/reload.
-   * Presentation uses only freshness, never reward kinds or XP.
-   */
   freshMomentKey: string;
   crackStage: number;
   onHatch: () => void;
   onEvolve: () => void;
-  /**
-   * Today may give reviewed mascot artwork a real companion presence above
-   * the progress strip. Egg and glyph fallbacks remain inside the strip.
-   */
   companionPlacement?: 'inline' | 'above';
 }
 
@@ -96,14 +83,8 @@ export function GameHeader({
   const progress = levelProgress(state.xp.total);
   const standingArt =
     family === undefined ? undefined : mascotStageArt(family.id, state.mascot.stage);
-  const showArtAbove =
-    companionPlacement === 'above' && standingArt !== undefined;
+  const showArtAbove = companionPlacement === 'above' && standingArt !== undefined;
 
-  /*
-   * The same cinematic onboarding uses. Today is the RECOVERY route into it - for a
-   * save that arrived here still holding an egg - so it must behave identically, and
-   * sharing the hook is what guarantees that rather than hoping two copies match.
-   */
   const hatch = useHatchCinematic({
     canHatch: state.mascot.eggState === 'ready',
     onHatch,
@@ -126,12 +107,8 @@ export function GameHeader({
     return () => clearTimeout(timer);
   }, [freshMomentKey, lifetime]);
 
-  const momentActive =
-    freshMomentKey !== '' && activeMomentKey === freshMomentKey;
-  const reactionPresentation = companionReactionPresentationForLifetime(
-    context,
-    momentActive,
-  );
+  const momentActive = freshMomentKey !== '' && activeMomentKey === freshMomentKey;
+  const reactionPresentation = companionReactionPresentationForLifetime(context, momentActive);
 
   const action =
     state.mascot.eggState === 'ready'
@@ -150,103 +127,108 @@ export function GameHeader({
         className="game"
         aria-label="Your companion"
         data-companion-reaction={reactionPresentation}
-        data-has-mascot-art={
-          standingArt !== undefined && !showArtAbove ? 'true' : 'false'
-        }
+        data-has-mascot-art={standingArt !== undefined && !showArtAbove ? 'true' : 'false'}
       >
-      <div
-        className={`game__art${hatch.isRunning ? ` egg-hatch--${hatch.phase}` : ''}`}
-      >
-        {hatch.phase.startsWith('reduced-') ? (
-          <div className="egg-hatch__reduced" role="status">
-            <span>{hatch.phase === 'reduced-ready' ? 'Your egg is ready.' : hatch.phase === 'reduced-opening' ? 'It’s opening.' : 'Meet your companion.'}</span>
-            <button type="button" className="egg-hatch__skip" onClick={hatch.skip}>Skip</button>
-          </div>
-        ) : null}
+        <div className={`game__art${hatch.isRunning ? ` egg-hatch--${hatch.phase}` : ''}`}>
+          {hatch.phase.startsWith('reduced-') ? (
+            <div className="egg-hatch__reduced" role="status">
+              <span>
+                {hatch.phase === 'reduced-ready'
+                  ? 'Your egg is ready.'
+                  : hatch.phase === 'reduced-opening'
+                    ? 'It’s opening.'
+                    : 'Meet your companion.'}
+              </span>
+              <button type="button" className="egg-hatch__skip" onClick={hatch.skip}>
+                Skip
+              </button>
+            </div>
+          ) : null}
 
-        {family === undefined || hatch.isRunning ? (
-          <>
-            <EggArt
-              ready={state.mascot.eggState === 'ready' && !hatch.isRunning}
-              crackStage={crackStage}
+          {family === undefined || hatch.isRunning ? (
+            <>
+              <EggArt
+                ready={state.mascot.eggState === 'ready' && !hatch.isRunning}
+                crackStage={crackStage}
+              />
+              {hatch.phase === 'flash' ? (
+                <span className="egg__hatchFlash" aria-hidden="true" />
+              ) : null}
+            </>
+          ) : standingArt !== undefined && !showArtAbove ? (
+            <img
+              className="mascot mascot--art"
+              src={standingArt.src}
+              alt=""
+              aria-hidden="true"
             />
-            {hatch.phase === 'flash' ? (
-              <span className="egg__hatchFlash" aria-hidden="true" />
-            ) : null}
-          </>
-        ) : standingArt !== undefined && !showArtAbove ? (
-          <img
-            className="mascot mascot--art"
-            src={standingArt.src}
-            alt=""
-            aria-hidden="true"
-          />
-        ) : showArtAbove ? null : (
-          <span className="mascot" aria-hidden="true">
-            {family.glyph}
-          </span>
-        )}
+          ) : showArtAbove ? null : (
+            /* TEMPORARY PRESENTATION FALLBACK: a letter is never the mascot model. */
+            <span className="mascot" aria-hidden="true">
+              {family.glyph}
+            </span>
+          )}
 
-        {hatch.isRunning && family !== undefined ? (
-          <HatchCompanionMedia
-            phase={hatch.phase}
-            standingSrc={standingArt?.src}
-            motionSrc={standingArt?.motionSrc}
-            fallbackMark={family.glyph}
-          />
-        ) : null}
-      </div>
-
-      <div className="game__body">
-        <div className="game__titles">
-          <span className="game__name">
-            {family === undefined ? 'Mystery Egg' : family.name}
-          </span>
-          <span className="game__level">Level {progress.level}</span>
+          {hatch.isRunning && family !== undefined ? (
+            <HatchCompanionMedia
+              phase={hatch.phase}
+              standingSrc={standingArt?.src}
+              motionSrc={standingArt?.motionSrc}
+              fallbackMark={family.glyph}
+            />
+          ) : null}
         </div>
 
-        <div
-          className="xpbar"
-          role="img"
-          aria-label={
-            progress.isMaxLevel
-              ? `Level ${progress.level}, maximum reached`
-              : `Level ${progress.level}, ${progress.xpIntoLevel} of ${progress.xpForLevel ?? 0} XP`
-          }
-        >
-          <span
-            className="xpbar__fill"
-            style={{ width: `${Math.round(progress.fraction * 100)}%` }}
-          />
-        </div>
+        <div className="game__body">
+          <div className="game__titles">
+            <span className="game__name">
+              {family === undefined ? 'Mystery Egg' : family.name}
+            </span>
+            <span className="game__level">Level {progress.level}</span>
+          </div>
 
-        <p className="game__line">
-          <span className="game__xp">
-            {progress.isMaxLevel
-              ? `${state.xp.total} XP`
-              : `${progress.xpIntoLevel} / ${progress.xpForLevel ?? 0} XP`}
-          </span>
-          {message !== undefined ? <span className="game__message">{message}</span> : null}
-        </p>
+          <div
+            className="xpbar"
+            role="img"
+            aria-label={
+              progress.isMaxLevel
+                ? `Level ${progress.level}, maximum reached`
+                : `Level ${progress.level}, ${progress.xpIntoLevel} of ${progress.xpForLevel ?? 0} XP`
+            }
+          >
+            <span
+              className="xpbar__fill"
+              style={{ width: `${Math.round(progress.fraction * 100)}%` }}
+            />
+          </div>
 
-        {family !== undefined ? (
-          <p className="game__stage">
-            {MASCOT_STAGE_LABELS[state.mascot.stage]} ·{' '}
-            {EVOLUTION_STATUS_LABELS[evolutionStatus(state.mascot, state.xp.level)]}
+          <p className="game__line">
+            <span className="game__xp">
+              {progress.isMaxLevel
+                ? `${state.xp.total} XP`
+                : `${progress.xpIntoLevel} / ${progress.xpForLevel ?? 0} XP`}
+            </span>
+            {message !== undefined ? <span className="game__message">{message}</span> : null}
           </p>
-        ) : null}
-      </div>
 
-      {action !== undefined ? (
-        <button
-          type="button"
-          className="btn btn--secondary game__action"
-          onClick={action.onClick}
-          disabled={'disabled' in action ? action.disabled : false}
-        >
-          {action.label}
-        </button>
-      ) : null}
+          {family !== undefined ? (
+            <p className="game__stage">
+              {MASCOT_STAGE_LABELS[state.mascot.stage]} ·{' '}
+              {EVOLUTION_STATUS_LABELS[evolutionStatus(state.mascot, state.xp.level)]}
+            </p>
+          ) : null}
+        </div>
+
+        {action !== undefined ? (
+          <button
+            type="button"
+            className="btn btn--secondary game__action"
+            onClick={action.onClick}
+            disabled={'disabled' in action ? action.disabled : false}
+          >
+            {action.label}
+          </button>
+        ) : null}
       </section>
     </>
   );
