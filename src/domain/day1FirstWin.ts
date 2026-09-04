@@ -53,6 +53,20 @@ function preferenceRank(
   return Number.POSITIVE_INFINITY;
 }
 
+function preferredActivity(
+  activities: readonly PlannedActivity[],
+  preferences: readonly NonNullable<OnboardingAnswers['preferredActivities']>[number][],
+): PlannedActivity | undefined {
+  return activities
+    .map((activity, index) => ({ activity, index }))
+    .filter(({ activity }) => Number.isFinite(preferenceRank(activity, preferences)))
+    .sort((a, b) => {
+      const rankDifference =
+        preferenceRank(a.activity, preferences) - preferenceRank(b.activity, preferences);
+      return rankDifference === 0 ? a.index - b.index : rankDifference;
+    })[0]?.activity;
+}
+
 /**
  * A bounded smaller version of the same planned activity.
  *
@@ -96,9 +110,13 @@ function explanationFor(
  * for Day 1.
  *
  * Ordering rules, in priority order:
- *  1. A directly supported explicit preference that exists in today's plan.
- *  2. An existing activity that fits the user's stated available time.
- *  3. Stable plan order.
+ *  1. Stay within the user's stated available time when at least one planned activity fits.
+ *  2. Within that realistic pool, honour a directly supported explicit preference.
+ *  3. Otherwise preserve stable plan order.
+ *
+ * If no planned activity fits the stated time, this selector does not fabricate a
+ * replacement. It falls back to stable programme order and exposes a bounded Tiny
+ * adaptation separately.
  *
  * Current tracker activity types can represent walking and yoga directly. Strength,
  * cycling and swimming onboarding preferences are intentionally NOT coerced to the
@@ -112,25 +130,13 @@ export function selectDay1FirstWin(
   if (eligible.length === 0) return undefined;
 
   const preferences = answers.preferredActivities ?? [];
-  const indexed = eligible.map((activity, index) => ({ activity, index }));
+  const withinAvailableTime =
+    answers.availableMinutes === undefined
+      ? eligible
+      : eligible.filter((activity) => activity.durationMinutes <= answers.availableMinutes!);
 
-  const preferenceMatches = indexed
-    .filter(({ activity }) => Number.isFinite(preferenceRank(activity, preferences)))
-    .sort((a, b) => {
-      const rankDifference =
-        preferenceRank(a.activity, preferences) - preferenceRank(b.activity, preferences);
-      return rankDifference === 0 ? a.index - b.index : rankDifference;
-    });
-
-  let selected = preferenceMatches[0]?.activity;
-
-  if (selected === undefined && answers.availableMinutes !== undefined) {
-    selected = eligible.find(
-      (activity) => activity.durationMinutes <= (answers.availableMinutes as number),
-    );
-  }
-
-  selected ??= eligible[0];
+  const realisticPool = withinAvailableTime.length > 0 ? withinAvailableTime : eligible;
+  const selected = preferredActivity(realisticPool, preferences) ?? realisticPool[0];
   if (selected === undefined) return undefined;
 
   const tinyDurationMinutes = tinyDurationFor(selected.durationMinutes);
