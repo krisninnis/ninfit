@@ -10,6 +10,7 @@ const maxMeanGreenExcess = manifest.policy.maxMeanGreenExcess;
 const matteAlphaMin = manifest.policy.matteAlphaMin;
 const matteAlphaMax = manifest.policy.matteAlphaMax;
 const supportedExtensions = new Set(['.png', '.webp', '.webm']);
+const supportedMatteScopes = new Set(['all-frames']);
 
 function fail(message) {
   throw new Error(`[mascot-asset-contract] ${message}`);
@@ -75,6 +76,12 @@ for (const asset of approved) {
   }
   if (!asset.reviewRecord || typeof asset.reviewRecord !== 'string') {
     fail(`${asset.path} has no review/provenance record`);
+  }
+  if (asset.matteScope !== undefined && !supportedMatteScopes.has(asset.matteScope)) {
+    fail(`${asset.path} has unsupported matteScope ${asset.matteScope}`);
+  }
+  if (asset.role.endsWith('-motion') && asset.matteScope === undefined) {
+    fail(`${asset.path} is a motion master without a matteScope; G11 cannot be skipped for motion`);
   }
   const diskPath = join(root, 'public', asset.path.replace(/^\//, ''));
   if (!existsSync(diskPath)) fail(`${asset.path} is declared but missing from public/`);
@@ -215,7 +222,8 @@ async function matteStats(assetPath) {
   });
 }
 
-for (const asset of approved) {
+const matteAssets = approved.filter((asset) => asset.matteScope !== undefined);
+for (const asset of matteAssets) {
   const stats = await matteStats(asset.path);
   if (stats.meanGreenExcess > maxMeanGreenExcess) {
     fail(
@@ -228,3 +236,4 @@ for (const asset of approved) {
 }
 
 console.log(`G9 provenance OK: ${approved.length} shipped mascot assets are approved and watermark-free; ${manifest.rejected.length} rejected assets are absent from public/`);
+console.log(`G11 scope OK: ${matteAssets.length} matte-bearing asset(s) checked; every motion master is required to declare matteScope`);
