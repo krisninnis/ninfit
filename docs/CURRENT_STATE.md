@@ -5,19 +5,20 @@ A short live checkpoint for a human or agent picking the project up cold.
 **Authority:** live Git, tests and repository contents outrank this file. If they
 disagree, believe Git and say so. See `skills/ninfit-handoff/SKILL.md`.
 
-Last updated: **2026-09-03**
+Last updated: **2026-09-05**
 
 ## Repository truth
 
 | | |
 |---|---|
 | Remote | `https://github.com/krisninnis/ninfit.git` |
-| `main` | `6cfa56309f59139a3fc9979cb66ed8f127dc83e7` |
-| Latest merged PR | **#192 — Complete full-motion hatch presentation** |
-| Open PRs at checkpoint | **None** |
-| Verified baseline | **104 test files / 1,983 tests**, TypeScript, production build and `git diff --check` passed for the accepted #192 head. |
+| `main` | `95c9ccabb454f723e527bc08b371e25c56f3bda1` |
+| Latest merged PR | **#197 — Staged egg shake and Tortoise hatch wave motion** |
+| Open PRs at checkpoint | **1 — #194 (`feat/day1-first-win-selector-v1`, deterministic Day 1 first-win selector)** |
+| Open issues | **46** (#101–#144, #146, #147). None closed. |
+| Verified baseline | **107 test files / 2,035 tests**, TypeScript, production build, `npm audit` (0 vulnerabilities) and `git diff --check` all passed on `95c9cca` in a clean clone on 2026-09-05. |
 | Node | `24.x` |
-| Deployment | GitHub Actions Verification Gate and Vercel passed for #192 before merge; Vercel also reports success for current merged `main`. |
+| Deployment | GitHub Actions Verification Gate passed for each merged PR in the #193–#197 train. |
 
 Verify live Git before acting. Branches are cut from verified `origin/main`, never
 from a stale local `main`.
@@ -29,6 +30,10 @@ the SHA above.
 
 | PR | What landed |
 |---|---|
+| #197 | **Staged egg shake and Tortoise hatch wave motion** — per-stage crack shake, and the Starter Tortoise wave played during the post-break reveal. **See the defect record below: this slice is due to be reverted.** |
+| #196 | **Premium egg stages wired into the hatch runtime** (#134) |
+| #195 | **Premium egg production stages derived from one canonical master** (#134) |
+| #193 | **Current-state checkpoint** after the full-motion hatch |
 | #192 | **Full-motion hatch presentation** — held, break, emergence, settling and landing across onboarding and Today recovery; revealed companion art is requested only after the authoritative hatch |
 | #191 | **Optional Supabase startup** — the local-first app remains usable when optional NinFit ID configuration is absent |
 | #190 | **Current-state refresh** after verification work |
@@ -85,7 +90,7 @@ The runtime ceremony from #134 is now substantially implemented:
 - questionnaire progress maps deterministically to six visual egg states
 - cracks are cumulative and species-neutral
 - the real hatch mutation happens at the break point, not at the end of presentation
-- a started hatch commits exactly once even if the host unmounts early
+- a started hatch commits exactly once even if its host unmounts early
 - full motion runs for **4.2 seconds** through cracking, held, flash, emergence,
   settling and landing
 - reduced motion uses three still states with opacity-only treatment and a Skip path
@@ -94,10 +99,16 @@ The runtime ceremony from #134 is now substantially implemented:
 - onboarding and Today recovery share the same hatch hook
 - the normal reviewed standing mascot presentation takes over after the ceremony
 
-The remaining visual gap is important: `EggArt` and its SVG fracture paths are still
-explicitly **temporary presentation infrastructure**. There is no approved premium
-master egg / derived production crack-stage asset set yet. #192 also deliberately added
-no new generated hatch art.
+The #134 egg art gate is now **closed**. #195 derived the approved production set —
+six cumulative SVG stages from one canonical master, `src/art/egg/eggMaster.ts`, served
+from `public/egg/` and guarded by `src/test/eggProductionArt.test.ts` — and #196 wired
+them into the runtime through `src/ui/eggStageArt.ts`. The whole set is ~69 KB and is
+mounted together so the break frame never waits on a decode. `EggArt`'s code-drawn
+shell is no longer the presentation: it is the **fallback**, load-bearing only when the
+reviewed set is incomplete or a stage fails to load on the device.
+
+The remaining art problem is not the egg. It is the temporary Tortoise wave described
+below.
 
 ### Living Adventure
 
@@ -125,22 +136,26 @@ that the full app works offline.
 
 ## Current phase
 
-**Phase 9 mascot onboarding integration — production-art proof.**
+**Pre-beta hardening, as agreed at the 2026-09-05 launch summit.**
 
-The P0 integration train is merged. The hatch state/timing/accessibility/durability
-contract is implemented. The next bottleneck is no longer ceremony mechanics; it is
-replacing the deliberately temporary egg drawing with reviewed production artwork.
+The premium egg master and its derived stages landed in #195/#196, so the #134 art gate
+is closed for the egg. The phase now is not new capability: it is removing the four
+hatch-wave defects recorded below, closing the offline-start gap, adding the first
+measurement, and getting the product into fifteen to twenty-five real pairs of hands.
+
+`docs/LAUNCH_SUMMIT_2026-09-05.md` is the agreed scope, release gate and roadmap.
 
 ## Next exact action
 
-**Create and human-review one species-neutral premium master egg for #134, then derive
-the deterministic crack-stage candidates from that same master.**
+**Revert the Tortoise wave from the hatch presentation and from Today's tap-to-wave**
+(summit M1), keeping the standing and idle presentation and the media-failure fallback
+exactly as they are, and re-point `src/test/tortoiseHatchWaveShake.dom.test.tsx` to
+assert that the wave is not mounted.
 
-Stop before runtime wiring until the master and stages pass visual review. After
-approval, prove the resulting asset pipeline end-to-end with the **Starter Tortoise**
-only: stable composition, no species leak, mobile payload/alpha checks, full/reduced
-hatch handoff to the existing reviewed Tortoise REST/IDLE/WAVE system. Do not generate
-or wire families 2–5 before the Tortoise proof is accepted.
+Then add the asset-contract tests (summit M2) so a still can never again be paired with
+a motion master that is not its own, and so a watermarked or poorly-matted asset cannot
+reach `main`. Only after both are in place should a clean T1B wave master be produced
+and re-landed.
 
 ## Locked decisions relevant now
 
@@ -173,12 +188,37 @@ without explicit human instruction.
 
 ## Known blockers / follow-up
 
-### Production egg/hatch art
+### Premium egg art — gate closed
 
-This is the immediate #134 gate. The runtime currently uses the code-drawn egg and
-existing reviewed standing mascot art. The temporary egg must be **replaced**, not
-polished into a de-facto production asset. One master, derived stages, then Tortoise
-proof and human mobile review.
+The #134 premium egg art gate is **closed**. #195 derived the reviewed six-stage
+production set from one canonical master and #196 wired those stages into the hatch
+runtime. `EggArt`'s code-drawn shell remains only as the media-failure fallback. Do not
+reopen or recreate this work while addressing the separate Tortoise motion defect.
+
+### Hatch wave motion — four defects on current `main`
+
+Recorded by the 2026-09-05 launch summit
+(`docs/LAUNCH_SUMMIT_2026-09-05.md`, section 2.2), which holds the full evidence and
+the reproduction commands. Human device testing reported overlapping Tortoises during
+the reveal; inspection of current `main` found four separate faults, all of which pass
+CI:
+
+1. **Two companions render at once.** `HatchCompanionMedia` keeps the standing still
+   mounted at `opacity: 1` beneath the wave video, and the still it uses is frame 0 of
+   the **idle** master (bbox 308x478) while the video is the **wave** master (bbox
+   320x492). The silhouettes do not coincide, so the standing figure protrudes around
+   the animated one. `public/mascots/tortoise/tortoise-starter-wave-rest-v1.png` is the
+   wave master's own frame 0 and is referenced nowhere in `src/`.
+2. **A Pika watermark is visible during the reveal**, from roughly t=1.6s to t=3.4s.
+   `docs/specs/active/tortoise-production-scaffold-v1.md` already forbids treating this
+   asset as production art.
+3. **Green matte spill** on the wave master: 11,272 semi-transparent edge pixels with a
+   mean green excess of +53.8 (max +116). The idle master measures 0 on the same test.
+4. **The wave never finishes.** The master is 5.03s; the ceremony mounts it for 2.5s.
+
+The agreed action is to **revert the wave from the hatch and from Today's tap-to-wave**
+and to re-land it only behind machine-checkable asset contracts. The reduced-motion
+path, the no-motion path and the media-failure fallback are all correct and unaffected.
 
 ### Runtime media/art failure fallback
 
@@ -231,20 +271,20 @@ art approval.
 
 ```
 HANDOFF CHECKPOINT
-main SHA: 6cfa56309f59139a3fc9979cb66ed8f127dc83e7
-latest merged PR: #192 — Complete full-motion hatch presentation
-open PRs: none at checkpoint
-test baseline: 104 files / 1983 tests; TypeScript + production build + diff check passed on accepted #192 head
+main SHA: 95c9ccabb454f723e527bc08b371e25c56f3bda1
+latest merged PR: #197 — Staged egg shake and Tortoise hatch wave motion
+open PRs: #194 (deterministic Day 1 first-win selector)
+test baseline: 107 files / 2035 tests; TypeScript + production build + npm audit (0 vulns) + diff check passed on 95c9cca
 completed: P0 #83–#100 intent rebuilt on current main; six-stage cracks; full/reduced hatch timing; break commit; early-unmount durability; Day 1 First Win; optional-Supabase startup; verification gate
-current phase: Phase 9 mascot onboarding integration — production-art proof
-next exact action: create/review one premium species-neutral master egg, derive consistent crack stages, then prove Tortoise end-to-end before families 2–5
+current phase: Pre-beta hardening
+next exact action: M1 — revert the defective Tortoise wave from the hatch and from Today's tap-to-wave, keeping standing + idle and the media-failure fallback; then M2 asset-contract tests (frame-0 pairing, watermark, matte spill) and M3 offline cold-start, per the summit roadmap
 parked branches/work: preserve/journey-home-mobile-background-v1; future/ornate-mystery-egg-v1
-known blockers: approved premium egg/hatch art absent; media fallback proof due when real assets land; offline is shell-only; shared game-state discovery unresolved; pilot real-device/data-safety follow-up remains
-new locked decisions: none
+known blockers: hatch wave carries four art defects on main and is due to be reverted; offline start is shell-only and now treated as a launch blocker; no analytics or crash reporting exists; NinFit ID has no password recovery; shared game-state discovery unresolved; pilot real-device/data-safety follow-up remains
+new locked decisions: see docs/LAUNCH_SUMMIT_2026-09-05.md section 18 (D-01 to D-19)
 deployment state: #192 Verification Gate and Vercel passed before merge; current-main Vercel status success
-notes for next agent: cut from live origin/main; do not resurrect #83–#100; temporary EggArt is not production art; generated assets require human review before runtime wiring
+notes for next agent: cut from live origin/main; do not resurrect #83–#100; the premium egg stages are reviewed production art and EggArt's drawing is now only their fallback; generated assets require human review before runtime wiring
 ```
 
-Read `docs/ROADMAP.md` for *what to build*, `docs/DECISIONS.md` for durable
-decisions, `skills/ninfit-visual-asset-pipeline/SKILL.md` for the art gate, and
-`skills/ninfit-delivery-loop/SKILL.md` for *how work is done*.
+Read `docs/LAUNCH_SUMMIT_2026-09-05.md` for the agreed launch scope, release gate and
+roadmap from 2026-09-05 forward, `docs/ROADMAP.md` for the long-horizon product vision, `docs/DECISIONS.md` for durable
+decisions, and `docs/production-readiness.md` for the broader production evidence map.
