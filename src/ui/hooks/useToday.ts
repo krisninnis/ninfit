@@ -42,9 +42,6 @@ export interface TodayState {
 
 export function useToday(): TodayState {
   const context = useMemo(() => getAppContext(), []);
-  // Resolved once per mount. A session that stays open past midnight keeps showing the
-  // day it was opened on, which is the lesser evil compared with the screen silently
-  // switching days underneath a half-finished entry.
   const date = useMemo(() => todayISO(), []);
 
   const profile = context.repository.getProfile();
@@ -75,9 +72,6 @@ export function useToday(): TodayState {
   const saveWithTelemetry = useCallback(() => {
     if (!session.hasUnsavedChanges()) return { status: 'skipped' as const };
 
-    // Snapshot only the minimum truth needed to identify a completion transition.
-    // This is read before the write; no health, measurement, route or note value is
-    // ever handed to telemetry.
     const beforeLog = context.repository.getDailyLog(date);
     const beforeFacts = deriveRewards({
       programmeStartDate: profile?.programmeStartDate ?? date,
@@ -85,6 +79,8 @@ export function useToday(): TodayState {
       logs: context.repository.listDailyLogs(),
       measurementCount: context.repository.getMeasurements().length,
     });
+    const alreadyAwardedAnActivity =
+      context.repository.getGameState()?.awardedKeys.some((key) => key.startsWith('activity:')) ?? false;
 
     const outcome = session.save();
     if (outcome.status !== 'saved') return outcome;
@@ -96,7 +92,14 @@ export function useToday(): TodayState {
         && isActivityCompleted(afterLog, activity.id),
     );
 
-    if (newlyCompleted.length > 0 && beforeFacts.activeDays.length === 0) {
+    // Award keys are permanent even when a completion is later unticked. Combining
+    // that durable history with current derived facts prevents a re-tick from emitting
+    // a second "first" event without introducing separate sensitive analytics state.
+    if (
+      newlyCompleted.length > 0
+      && beforeFacts.activeDays.length === 0
+      && !alreadyAwardedAnActivity
+    ) {
       telemetry().capture({ name: 'first_activity_recorded' });
     }
     for (const activity of newlyCompleted) {
@@ -137,7 +140,6 @@ export function useToday(): TodayState {
     [session, flush],
   );
 
-  // Let "Saved" fade back to nothing rather than sitting there demanding attention.
   useEffect(() => {
     if (saveIndicator !== 'saved') return;
     clearTimer.current = setTimeout(() => setSaveIndicator('idle'), SAVED_INDICATOR_MS);
@@ -146,9 +148,6 @@ export function useToday(): TodayState {
     };
   }, [saveIndicator]);
 
-  // Write before the phone takes the app away, and on unmount. This goes through the
-  // same successful-write boundary as the debounce path, so hiding the app cannot make
-  // analytics observe an activity that storage did not accept.
   useEffect(() => {
     const flushNow = () => {
       if (session.hasUnsavedChanges()) saveWithTelemetry();
