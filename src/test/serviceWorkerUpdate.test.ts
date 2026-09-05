@@ -15,6 +15,10 @@ function requestPath(input: unknown): string {
   throw new Error('Unsupported request');
 }
 
+async function storedText(stored: Map<string, Response>, key: string) {
+  return stored.get(key)?.clone().text();
+}
+
 function loadWorker() {
   const handlers = new Map<string, WorkerHandler>();
   const stored = new Map<string, Response>([
@@ -144,9 +148,9 @@ describe('service-worker offline boot safety', () => {
     if (!installHandler || !fetchHandler) throw new Error('Missing worker handler');
 
     await install(installHandler);
-    expect(await stored.get('/')?.text()).toBe('current deployed shell');
+    expect(await storedText(stored, '/')).toBe('current deployed shell');
     for (const asset of BOOT_ASSETS) {
-      expect(await stored.get(asset)?.text()).toBe(`network:${asset}`);
+      expect(await storedText(stored, asset)).toBe(`network:${asset}`);
     }
 
     setOnline(false);
@@ -162,7 +166,7 @@ describe('service-worker offline boot safety', () => {
     if (!fetchHandler) throw new Error('Missing fetch handler');
 
     expect(await (await navigate(fetchHandler)).text()).toBe('current deployed shell');
-    expect(await stored.get('/')?.text()).toBe('current deployed shell');
+    expect(await storedText(stored, '/')).toBe('current deployed shell');
     expect(stored.has('/assets/index-previous.js')).toBe(false);
     for (const asset of BOOT_ASSETS) expect(stored.has(asset)).toBe(true);
 
@@ -179,7 +183,7 @@ describe('service-worker offline boot safety', () => {
     expect(await (await navigate(fetchHandler)).text()).toBe('current deployed shell');
 
     // Online navigation still succeeds, but the old coherent offline root remains.
-    expect(await stored.get('/')?.text()).toBe('previous offline shell');
+    expect(await storedText(stored, '/')).toBe('previous offline shell');
     expect(stored.has('/assets/index-previous.js')).toBe(true);
   });
 });
