@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from "react";
 import { getAppContext } from "../../app/bootstrap";
+import { RegionErrorBoundary } from "../components/RegionErrorBoundary";
 import { restartOnboarding } from "../../app/game";
 import {
   FITNESS_PATHS,
@@ -581,15 +582,26 @@ export function ProfileScreen() {
         onUnitsChange={(preferredUnits) => updateProfile({ preferredUnits })}
       />
 
-      <Suspense
+      <RegionErrorBoundary
         fallback={
-          <section className="card">
-            <p className="footnote">Account controls loading…</p>
+          <section className="card" role="status">
+            <p className="footnote">
+              Account controls could not load. Your fitness records on this device are
+              unaffected.
+            </p>
           </section>
         }
       >
-        <AccountSection />
-      </Suspense>
+        <Suspense
+          fallback={
+            <section className="card">
+              <p className="footnote">Account controls loading…</p>
+            </section>
+          }
+        >
+          <AccountSection />
+        </Suspense>
+      </RegionErrorBoundary>
 
       <p className="today__disclaimer">
         A personal record, not a medical assessment.

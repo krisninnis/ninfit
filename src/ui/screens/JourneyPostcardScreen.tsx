@@ -1,5 +1,6 @@
 import { lazy, Suspense, useMemo } from 'react';
 import { getAppContext } from '../../app/bootstrap';
+import { RegionErrorBoundary } from '../components/RegionErrorBoundary';
 import { loadJourneyHistory } from '../../storage/journeyHistory';
 import { formatJourneyDistance, formatJourneyDuration } from '../journeyPresentation';
 import {
@@ -68,21 +69,30 @@ export function JourneyPostcardScreen({ journeyId, onClose }: JourneyPostcardScr
 
         <div className="journey-postcard__route">
           {hasRoute ? (
-            <Suspense
+            <RegionErrorBoundary
               fallback={
-                <div className="journey-postcard__route-message" role="status" aria-live="polite">
-                  Loading privacy-safe route...
+                <div className="journey-postcard__route-message" role="status">
+                  <strong>Route not shown</strong>
+                  <span>The Postcard remains available without its map.</span>
                 </div>
               }
             >
-              <JourneyRouteMap
-                segments={postcard.route.segments}
-                latestPoint={null}
-                view="overview"
-                ariaLabel="Privacy-safe route preview for this Journey Postcard"
-                unavailableMessage="The Postcard remains available without its map."
-              />
-            </Suspense>
+              <Suspense
+                fallback={
+                  <div className="journey-postcard__route-message" role="status" aria-live="polite">
+                    Loading privacy-safe route...
+                  </div>
+                }
+              >
+                <JourneyRouteMap
+                  segments={postcard.route.segments}
+                  latestPoint={null}
+                  view="overview"
+                  ariaLabel="Privacy-safe route preview for this Journey Postcard"
+                  unavailableMessage="The Postcard remains available without its map."
+                />
+              </Suspense>
+            </RegionErrorBoundary>
           ) : (
             <div className="journey-postcard__route-message">
               <span className="journey-postcard__route-mark" aria-hidden="true">N</span>

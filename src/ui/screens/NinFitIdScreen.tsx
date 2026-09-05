@@ -1,5 +1,6 @@
 import { Suspense, lazy, useState } from 'react'
 import { isSupabaseConfigured } from '../../config/supabase'
+import { RegionErrorBoundary } from '../components/RegionErrorBoundary'
 import type { AuthMode } from '../account/accountFlow'
 
 /**
@@ -78,21 +79,38 @@ export function NinFitIdScreen({
 
     return (
       <div className="ninfit-id">
-        <Suspense
+        <RegionErrorBoundary
           fallback={
-            <div className="account-journey account-journey--quiet">
+            <div className="account-journey account-journey--quiet" role="status">
               <span className="account-journey__eyebrow">Your NinFit</span>
-              <p className="account-journey__status">Loading your NinFit ID…</p>
+              <h1 className="account-journey__title">NinFit ID could not load.</h1>
+              <p className="account-journey__status">
+                The fitness app still works normally and keeps your information on this device.
+              </p>
+              <div className="account-journey__actions">
+                <button type="button" className="btn btn--primary" onClick={onSkip}>
+                  Continue to Today
+                </button>
+              </div>
             </div>
           }
         >
-          <NinFitIdAuth
-            initialMode={stage.mode}
-            returningFromConfirmation={returningFromConfirmation}
-            onBack={() => setStage({ kind: 'choice' })}
-            onContinue={onSkip}
-          />
-        </Suspense>
+          <Suspense
+            fallback={
+              <div className="account-journey account-journey--quiet">
+                <span className="account-journey__eyebrow">Your NinFit</span>
+                <p className="account-journey__status">Loading your NinFit ID…</p>
+              </div>
+            }
+          >
+            <NinFitIdAuth
+              initialMode={stage.mode}
+              returningFromConfirmation={returningFromConfirmation}
+              onBack={() => setStage({ kind: 'choice' })}
+              onContinue={onSkip}
+            />
+          </Suspense>
+        </RegionErrorBoundary>
       </div>
     )
   }

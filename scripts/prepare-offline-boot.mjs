@@ -8,8 +8,38 @@ const indexPath = join(distRoot, 'index.html');
 const outputPath = join(distRoot, 'offline-assets.json');
 const stablePublicDirs = ['mascots', 'egg'];
 
+/**
+ * Only real runtime artwork belongs in the offline set.
+ *
+ * `public/mascots` and `public/egg` are working directories: they carry a README
+ * describing the asset contracts and `.gitkeep` placeholders. Those were being
+ * precached onto every device as though they were app artwork, which spends cache
+ * budget and copies internal notes into the browser cache for no reason. Anything
+ * the UI cannot render is skipped and reported rather than silently shipped.
+ */
+const STABLE_ASSET_EXTENSIONS = new Set([
+  '.avif',
+  '.gif',
+  '.jpeg',
+  '.jpg',
+  '.mp4',
+  '.png',
+  '.svg',
+  '.webm',
+  '.webp',
+]);
+
+const skippedStableFiles = [];
+
 function fail(message) {
   throw new Error(`[offline-boot] ${message}`);
+}
+
+function isStableRuntimeAsset(fileName) {
+  if (fileName.startsWith('.')) return false;
+  const dot = fileName.lastIndexOf('.');
+  if (dot <= 0) return false;
+  return STABLE_ASSET_EXTENSIONS.has(fileName.slice(dot).toLowerCase());
 }
 
 function addDirectoryFiles(directory, assetPaths) {
@@ -25,7 +55,14 @@ function addDirectoryFiles(directory, assetPaths) {
     if (!info.isFile()) continue;
 
     const relativePath = relative(distRoot, fullPath).split(sep).join('/');
-    assetPaths.add(`/${posix.normalize(relativePath)}`);
+    const assetPath = `/${posix.normalize(relativePath)}`;
+
+    if (!isStableRuntimeAsset(entry)) {
+      skippedStableFiles.push(assetPath);
+      continue;
+    }
+
+    assetPaths.add(assetPath);
   }
 }
 
@@ -76,3 +113,8 @@ writeFileSync(
 
 console.log(`Offline asset manifest: ${assets.length} asset(s)`);
 for (const asset of assets) console.log(`  ${asset}`);
+
+if (skippedStableFiles.length > 0) {
+  console.log(`Skipped ${skippedStableFiles.length} non-runtime file(s) in stable art directories:`);
+  for (const skipped of skippedStableFiles.sort()) console.log(`  ${skipped}`);
+}

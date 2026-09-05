@@ -56,13 +56,18 @@ describe('PWA installability', () => {
     expect(worker).toContain("event.request.method !== 'GET'");
     expect(worker).toContain('requestUrl.origin !== self.location.origin');
     expect(worker).toContain("event.request.mode === 'navigate'");
-    expect(worker).toContain('networkFirstNavigation(event.request)');
-    expect(worker).toContain("fetch(request, { cache: 'no-store' })");
+    expect(worker).toContain('networkFirstNavigation(event)');
+    expect(worker).toContain("fetch(event.request, { cache: 'no-store' })");
+    // The offline refresh happens behind the response, never in front of it: a phone
+    // launch must not wait for megabytes of hashed JS and artwork before painting.
+    expect(worker).toContain('event.waitUntil(refreshOfflineBoot(rootForCache)');
     expect(worker).toContain("const OFFLINE_ASSET_MANIFEST = '/offline-assets.json'");
     expect(worker).toContain("const OFFLINE_ASSET_PREFIXES = ['/assets/', '/mascots/', '/egg/']");
     expect(worker).toContain('await cache.addAll(assets)');
     expect(worker).toContain("cache.put('/', rootResponse.clone())");
-    expect(worker).toContain("const CACHE_VERSION = 'ninfit-shell-v3'");
+    expect(worker).toContain("const CACHE_PREFIX = 'ninfit-shell-v'");
+    expect(worker).toContain('const CACHE_GENERATION =');
+    expect(worker).toContain('const RETAINED_GENERATIONS = 2');
 
     expect(viteConfig).toContain('manifest: true');
     expect(packageJson).toContain('node scripts/prepare-offline-boot.mjs');
@@ -71,5 +76,6 @@ describe('PWA installability', () => {
     expect(offlineBuild).toContain("const stablePublicDirs = ['mascots', 'egg']");
     expect(offlineBuild).toContain('addDirectoryFiles(join(distRoot, directory), assetPaths)');
     expect(offlineBuild).toContain('manifest references missing build asset');
+    expect(offlineBuild).toContain('STABLE_ASSET_EXTENSIONS');
   });
 });
