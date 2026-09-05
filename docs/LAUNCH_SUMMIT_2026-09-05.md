@@ -54,10 +54,10 @@ returner have been left with nothing that is calm, private, cheap and kind. That
 is real, it is large, and it is the one NinFit was accidentally already built for.
 
 **The verdict.** NinFit is **not** ready for a public launch and is **close** to
-being ready for a private beta. Two launch-blocking defects are on `main` today, both
-in the single most emotionally important moment in the product, and both invisible to
-a green CI run. Fix those, close the offline gap, and NinFit can be in real hands
-within weeks.
+being ready for a private beta. A defective hatch-wave lane is on `main` today, with
+four independently verified faults that all passed CI, sitting in the single most
+emotionally important moment in the product; offline cold-start is a separate P0 launch
+blocker. Fix both, and NinFit can be in real hands within weeks.
 
 ---
 
