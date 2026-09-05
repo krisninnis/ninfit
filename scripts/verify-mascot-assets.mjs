@@ -39,6 +39,7 @@ function registryAssetUrls(path) {
   const source = stripComments(readFileSync(join(root, path), 'utf8'));
   return [...source.matchAll(/['"`]((?:\/mascots\/)[^'"`]+)['"`]/g)]
     .map((match) => match[1])
+    .filter((assetPath) => !assetPath.includes('${'))
     .sort();
 }
 
