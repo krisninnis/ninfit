@@ -47,7 +47,7 @@ describe('PWA installability', () => {
     expect(registration).not.toContain('window.location.reload');
   });
 
-  it('keeps navigation network-first while caching the exact Vite build for offline boot', () => {
+  it('keeps navigation network-first while caching the exact Vite build and stable UI art for offline boot', () => {
     const worker = read('public/sw.js');
     const viteConfig = read('vite.config.ts');
     const packageJson = read('package.json');
@@ -59,6 +59,7 @@ describe('PWA installability', () => {
     expect(worker).toContain('networkFirstNavigation(event.request)');
     expect(worker).toContain("fetch(request, { cache: 'no-store' })");
     expect(worker).toContain("const OFFLINE_ASSET_MANIFEST = '/offline-assets.json'");
+    expect(worker).toContain("const OFFLINE_ASSET_PREFIXES = ['/assets/', '/mascots/', '/egg/']");
     expect(worker).toContain('await cache.addAll(assets)');
     expect(worker).toContain("cache.put('/', rootResponse.clone())");
     expect(worker).toContain("const CACHE_VERSION = 'ninfit-shell-v3'");
@@ -67,6 +68,8 @@ describe('PWA installability', () => {
     expect(packageJson).toContain('node scripts/prepare-offline-boot.mjs');
     expect(offlineBuild).toContain("'.vite', 'manifest.json'");
     expect(offlineBuild).toContain("'offline-assets.json'");
+    expect(offlineBuild).toContain("const stablePublicDirs = ['mascots', 'egg']");
+    expect(offlineBuild).toContain('addDirectoryFiles(join(distRoot, directory), assetPaths)');
     expect(offlineBuild).toContain('manifest references missing build asset');
   });
 });
