@@ -25,7 +25,6 @@ import { visibleMascotFamily } from './domain/game/mascot';
 import { mascotStageArt } from './ui/mascotStageArt';
 import { applyThemePreference } from './ui/theme';
 import { setTelemetryEnabled, telemetryEnabled } from './telemetry/preferences';
-import { telemetry } from './telemetry/runtime';
 import {
   ACCOUNT_HASH,
   DATA_HASH,
@@ -174,10 +173,7 @@ export default function App() {
           ) : showActiveJourney ? (
             <ActiveJourneyScreen
               onClose={() => navigate(JOURNEY_HASH)}
-              onCompleted={(journeyId) => {
-                telemetry().capture({ name: 'journey_completed' });
-                navigate(journeyCompleteHash(journeyId));
-              }}
+              onCompleted={(journeyId) => navigate(journeyCompleteHash(journeyId))}
             />
           ) : showJourneyComplete ? (
             <JourneyCompletionScreen
