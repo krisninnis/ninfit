@@ -90,7 +90,7 @@ The runtime ceremony from #134 is now substantially implemented:
 - questionnaire progress maps deterministically to six visual egg states
 - cracks are cumulative and species-neutral
 - the real hatch mutation happens at the break point, not at the end of presentation
-- a started hatch commits exactly once even if the host unmounts early
+- a started hatch commits exactly once even if its host unmounts early
 - full motion runs for **4.2 seconds** through cracking, held, flash, emergence,
   settling and landing
 - reduced motion uses three still states with opacity-only treatment and a Skip path
@@ -188,12 +188,12 @@ without explicit human instruction.
 
 ## Known blockers / follow-up
 
-### Production egg/hatch art
+### Premium egg art — gate closed
 
-This is the immediate #134 gate. The runtime currently uses the code-drawn egg and
-existing reviewed standing mascot art. The temporary egg must be **replaced**, not
-polished into a de-facto production asset. One master, derived stages, then Tortoise
-proof and human mobile review.
+The #134 premium egg art gate is **closed**. #195 derived the reviewed six-stage
+production set from one canonical master and #196 wired those stages into the hatch
+runtime. `EggArt`'s code-drawn shell remains only as the media-failure fallback. Do not
+reopen or recreate this work while addressing the separate Tortoise motion defect.
 
 ### Hatch wave motion — four defects on current `main`
 
@@ -287,5 +287,4 @@ notes for next agent: cut from live origin/main; do not resurrect #83–#100; th
 
 Read `docs/LAUNCH_SUMMIT_2026-09-05.md` for the agreed launch scope, release gate and
 roadmap from 2026-09-05 forward, `docs/ROADMAP.md` for the long-horizon product vision, `docs/DECISIONS.md` for durable
-decisions, `skills/ninfit-visual-asset-pipeline/SKILL.md` for the art gate, and
-`skills/ninfit-delivery-loop/SKILL.md` for *how work is done*.
+decisions, and `docs/production-readiness.md` for the broader production evidence map.
