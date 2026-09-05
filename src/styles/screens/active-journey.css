@@ -190,6 +190,30 @@
     color: var(--ft-text-primary);
   }
 
+  /**
+   * Base imagery can fail while the map itself is fine - offline, or a tile host
+   * that will not answer. The route line is still drawn, so this is a note above
+   * the map rather than a replacement for it.
+   */
+  .active-journey__map-imagery-note {
+    position: absolute;
+    top: var(--ft-space-2);
+    right: var(--ft-space-2);
+    left: var(--ft-space-2);
+    z-index: 2;
+    margin: 0;
+    padding: var(--ft-space-2) var(--ft-space-3);
+    border-radius: var(--ft-radius-sm);
+    background: color-mix(in srgb, var(--ft-surface-raised) 92%, transparent);
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-xs);
+    text-align: center;
+  }
+
+  .active-journey__map-imagery-note strong {
+    color: var(--ft-text-primary);
+  }
+
   .active-journey__map .maplibregl-canvas {
     outline: none;
   }

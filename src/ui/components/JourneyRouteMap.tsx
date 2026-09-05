@@ -17,6 +17,11 @@ interface JourneyRouteMapProps {
   view?: 'follow' | 'overview';
 }
 
+/** The raster source `baseStyle` declares; tile failures are reported against it. */
+const BASE_IMAGERY_SOURCE = 'osm';
+/** One slow tile is not an outage. Several failures with none arriving is. */
+const BASE_IMAGERY_FAILURE_THRESHOLD = 3;
+
 const ROUTE_SOURCE = 'ninfit-journey-route';
 const POSITION_SOURCE = 'ninfit-journey-position';
 const ROUTE_CASING_LAYER = 'ninfit-journey-route-casing';
@@ -165,6 +170,7 @@ export function JourneyRouteMap({
   const latestPointRef = useRef(latestPoint);
   const lastCenteredAtRef = useRef<string | null>(null);
   const [mapUnavailable, setMapUnavailable] = useState(false);
+  const [baseImageryUnavailable, setBaseImageryUnavailable] = useState(false);
 
   segmentsRef.current = segments;
   latestPointRef.current = latestPoint;
@@ -210,7 +216,43 @@ export function JourneyRouteMap({
 
     map.on('load', onLoad);
 
+    /**
+     * Tile failures do not stop the map from "loading".
+     *
+     * The style is inline, so `load` fires whether or not a single tile arrived.
+     * Offline - which is where a walk usually is - every tile request fails and the
+     * result was a large empty rectangle on the Active Journey screen and on a saved
+     * Journey, with nothing saying why. That reads as a broken screen.
+     *
+     * The route line is still drawn on the background colour, so the map is not
+     * replaced: only a note is added, and only once it is clear that no imagery is
+     * arriving rather than after a single slow tile.
+     */
+    let tileFailures = 0;
+    // MapLibre types these events as a bare `Event`, so the two fields this needs are
+    // read through a narrow local shape rather than an `any`.
+    const sourceOf = (event: unknown): { sourceId?: string; tile?: unknown } =>
+      (event ?? {}) as { sourceId?: string; tile?: unknown };
+
+    const onTileData = (event: unknown) => {
+      const detail = sourceOf(event);
+      if (detail.sourceId === BASE_IMAGERY_SOURCE && detail.tile) {
+        setBaseImageryUnavailable(false);
+        tileFailures = 0;
+      }
+    };
+    const onMapError = (event: unknown) => {
+      if (sourceOf(event).sourceId !== BASE_IMAGERY_SOURCE) return;
+      tileFailures += 1;
+      if (tileFailures >= BASE_IMAGERY_FAILURE_THRESHOLD) setBaseImageryUnavailable(true);
+    };
+
+    map.on('data', onTileData);
+    map.on('error', onMapError);
+
     return () => {
+      map.off('data', onTileData);
+      map.off('error', onMapError);
       loadedRef.current = false;
       map.off('load', onLoad);
       map.remove();
@@ -258,11 +300,19 @@ export function JourneyRouteMap({
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="active-journey__map"
-      role="img"
-      aria-label={ariaLabel}
-    />
+    <>
+      {baseImageryUnavailable ? (
+        <p className="active-journey__map-imagery-note" role="status">
+          <strong>Map images could not load.</strong> <span>{unavailableMessage}</span>
+        </p>
+      ) : null}
+      <div
+        ref={containerRef}
+        className="active-journey__map"
+        data-base-imagery={baseImageryUnavailable ? 'unavailable' : 'available'}
+        role="img"
+        aria-label={ariaLabel}
+      />
+    </>
   );
 }
