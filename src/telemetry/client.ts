@@ -9,7 +9,7 @@ import type { AnalyticsEvent, CrashReport, GapBucket, TelemetryTransport } from 
 const DAY_MS = 86_400_000;
 
 function ignoreFailure(result: void | Promise<void>): void {
-  if (result instanceof Promise) void result.catch(() => undefined);
+  void Promise.resolve(result).catch(() => undefined);
 }
 
 export function createTelemetryClient(store: StorageAdapter, transport: TelemetryTransport) {
