@@ -2,6 +2,8 @@
   "version": 1,
   "policy": {
     "maxMeanGreenExcess": 5,
+    "matteAlphaMin": 16,
+    "matteAlphaMax": 239,
     "publicRoot": "public/mascots"
   },
   "assets": [
