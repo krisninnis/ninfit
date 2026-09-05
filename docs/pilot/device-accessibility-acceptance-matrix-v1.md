@@ -7,10 +7,6 @@ Acceptance plan for supervised pilot evidence.
 No device/browser is considered supported merely because CSS is responsive or an
 automated test passes.
 
-## Principle
-
-NinFit should claim only the environments that have actually been exercised.
-
 Record evidence against this matrix before a pilot/public-support statement.
 
 ## Device/browser matrix
@@ -210,6 +206,96 @@ Check:
 - offline/update limitation
 
 The user should be told what happened and what they can safely do next.
+
+## Launch-summit H-A to H-K acceptance ledger
+
+This table is the authoritative recording surface for the human gate defined in
+`docs/LAUNCH_SUMMIT_2026-09-05.md` section 9.2. Automated tests, desktop responsive
+emulation and screenshots from a different build do not satisfy these rows.
+
+Every row must be exercised on one real iPhone and one real Android phone. Record the
+exact build fingerprint used. Where the summit requires both themes, locked-screen
+behaviour, airplane mode, or a deliberate media failure, perform that condition rather
+than substituting a nearby test.
+
+| Gate | Required behaviour | iPhone | Android | Build fingerprint(s) | Evidence / notes |
+|---|---|---|---|---|---|
+| H-A | Full hatch ceremony: one companion at all times; no ghost, watermark or cut-off gesture; check both themes | NOT RUN | NOT RUN | — | — |
+| H-B | Reduced-motion hatch: three still states, Skip works, companion arrives | NOT RUN | NOT RUN | — | — |
+| H-C | Force companion motion asset failure: standing fallback remains reachable and user is never trapped | NOT RUN | NOT RUN | — | — |
+| H-D | Real 30-minute outdoor walk with screen locked: route drawn, distance sane, no unexplained gaps | NOT RUN | NOT RUN | — | — |
+| H-E | Record battery drain across the same 30-minute walk | NOT RUN | NOT RUN | — | — |
+| H-F | Cold launch in airplane mode: installed app boots and existing local data is visible | NOT RUN | NOT RUN | — | — |
+| H-G | JSON backup → clear site data → restore: history returns and is verified by read-back | NOT RUN | NOT RUN | — | — |
+| H-H | Adventure Map route line is visibly drawn on the real device GPU | NOT RUN | NOT RUN | — | — |
+| H-I | VoiceOver / TalkBack: Today, Week, Journey start/stop, Settings → Data | NOT RUN | NOT RUN | — | — |
+| H-J | Install to home screen, launch from icon, then update to a newer build without losing local data | NOT RUN | NOT RUN | — | — |
+| H-K | Simulate a three-week absence by controlled clock/date change: no punishment, decay, catch-up debt or shaming copy anywhere | NOT RUN | NOT RUN | — | — |
+
+### Gate evidence rules
+
+For each H-gate record:
+
+- device make/model
+- OS version
+- browser/WebKit/Chrome version where visible
+- installed PWA / Add to Home Screen state
+- NinFit version, channel and build fingerprint from Settings → About
+- exact test condition used
+- PASS / PASS WITH ACCEPTED LIMITATION / FAIL / BLOCKED
+- screenshot, screen recording, battery screenshot or written observation as appropriate
+- reviewer name and date
+
+A gate is complete only when both required device cells have an accepted result. A
+failure stays a failure until a later build is rerun; do not overwrite the old evidence
+without recording the superseding build.
+
+### H-D / H-E shared walk record
+
+Use one record per device so distance and battery evidence are tied to the same real
+session:
+
+```
+30-MINUTE WALK
+date:
+device:
+OS/version:
+NinFit build fingerprint:
+start battery %:
+end battery %:
+battery delta percentage points:
+start time:
+finish time:
+recorded duration:
+recorded distance:
+screen locked interval(s):
+route visually continuous: yes/no
+unexplained GPS gaps: yes/no
+Adventure Map line visible: yes/no
+evidence:
+reviewer:
+notes:
+```
+
+Do not manufacture a percentage-per-hour extrapolation as the primary result. Publish
+the observed 30-minute battery delta first; any extrapolation must be clearly labelled
+as an estimate.
+
+### H-G destructive-test safety
+
+H-G intentionally clears site data. Before performing it, create the JSON backup and
+verify the file exists outside the app/device storage being cleared. Do not use a
+valuable sole copy of real fitness history for this drill.
+
+The pass condition is not merely that import reports success. Re-open representative
+history after restore and verify the restored data by read-back.
+
+### H-K clock-test safety
+
+Use a controlled test profile/device state. Record the original device date/time and
+restore automatic date/time immediately after the check. The pass condition is absence
+of punishment or lost earned progress; it is not permission to mutate historical
+fitness truth to make the UI look favourable.
 
 ## Pilot evidence record
 
