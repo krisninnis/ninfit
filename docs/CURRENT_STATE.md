@@ -101,7 +101,7 @@ Until #219 merges, canonical `main` still does not contain the new offline worke
 
 **PR #226 is a DRAFT REVIEW BUILD ONLY. DO NOT MERGE IT.**
 
-Branch: `review/prebeta-consolidated-v1`  
+Branch: `review/prebeta-consolidated-v1`
 Head: `294d9248c4d99356f16d1d78fd296e179dee430c`
 
 It deliberately combines #214, #215, #216, #217, #218 and #219 so the remaining human/device evidence can be collected against one exact fingerprint instead of six unrelated previews. Overlapping M3/M4/M7 code was reconciled deliberately on this integration branch.
