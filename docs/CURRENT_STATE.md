@@ -2,8 +2,7 @@
 
 A short live checkpoint for a human or agent picking the project up cold.
 
-**Authority:** live Git, tests and repository contents outrank this file. If they
-disagree, believe Git and say so. See `skills/ninfit-handoff/SKILL.md`.
+**Authority:** live Git, tests and repository contents outrank this file. If they disagree, believe Git and say so. See `skills/ninfit-handoff/SKILL.md`.
 
 Last updated: **2026-09-05**
 
@@ -12,279 +11,294 @@ Last updated: **2026-09-05**
 | | |
 |---|---|
 | Remote | `https://github.com/krisninnis/ninfit.git` |
-| `main` | `95c9ccabb454f723e527bc08b371e25c56f3bda1` |
-| Latest merged PR | **#197 — Staged egg shake and Tortoise hatch wave motion** |
-| Open PRs at checkpoint | **1 — #194 (`feat/day1-first-win-selector-v1`, deterministic Day 1 first-win selector)** |
-| Open issues | **46** (#101–#144, #146, #147). None closed. |
-| Verified baseline | **107 test files / 2,035 tests**, TypeScript, production build, `npm audit` (0 vulnerabilities) and `git diff --check` all passed on `95c9cca` in a clean clone on 2026-09-05. |
+| `main` | `61fc5ba7dfb9c1daea312d35f930c86c09fa4f12` |
+| Latest merged PR | **#207 — rollback rehearsal record preparation** |
+| Open launch PRs | **#201 offline cold-start, #202 instrumentation, #203 launch-path trim, #205 support surface** |
+| Parked PR | **#194 deterministic Day 1 first-win selector** — stale base; do not merge now |
 | Node | `24.x` |
-| Deployment | GitHub Actions Verification Gate passed for each merged PR in the #193–#197 train. |
+| Current phase | **Pre-beta hardening / human acceptance preparation** |
 
-Verify live Git before acting. Branches are cut from verified `origin/main`, never
-from a stale local `main`.
+Verify live Git before acting. Cut every new branch from current verified `origin/main`, never from a stale local checkout.
 
-## Recently completed
+## Launch strategy
 
-The current P0/P1 train, most recent first. Everything below is merged and present in
-the SHA above.
+The launch wedge agreed at the 2026-09-05 summit is:
 
-| PR | What landed |
+> **The first four weeks of starting again.**
+
+NinFit is a calm, local-first fitness app for people starting or returning to movement. It is not trying to beat Strava at Strava. Launch scope is intentionally narrow and free for the first public version.
+
+Target private beta: roughly **15–25 real users/pairs of hands** after the P0 gates below are satisfied.
+
+Read `docs/LAUNCH_SUMMIT_2026-09-05.md` before changing launch scope.
+
+## Recently completed on `main`
+
+### M1 — defective Tortoise wave removed
+
+PR **#199** removed the defective Tortoise wave lane from runtime while preserving standing/idle presentation, hatch truth, reduced motion, and media-failure fallback.
+
+The removed wave had four verified faults: duplicate/overlapping Tortoises, visible Pika watermark, severe green matte spill, and truncation before the gesture completed.
+
+Do **not** reintroduce that asset.
+
+### M2 — mascot asset production contracts
+
+PR **#200** added machine-enforced asset gates:
+
+- committed provenance/approval manifest;
+- rejected assets must be absent from shipped public assets;
+- motion frame-0 alpha bbox must match its paired still;
+- matte-spill threshold enforcement using the recovered alpha 16–239 definition;
+- ffmpeg-backed verification in GitHub Actions.
+
+Approved clean Tortoise idle remains production art. The defective wave and related proof/legacy assets were removed from `public/mascots`.
+
+### M6 preparation — privacy and medical-purpose boundary
+
+PR **#204** is merged.
+
+Repository now contains:
+
+- `docs/MEDICAL_DEVICE_BOUNDARY.md`
+- `docs/PRIVACY_NOTICE_LAUNCH_READINESS.md`
+
+These documents make M6 **prepared, not complete**. They deliberately do not invent legal/operator facts, lawful bases, Article 9 condition, provider retention, or a regulator determination.
+
+M6 remains incomplete until the actual public privacy notice is reconciled with shipped production truth, reviewed with the required human/legal facts, hosted at a stable URL, and linked from the appropriate product/store surfaces.
+
+### M8 preparation — human acceptance H-A through H-K
+
+PR **#206** is merged.
+
+`docs/pilot/device-accessibility-acceptance-matrix-v1.md` now contains explicit evidence rows for every launch-summit human gate H-A → H-K, separately for real iPhone and Android, with exact build/evidence fields.
+
+Every new acceptance cell remains correctly **NOT RUN** until real-device evidence exists.
+
+### M10 preparation — rollback rehearsal
+
+PR **#207** is merged.
+
+`docs/release/rollback-rehearsal-record-v1.md` now defines an auditable rollback rehearsal record and remains explicitly **NOT RUN**.
+
+Production rollback itself remains human-authorised and has not been rehearsed yet.
+
+## Open launch PRs — do not merge past their gates
+
+### #201 — M3 offline cold-start
+
+Branch/head last known:
+
+- `fix/offline-cold-start-v1`
+- `99e31f37a5b0034053a3c1368bff3a8d7f186ef5`
+
+Implements build-manifest-driven offline boot with coherent hashed JS/CSS caching and no forced reload of a running document.
+
+Automated verification is green.
+
+**Remaining gate:** H-F on a real iPhone and a real Android: install/load the PR build online, fully close, enable airplane mode with Wi-Fi off, cold launch, and prove the React app plus existing local data render rather than a blank shell.
+
+Until #201 is merged, canonical `main` still has the old shell-only service worker behaviour.
+
+### #202 — M4 privacy-safe instrumentation
+
+Branch/head last known:
+
+- `feat/privacy-safe-instrumentation-v1`
+- `af019c2ce0eb61c5c468e7a4da36073f4e78fda3`
+
+Implements exactly six opt-in usage events plus scrubbed crash diagnostics using direct PostHog EU capture calls, without loading the browser analytics SDK.
+
+Default is **off**. Event payloads exclude health measurements, health notes, GPS points/routes, free text, email and NinFit ID.
+
+Automated verification is green.
+
+**Remaining gates:**
+
+- configure a real PostHog EU project token in the intended deployment;
+- G13: confirm receipt of all six core events;
+- G12: deliberately throw a test error and confirm scrubbed crash receipt;
+- human visual acceptance of Settings → Data & privacy.
+
+Do not update the third-party register from candidate to active until the provider is actually configured/used in the selected environment.
+
+### #203 — M5 launch path trim
+
+Branch/head last known:
+
+- `feat/launch-path-trim-v1`
+- `e345012aad3cb77b7d98ebe37b50da143e915eb0`
+
+New onboarding offers only:
+
+- Start moving (`start_moving`)
+- Return to fitness (`return_to_fitness`)
+
+The permanent five-path/five-family domain remains intact for old data and future programmes. Bear/Fox/Otter families and hidden path IDs must not be deleted merely because they are not launch-selectable.
+
+Automated verification is green.
+
+**Remaining gate:** human onboarding flow/visual review proving no new user is offered Strength/Stamina/Balanced and existing hidden-path data remains usable.
+
+### #205 — M7 support surface
+
+Branch/head last known:
+
+- `feat/support-surface-v1`
+- `e10ff46838bb2a83509c264f69840e2dc4f86504`
+
+Adds fail-closed support configuration and Settings → Help & support.
+
+Private-beta operational decision recorded on the PR:
+
+- support address: `krisninnis@gmail.com`
+- response commitment: **We aim to reply within 3 working days.**
+
+These are public deployment values, not source-code constants. Keep them configurable so a future dedicated NinFit address (preferably a domain address such as `support@ninfit.app`) can replace the temporary mailbox without a code rewrite.
+
+**Remaining gate:** configure the two deployment variables and visually verify the Settings surface + generated mail draft. The mail draft must contain release identity only, never fitness/health/location data.
+
+## Product truth that must not regress
+
+- Fitness is the product; companion/game systems are reinforcement.
+- Calm by default. No guilt, punishment, broken-streak pressure, catch-up debt, decay or pay-to-win.
+- Fitness truth is never manufactured by game, analytics or AI.
+- Planned rest is valid adherence; absence does not remove permanent progress.
+- Shared Journey Bond can grow only from genuine history and never decays.
+- Exactly five path mascot families remain a durable architecture.
+- Hatched species is permanent.
+- Hatching grants no XP/trophy and must never leak species before the break.
+- A started hatch commits exactly once; early unmount cannot cancel truth.
+- Reduced-motion presentation must remain meaningful.
+- Health/body data is neutral information, never diagnosis or verdict.
+- Local fitness data is authoritative. NinFit ID is optional identity, not cloud fitness backup/sync.
+- Generated visual assets require human approval before production runtime use.
+- Human visual/device evidence outranks green CI for visual correctness.
+
+## Premium egg / Tortoise art
+
+The premium egg art gate is **closed**.
+
+PRs #195/#196 provide the reviewed six-stage production egg set derived from one canonical master and wired into the hatch runtime. `EggArt`'s code-drawn shell is fallback only.
+
+Do not reopen the egg art work while addressing unrelated companion motion.
+
+Current Tortoise production presentation is standing + approved clean idle. The rejected Pika wave is intentionally absent.
+
+A future clean wave may re-land only after human review and the M2 asset contracts pass.
+
+## PWA / offline truth
+
+On canonical `main` at this checkpoint, offline launch remains the old shell-only behaviour.
+
+PR #201 contains the fix and has automated proof, but the product must not claim full offline cold-start until H-F passes on both real-device platforms and #201 is merged.
+
+Network-dependent account/map/service features are not automatically promised offline even after M3.
+
+## Journey / GPS truth
+
+Journey records real GPS truth. Do not fabricate location points or distance to make a test pass.
+
+Still required before private beta:
+
+- H-D: 30-minute real outdoor walk with screen locked, route/distance checked on iPhone + Android;
+- H-E: battery drain measured across the same sessions;
+- H-H: Adventure Map route line visibly proven on real GPUs;
+- lifecycle/permission behaviour observed rather than inferred from desktop emulation.
+
+## Data safety truth
+
+JSON is the restorable backup. CSV is not a backup.
+
+Before beta, H-G must prove on both devices:
+
+1. create/export a valid JSON backup;
+2. preserve that backup outside the storage being cleared;
+3. clear the test app/site data deliberately;
+4. restore;
+5. verify read-back/history returns.
+
+Do not use site-data clearing as routine troubleshooting or rollback recovery.
+
+## Accessibility / real-device gates
+
+The full H-A → H-K ledger now lives in `docs/pilot/device-accessibility-acceptance-matrix-v1.md`.
+
+Important remaining evidence includes:
+
+- H-A hatch visual integrity on both themes/devices;
+- H-B reduced-motion hatch;
+- H-C forced media-failure fallback;
+- H-I VoiceOver/TalkBack on Today, Week, Journey start/stop, Settings → Data;
+- H-J install/home-screen/update without data loss;
+- H-K simulated three-week absence with no punishment anywhere.
+
+Desktop width checks and CI do not substitute for these real-device rows.
+
+## Legal / support / operations
+
+Privacy/operator/legal facts must not be invented from source code.
+
+Still needed before a stranger is invited into the beta:
+
+- final operator/controller identity decision;
+- privacy contact details;
+- launch jurisdiction/age boundary decisions;
+- Article 6 lawful basis and Article 9 condition where applicable;
+- final provider/processor/retention/transfer review;
+- published stable privacy notice URL;
+- #205 support variables configured and visually checked.
+
+M10 rollback rehearsal also remains **NOT RUN** even though its record template is merged.
+
+## Accounts
+
+NinFit ID remains optional and must not be promoted as fitness sync/backup.
+
+Password recovery remains a gap before account promotion.
+
+## Parked work
+
+| Branch / PR | Why parked |
 |---|---|
-| #197 | **Staged egg shake and Tortoise hatch wave motion** — per-stage crack shake, and the Starter Tortoise wave played during the post-break reveal. **See the defect record below: this slice is due to be reverted.** |
-| #196 | **Premium egg stages wired into the hatch runtime** (#134) |
-| #195 | **Premium egg production stages derived from one canonical master** (#134) |
-| #193 | **Current-state checkpoint** after the full-motion hatch |
-| #192 | **Full-motion hatch presentation** — held, break, emergence, settling and landing across onboarding and Today recovery; revealed companion art is requested only after the authoritative hatch |
-| #191 | **Optional Supabase startup** — the local-first app remains usable when optional NinFit ID configuration is absent |
-| #190 | **Current-state refresh** after verification work |
-| #189 | **Minimal DOM component test lane** — jsdom/Testing Library opt-in for rendered TSX behaviour |
-| #188 | **Hatch commit durability** — a started ceremony commits exactly once even if its host unmounts before the break timer |
-| #187 | **Real PR whitespace gate** — Actions compares the actual base/head or before/after range |
-| #186 | **Today heading entity fix** |
-| #185 | **Day 1 First Win** — calm first-step guidance around the existing authoritative activity action |
-| #184 | **GitHub verification gate** — full tests, typecheck, production build and diff validation on Node 24 |
-| #182 | **Hatch timing contract tests** aligned with the reduced-motion ceremony |
-| #181 | **Reduced-motion hatch ceremony** — three still states, real commit beat, accessible status copy and Skip control |
-| #180 | **Break-point hatch commit** — authoritative mutation at 1,450 ms while the presentation continues to 4.2 s |
-| #179 | **Six-stage crack fidelity** — deterministic cumulative crack presentation over the shared temporary egg |
-| #178 | **P0 pilot evidence and compatibility coverage v2** — rebuilt useful evidence from stale #86/#87/#91/#92/#93 on current main |
-| #177 | **Restore read-back integrity v2** — semantic verification before restore success is reported |
-| #148 | **Data backup & restore transparency** — rebuilt #94/#95/#96 presentation intent for Settings → Data |
-| #176 | **P0 pilot documentation integration** — rebuilt useful documentation from stale #83/#84/#85/#88/#89/#90 |
-| #150 | **Fail-closed complete backup integrity** — rebuilt #97/#98/#99 safety intent coherently on current main |
-| #79 | **Adventure Map v1** — a projection of durable Journey history onto one private map |
-| #81 | **Settings Build Identification** |
-| #80 | **Mobile Demo Update Reliability** |
-| #76 | **Settings & Navigation Reorganisation** — Settings owns Appearance, App preferences, Privacy and Data |
-| #73 | **Tortoise starter clean idle runtime** |
+| PR #194 / `feat/day1-first-win-selector-v1` | Domain-only selector on a stale base. Known duration-schema truth issue; do not merge during launch hardening. |
+| `preserve/journey-home-mobile-background-v1` | Journey Home scenery prototype; reference only. |
+| `future/ornate-mystery-egg-v1` | Unfinished alternate egg direction; not the approved production egg master. |
 
-The original #83–#100 branches are now **closed unmerged**. Their accepted intent was
-recreated through #176, #148, #150, #177 and #178; do not resurrect those stale
-siblings mechanically.
+Do not resurrect stale historical branches merely because code is absent from a local checkout.
 
-## Current product/architecture position
+## Next execution order
 
-NinFit remains **fitness-first**. Fitness truth is authoritative; programme/game and
-companion systems sit downstream.
+The useful next work is no longer another speculative feature branch. It is to close the human/provider gates in a controlled session:
 
-### P0 data/integration train
+1. #201 H-F offline cold-start on real Android + iPhone.
+2. #203 onboarding visual/flow acceptance.
+3. #205 configure beta support deployment values and visually verify support/mail draft.
+4. #202 configure PostHog EU and prove G12/G13 + Settings visual acceptance.
+5. Run the consolidated H-A → H-K device sweep, including H-D/H-E 30-minute walks and H-I screen-reader checks.
+6. Rehearse M10 rollback under the merged runbook/record with explicit human authorisation.
+7. Publish/reconcile the final privacy notice when the actual production provider/configuration truth is known.
+8. Only then assemble the 15–25 person private beta.
 
-The P0 cleanup requested by #142/#143 is complete in current `main`:
-
-- pilot documentation was reconciled rather than stale-merged
-- realistic backup/restore, interruption, corruption, write-failure and compatibility
-  evidence is present
-- Settings → Data explains Journey inclusion, active recovery, old/pre-Journey files,
-  app/schema metadata and device-loss risk without using metadata as a trust shortcut
-- supposedly complete backups fail closed when authoritative local/Journey data cannot
-  be read safely
-- restore read-back verification distinguishes backup/write/verify failure and does not
-  claim localStorage transactionality
-- legitimate old backups remain supported and do not destructively infer missing
-  Journey history
-
-### Premium egg and hatch
-
-The runtime ceremony from #134 is now substantially implemented:
-
-- questionnaire progress maps deterministically to six visual egg states
-- cracks are cumulative and species-neutral
-- the real hatch mutation happens at the break point, not at the end of presentation
-- a started hatch commits exactly once even if its host unmounts early
-- full motion runs for **4.2 seconds** through cracking, held, flash, emergence,
-  settling and landing
-- reduced motion uses three still states with opacity-only treatment and a Skip path
-- the selected companion asset is not inserted until after the authoritative hatch, so
-  pre-break asset requests cannot disclose species
-- onboarding and Today recovery share the same hatch hook
-- the normal reviewed standing mascot presentation takes over after the ceremony
-
-The #134 egg art gate is now **closed**. #195 derived the approved production set —
-six cumulative SVG stages from one canonical master, `src/art/egg/eggMaster.ts`, served
-from `public/egg/` and guarded by `src/test/eggProductionArt.test.ts` — and #196 wired
-them into the runtime through `src/ui/eggStageArt.ts`. The whole set is ~69 KB and is
-mounted together so the break frame never waits on a decode. `EggArt`'s code-drawn
-shell is no longer the presentation: it is the **fallback**, load-bearing only when the
-reviewed set is incomplete or a stage fails to load on the device.
-
-The remaining art problem is not the egg. It is the temporary Tortoise wave described
-below.
-
-### Living Adventure
-
-The Adventure Map remains a projection, not a second store:
-
-- it reads durable Journey history and admits only completed/imported Journeys
-- trusted route segmentation is reused; gaps and separate Journeys are never joined
-- authoritative distance remains the stored `distance_m` metric
-- the map writes and persists nothing
-- exact route geometry remains private; disclosure surfaces use the separate privacy
-  projection
-
-### Settings and data
-
-Settings remains the owner of Appearance (System / Light / Dark), app preferences,
-Privacy and participation, Data & privacy, and About. Data is not a primary navigation
-item. JSON is the restorable backup; CSV is explicitly non-restorable.
-
-### PWA / phone demo
-
-`docs/PHONE_DEMO.md` remains the install/update walkthrough. Installed launches prefer
-the current online deployment without automatically reloading a running document, so
-an active Journey is not interrupted. Offline support remains shell-only; do not claim
-that the full app works offline.
-
-## Current phase
-
-**Pre-beta hardening, as agreed at the 2026-09-05 launch summit.**
-
-The premium egg master and its derived stages landed in #195/#196, so the #134 art gate
-is closed for the egg. The phase now is not new capability: it is removing the four
-hatch-wave defects recorded below, closing the offline-start gap, adding the first
-measurement, and getting the product into fifteen to twenty-five real pairs of hands.
-
-`docs/LAUNCH_SUMMIT_2026-09-05.md` is the agreed scope, release gate and roadmap.
-
-## Next exact action
-
-**Revert the Tortoise wave from the hatch presentation and from Today's tap-to-wave**
-(summit M1), keeping the standing and idle presentation and the media-failure fallback
-exactly as they are, and re-point `src/test/tortoiseHatchWaveShake.dom.test.tsx` to
-assert that the wave is not mounted.
-
-Then add the asset-contract tests (summit M2) so a still can never again be paired with
-a motion master that is not its own, and so a watermarked or poorly-matted asset cannot
-reach `main`. Only after both are in place should a clean T1B wave master be produced
-and re-landed.
-
-## Locked decisions relevant now
-
-The complete index is `docs/DECISIONS.md`. Do not reopen these casually:
-
-- Fitness is the product; game/companion is reinforcement.
-- No guilt, punishment, broken-streak pressure, score, daily completion percentage or
-  generic failure framing.
-- Fitness truth is never manufactured by game or AI.
-- Planned rest is valid adherence; partial completion counts.
-- Exactly five path mascot families; a sixth family requires a sixth fitness path.
-- Opal is the universal guide and does not replace the path mascot.
-- Hatching happens at the end of onboarding and grants no XP/trophy.
-- A hatched companion's species is permanent.
-- Health/body data remains neutral information, never a verdict.
-- Local fitness data remains authoritative; NinFit ID is optional identity only.
-- Generated artwork is reference/source material until human approved; only canonical
-  reviewed assets are wired into runtime code.
-
-## Parked work — do not merge
-
-| Branch | SHA | Why parked |
-|---|---|---|
-| `preserve/journey-home-mobile-background-v1` | `c984009dd437694b4459b1f4f48b7a449e88d2bc` | Journey Home mobile scenery prototype; reference only |
-| `future/ornate-mystery-egg-v1` | `25dcfad80fbe6a189c0627443d2502dbbc851f5e` | Ornate Mystery Egg art route unfinished; do not treat it as the approved #134 master |
-
-The user's checkout may also carry helper/untracked delivery folders created during
-delivery work. Do not clean, delete, stash or repurpose them from an agent session
-without explicit human instruction.
-
-## Known blockers / follow-up
-
-### Premium egg art — gate closed
-
-The #134 premium egg art gate is **closed**. #195 derived the reviewed six-stage
-production set from one canonical master and #196 wired those stages into the hatch
-runtime. `EggArt`'s code-drawn shell remains only as the media-failure fallback. Do not
-reopen or recreate this work while addressing the separate Tortoise motion defect.
-
-### Hatch wave motion — four defects on current `main`
-
-Recorded by the 2026-09-05 launch summit
-(`docs/LAUNCH_SUMMIT_2026-09-05.md`, section 2.2), which holds the full evidence and
-the reproduction commands. Human device testing reported overlapping Tortoises during
-the reveal; inspection of current `main` found four separate faults, all of which pass
-CI:
-
-1. **Two companions render at once.** `HatchCompanionMedia` keeps the standing still
-   mounted at `opacity: 1` beneath the wave video, and the still it uses is frame 0 of
-   the **idle** master (bbox 308x478) while the video is the **wave** master (bbox
-   320x492). The silhouettes do not coincide, so the standing figure protrudes around
-   the animated one. `public/mascots/tortoise/tortoise-starter-wave-rest-v1.png` is the
-   wave master's own frame 0 and is referenced nowhere in `src/`.
-2. **A Pika watermark is visible during the reveal**, from roughly t=1.6s to t=3.4s.
-   `docs/specs/active/tortoise-production-scaffold-v1.md` already forbids treating this
-   asset as production art.
-3. **Green matte spill** on the wave master: 11,272 semi-transparent edge pixels with a
-   mean green excess of +53.8 (max +116). The idle master measures 0 on the same test.
-4. **The wave never finishes.** The master is 5.03s; the ceremony mounts it for 2.5s.
-
-The agreed action is to **revert the wave from the hatch and from Today's tap-to-wave**
-and to re-land it only behind machine-checkable asset contracts. The reduced-motion
-path, the no-motion path and the media-failure fallback are all correct and unaffected.
-
-### Runtime media/art failure fallback
-
-The hatch mutation itself is independent of presentation media and therefore cannot be
-lost because an animation fails. When production hatch/egg assets are introduced,
-explicitly prove that a failed asset still leaves the authoritative hatched companion
-reachable using its reviewed standing fallback; never reroll or trap the user.
-
-### Shared game state / reward delivery
-
-Still unresolved. The earlier checkpoint recorded a candidate correctness risk around
-multiple independent `useGame()` instances consuming newly granted `RewardEvent`s
-before the intended acknowledgement surface sees them. Durable reward delivery reduced
-the presentation-loss risk, but the shared-state discovery itself remains owed. Extend
-the DOM lane where rendered behaviour is required.
-
-### Offline support is shell-only
-
-The precache holds the shell/manifest/icons, not the application JS/CSS bundle. An
-offline launch can paint the shell without booting the full app. This is a deliberate
-current limitation.
-
-### Map rendering proof
-
-Automated headless software WebGL does not provide reliable pixel proof for the drawn
-route line. Wiring/camera/paint conversion are covered; the actual route line still
-needs human proof on a real device.
-
-### Data safety before a real pilot
-
-The P0 integrity/evidence train is substantially stronger, but
-`docs/production-readiness.md` still owns any remaining real-device pilot acceptance,
-including schema N → N+1 and deletion-path decisions. Do not infer those gates passed
-merely because unit evidence exists.
-
-### Account maturity
-
-Password recovery remains a gap before account promotion. Optional NinFit ID must not
-be described as cloud fitness backup/sync until that feature exists.
-
-## Verified mobile/responsive baseline
-
-The established app baseline has been checked at 360, 390, 430, 768, 1024 and 1440
-across Today, Week, Journey, Adventure Map, Progress, Profile, Settings and Settings →
-Data. #192 is a visible hatch change and therefore still needs human real-device visual
-acceptance for the final production-art proof; passing CI/Vercel is not a substitute for
-art approval.
+Do not merge #201/#202/#203/#205 solely because automated checks are green.
 
 ## Handoff checkpoint
 
-```
+```text
 HANDOFF CHECKPOINT
-main SHA: 95c9ccabb454f723e527bc08b371e25c56f3bda1
-latest merged PR: #197 — Staged egg shake and Tortoise hatch wave motion
-open PRs: #194 (deterministic Day 1 first-win selector)
-test baseline: 107 files / 2035 tests; TypeScript + production build + npm audit (0 vulns) + diff check passed on 95c9cca
-completed: P0 #83–#100 intent rebuilt on current main; six-stage cracks; full/reduced hatch timing; break commit; early-unmount durability; Day 1 First Win; optional-Supabase startup; verification gate
-current phase: Pre-beta hardening
-next exact action: M1 — revert the defective Tortoise wave from the hatch and from Today's tap-to-wave, keeping standing + idle and the media-failure fallback; then M2 asset-contract tests (frame-0 pairing, watermark, matte spill) and M3 offline cold-start, per the summit roadmap
-parked branches/work: preserve/journey-home-mobile-background-v1; future/ornate-mystery-egg-v1
-known blockers: hatch wave carries four art defects on main and is due to be reverted; offline start is shell-only and now treated as a launch blocker; no analytics or crash reporting exists; NinFit ID has no password recovery; shared game-state discovery unresolved; pilot real-device/data-safety follow-up remains
-new locked decisions: see docs/LAUNCH_SUMMIT_2026-09-05.md section 18 (D-01 to D-19)
-deployment state: #192 Verification Gate and Vercel passed before merge; current-main Vercel status success
-notes for next agent: cut from live origin/main; do not resurrect #83–#100; the premium egg stages are reviewed production art and EggArt's drawing is now only their fallback; generated assets require human review before runtime wiring
+main SHA: 61fc5ba7dfb9c1daea312d35f930c86c09fa4f12
+latest merged PR: #207 — rollback rehearsal record preparation
+current phase: pre-beta hardening / human acceptance preparation
+merged summit work: M1 #199, M2 #200, M6-prep #204, M8-prep #206, M10-prep #207
+open launch PRs: #201 offline cold-start; #202 instrumentation; #203 two-path launch onboarding; #205 support surface
+parked PR: #194 deterministic Day 1 first-win selector
+support beta decision: krisninnis@gmail.com; aim to reply within 3 working days; deployment-configured, not hard-coded
+privacy status: boundary/readiness docs merged; public notice not yet published
+human evidence status: H-A → H-K ledger merged; required real-device rows remain NOT RUN
+rollback status: rehearsal record merged; rehearsal itself NOT RUN
+primary blockers: #201 H-F; #202 real provider G12/G13 + visual; #203 visual flow; #205 deployment config + visual; H-D/H-E GPS+battery; H-I screen readers; final privacy/operator/legal publication facts
+art status: premium egg approved; defective Tortoise wave removed; asset contracts enforced; clean idle remains approved production motion
+notes: remote GitHub truth is authoritative; generated visual assets require human approval; do not merge visible changes on CI alone
 ```
 
-Read `docs/LAUNCH_SUMMIT_2026-09-05.md` for the agreed launch scope, release gate and
-roadmap from 2026-09-05 forward, `docs/ROADMAP.md` for the long-horizon product vision, `docs/DECISIONS.md` for durable
-decisions, and `docs/production-readiness.md` for the broader production evidence map.
+Read `docs/LAUNCH_SUMMIT_2026-09-05.md`, `docs/DECISIONS.md`, the privacy/medical boundary docs, device acceptance matrix, and release/rollback runbook before consequential launch work.
