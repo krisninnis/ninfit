@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import { TabBar } from './ui/components/TabBar';
+import { ScreenErrorBoundary } from './ui/components/ScreenErrorBoundary';
 import { OnboardingScreen } from './ui/screens/OnboardingScreen';
 import { NinFitIdScreen } from './ui/screens/NinFitIdScreen';
 import { DataScreen } from './ui/screens/DataScreen';
@@ -201,7 +202,11 @@ export default function App() {
               onOpenData={() => navigate(DATA_HASH)}
             />
           ) : (
-            CurrentScreen ? <CurrentScreen /> : null
+            CurrentScreen ? (
+              <ScreenErrorBoundary key={screenTab}>
+                <CurrentScreen />
+              </ScreenErrorBoundary>
+            ) : null
           )}
         </main>
 
