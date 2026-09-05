@@ -46,6 +46,7 @@
 @import './screens/today.css';
 @import './screens/week.css';
 @import './screens/journey.css';
+@import './screens/journey-home-central.css';
 @import './screens/journey-launch.css';
 @import './screens/journey-completion.css';
 @import './screens/journey-detail.css';
