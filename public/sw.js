@@ -33,6 +33,12 @@ async function fetchOfflineAssetManifest() {
  * Refresh the complete offline set atomically enough for our promise: all new assets
  * are cached before the cached root HTML is replaced. If any asset fails, the previous
  * offline root remains authoritative and an online launch still succeeds normally.
+ *
+ * Deliberately do not delete older hashed assets here. Another open tab or installed
+ * client may still be executing the previous build and can request a lazy chunk later
+ * (Profile's AccountSection is one concrete example). Removing that chunk underneath
+ * a live client turns a safe background refresh into a runtime screen failure. Old
+ * cache generations are still removed when CACHE_VERSION changes.
  */
 async function refreshOfflineBoot(rootResponse) {
   const cache = await caches.open(CACHE_VERSION);
@@ -41,19 +47,6 @@ async function refreshOfflineBoot(rootResponse) {
   await cache.addAll(assets);
   await cache.put(OFFLINE_ASSET_MANIFEST, manifestResponse.clone());
   await cache.put('/', rootResponse.clone());
-
-  const keep = new Set(assets.map((asset) => new URL(asset, self.location.origin).href));
-  const requests = await cache.keys();
-  await Promise.all(
-    requests
-      .filter((request) => {
-        const url = new URL(request.url);
-        return url.origin === self.location.origin
-          && OFFLINE_ASSET_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))
-          && !keep.has(url.href);
-      })
-      .map((request) => cache.delete(request)),
-  );
 }
 
 /**
