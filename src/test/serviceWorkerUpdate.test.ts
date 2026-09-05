@@ -24,6 +24,7 @@ function loadWorker() {
   const stored = new Map<string, Response>([
     ['/', new Response('previous offline shell', { status: 200 })],
     ['/assets/index-previous.js', new Response('previous js', { status: 200 })],
+    ['/assets/AccountSection-previous.js', new Response('previous lazy account chunk', { status: 200 })],
   ]);
   let online = true;
   let failAsset: string | undefined;
@@ -160,18 +161,22 @@ describe('service-worker offline boot safety', () => {
     }
   });
 
-  it('refreshes the full offline boot set after a successful online launch', async () => {
+  it('refreshes the full offline boot set without deleting chunks a live previous client may still need', async () => {
     const { handlers, stored, setOnline } = loadWorker();
     const fetchHandler = handlers.get('fetch');
     if (!fetchHandler) throw new Error('Missing fetch handler');
 
     expect(await (await navigate(fetchHandler)).text()).toBe('current deployed shell');
     expect(await storedText(stored, '/')).toBe('current deployed shell');
-    expect(stored.has('/assets/index-previous.js')).toBe(false);
     for (const asset of BOOT_ASSETS) expect(stored.has(asset)).toBe(true);
+
+    expect(stored.has('/assets/index-previous.js')).toBe(true);
+    expect(stored.has('/assets/AccountSection-previous.js')).toBe(true);
 
     setOnline(false);
     expect(await (await navigate(fetchHandler)).text()).toBe('current deployed shell');
+    expect(await (await fetchAsset(fetchHandler, '/assets/AccountSection-previous.js')).text())
+      .toBe('previous lazy account chunk');
   });
 
   it('does not replace the cached root if a new hashed asset cannot be cached', async () => {
@@ -185,5 +190,6 @@ describe('service-worker offline boot safety', () => {
     // Online navigation still succeeds, but the old coherent offline root remains.
     expect(await storedText(stored, '/')).toBe('previous offline shell');
     expect(stored.has('/assets/index-previous.js')).toBe(true);
+    expect(stored.has('/assets/AccountSection-previous.js')).toBe(true);
   });
 });
