@@ -1,20 +1,22 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, render } from '@testing-library/react';
+import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { HatchCompanionMedia } from '../ui/components/HatchCompanionMedia';
 import { EggArt } from '../ui/components/EggArt';
+import { mascotStageArt } from '../ui/mascotStageArt';
 
 const styles = readFileSync(join('src', 'styles', 'components', 'egg.css'), 'utf8');
 const appSource = readFileSync(join('src', 'App.tsx'), 'utf8');
 const onboardingSource = readFileSync(join('src', 'ui', 'screens', 'OnboardingScreen.tsx'), 'utf8');
 const gameHeaderSource = readFileSync(join('src', 'ui', 'components', 'GameHeader.tsx'), 'utf8');
+const todaySource = readFileSync(join('src', 'ui', 'screens', 'TodayScreen.tsx'), 'utf8');
 
 const STANDING = '/mascots/tortoise/tortoise-starter-idle-v1.png';
-const WAVE = '/mascots/tortoise/tortoise-starter-wave-v1.webm';
+const DEFECTIVE_WAVE = '/mascots/tortoise/tortoise-starter-wave-v1.webm';
 
 afterEach(() => cleanup());
 
@@ -41,52 +43,55 @@ describe('questionnaire crack motion', () => {
   });
 });
 
-describe('post-break Starter Tortoise wave', () => {
-  it('does not mount motion during flash or reduced motion, but does during full reveal', () => {
+describe('Starter Tortoise motion removal', () => {
+  it('keeps the reviewed standing and idle assets but exposes no wave motion at runtime', () => {
+    const art = mascotStageArt('tortoise', 'starter');
+    expect(art?.src).toBe(STANDING);
+    expect(art?.idleSrc).toBe('/mascots/tortoise/tortoise-starter-idle-v1.webm');
+    expect(art?.motionSrc).toBeUndefined();
+    expect(JSON.stringify(art)).not.toContain(DEFECTIVE_WAVE);
+  });
+
+  it('does not mount motion during the full hatch reveal when the registry supplies none', () => {
+    const art = mascotStageArt('tortoise', 'starter');
     const { rerender } = render(
-      <HatchCompanionMedia phase="flash" standingSrc={STANDING} motionSrc={WAVE} fallbackMark="T" />,
+      <HatchCompanionMedia
+        phase="flash"
+        standingSrc={art?.src}
+        motionSrc={art?.motionSrc}
+        fallbackMark="T"
+      />,
     );
     expect(document.querySelector('video')).toBeNull();
     expect(document.querySelector('.egg-hatch__companion')?.getAttribute('src')).toBe(STANDING);
 
-    rerender(
-      <HatchCompanionMedia phase="emerging" standingSrc={STANDING} motionSrc={WAVE} fallbackMark="T" />,
-    );
-    const video = document.querySelector('video');
-    expect(video?.getAttribute('src')).toBe(WAVE);
-    expect(video?.hasAttribute('autoplay')).toBe(true);
-    expect(video?.hasAttribute('playsinline')).toBe(true);
-    expect(video?.hasAttribute('loop')).toBe(false);
-    expect(document.querySelector('.egg-hatch__companion--under-wave')).toBeTruthy();
-
-    rerender(
-      <HatchCompanionMedia phase="reduced-meet" standingSrc={STANDING} motionSrc={WAVE} fallbackMark="T" />,
-    );
-    expect(document.querySelector('video')).toBeNull();
-    expect(document.querySelector('.egg-hatch__companion')?.getAttribute('src')).toBe(STANDING);
+    for (const phase of ['emerging', 'settling', 'landing'] as const) {
+      rerender(
+        <HatchCompanionMedia
+          phase={phase}
+          standingSrc={art?.src}
+          motionSrc={art?.motionSrc}
+          fallbackMark="T"
+        />,
+      );
+      expect(document.querySelector('video')).toBeNull();
+      expect(document.querySelector('.egg-hatch__companion')?.getAttribute('src')).toBe(STANDING);
+      expect(document.querySelector('.egg-hatch__companion--under-wave')).toBeNull();
+    }
   });
 
-  it('falls back immediately to the reviewed standing frame if motion media fails', () => {
-    render(
-      <HatchCompanionMedia phase="emerging" standingSrc={STANDING} motionSrc={WAVE} fallbackMark="T" />,
-    );
-    const video = document.querySelector('video');
-    expect(video).toBeTruthy();
-
-    act(() => {
-      video?.dispatchEvent(new Event('error', { bubbles: false }));
-    });
-
-    expect(document.querySelector('video')).toBeNull();
-    expect(document.querySelector('.egg-hatch__companion')?.getAttribute('src')).toBe(STANDING);
-  });
-
-  it('wires the same motion asset boundary through onboarding and Today without pre-break preload logic', () => {
+  it('leaves the generic media-failure boundary available for a future reviewed motion master', () => {
     expect(appSource).toContain('companionMotionSrc={revealedArt?.motionSrc}');
     expect(onboardingSource).toContain('motionSrc={companionMotionSrc}');
     expect(gameHeaderSource).toContain('motionSrc={standingArt?.motionSrc}');
     expect(onboardingSource).not.toMatch(/tortoise-starter-wave/i);
     expect(gameHeaderSource).not.toMatch(/tortoise-starter-wave/i);
-    expect(styles).toContain('never crops, masks or obscures it.');
+  });
+
+  it('keeps Today idle-capable while disabling tap-to-wave when motionSrc is absent', () => {
+    expect(todaySource).toContain("todayMascotArt?.idleSrc !== undefined && !reducedMotion");
+    expect(todaySource).toContain("todayMascotArt?.motionSrc !== undefined && !reducedMotion");
+    expect(mascotStageArt('tortoise', 'starter')?.idleSrc).toBeDefined();
+    expect(mascotStageArt('tortoise', 'starter')?.motionSrc).toBeUndefined();
   });
 });
