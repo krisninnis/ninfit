@@ -1,13 +1,14 @@
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const css = readFileSync(
-  new URL('../styles/screens/journey-home-central.css', import.meta.url),
+  fileURLToPath(new URL('../styles/screens/journey-home-central.css', import.meta.url)),
   'utf8',
 );
 
 const indexCss = readFileSync(
-  new URL('../styles/index.css', import.meta.url),
+  fileURLToPath(new URL('../styles/index.css', import.meta.url)),
   'utf8',
 );
 
