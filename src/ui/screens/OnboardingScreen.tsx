@@ -305,7 +305,7 @@ export function OnboardingScreen({
               aria-expanded={showAllPaths}
               onClick={() => setShowAllPaths((value) => !value)}
             >
-              {showAllPaths ? 'Hide other paths' : 'See other path'}
+              {showAllPaths ? 'Hide other paths' : 'See other paths'}
             </button>
 
             {showAllPaths ? (
