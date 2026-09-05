@@ -29,10 +29,15 @@ export const MASCOT_STAGE_ART: Readonly<
   Partial<Record<MascotStageArtKey, MascotStageArt>>
 > = {
   'tortoise:starter': {
-    /* Frame 0 of the idle master below - the video's own keyframe, at rest. */
+    /* Frame 0 of the reviewed idle master below - the video's own keyframe, at rest. */
     src: '/mascots/tortoise/tortoise-starter-idle-v1.png',
     idleSrc: '/mascots/tortoise/tortoise-starter-idle-v1.webm',
-    motionSrc: '/mascots/tortoise/tortoise-starter-wave-v1.webm',
+    /*
+     * No explicit motion is exposed at runtime. The previous temporary wave master
+     * was removed from hatch/Today by summit decision D-01/D-02 after human review
+     * found overlap, watermark, matte-spill and truncation defects. Re-land a wave
+     * here only after it passes the asset-contract and human visual gates.
+     */
   },
 };
 
