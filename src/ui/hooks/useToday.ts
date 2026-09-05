@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getAppContext } from '../../app/bootstrap';
 import { createTodaySession } from '../../app/todaySession';
-import { dailyLogCompletion, type DailyLogUpdate } from '../../domain/dailyLog';
+import {
+  dailyLogCompletion,
+  isActivityCompleted,
+  isRestDayAcknowledged,
+  type DailyLogUpdate,
+} from '../../domain/dailyLog';
 import { todayISO } from '../../domain/dates';
+import { deriveRewards } from '../../domain/game/rewards';
 import { resolveToday, type TodayView } from '../../domain/today';
 import type { DailyLog, ISODate } from '../../domain/types';
 import type { DailyLogCompletion } from '../../domain/dailyLog';
+import { telemetry } from '../../telemetry/runtime';
 
 /**
  * Everything the Today screen needs, and nothing it doesn't.
@@ -35,9 +42,6 @@ export interface TodayState {
 
 export function useToday(): TodayState {
   const context = useMemo(() => getAppContext(), []);
-  // Resolved once per mount. A session that stays open past midnight keeps showing the
-  // day it was opened on, which is the lesser evil compared with the screen silently
-  // switching days underneath a half-finished entry.
   const date = useMemo(() => todayISO(), []);
 
   const profile = context.repository.getProfile();
@@ -65,16 +69,66 @@ export function useToday(): TodayState {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const clearTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
+  const saveWithTelemetry = useCallback(() => {
+    if (!session.hasUnsavedChanges()) return { status: 'skipped' as const };
+
+    const beforeLog = context.repository.getDailyLog(date);
+    const beforeFacts = deriveRewards({
+      programmeStartDate: profile?.programmeStartDate ?? date,
+      plans,
+      logs: context.repository.listDailyLogs(),
+      measurementCount: context.repository.getMeasurements().length,
+    });
+    const alreadyAwardedAnActivity =
+      context.repository.getGameState()?.awardedKeys.some((key) => key.startsWith('activity:')) ?? false;
+
+    const outcome = session.save();
+    if (outcome.status !== 'saved') return outcome;
+
+    const afterLog = session.getLog();
+    const newlyCompleted = view.activities.filter(
+      (activity) =>
+        !isActivityCompleted(beforeLog, activity.id)
+        && isActivityCompleted(afterLog, activity.id),
+    );
+
+    // Award keys are permanent even when a completion is later unticked. Combining
+    // that durable history with current derived facts prevents a re-tick from emitting
+    // a second "first" event without introducing separate sensitive analytics state.
+    if (
+      newlyCompleted.length > 0
+      && beforeFacts.activeDays.length === 0
+      && !alreadyAwardedAnActivity
+    ) {
+      telemetry().capture({ name: 'first_activity_recorded' });
+    }
+    for (const activity of newlyCompleted) {
+      telemetry().capture({
+        name: 'activity_recorded',
+        properties: { type: activity.type, is_rest: false },
+      });
+    }
+
+    if (!isRestDayAcknowledged(beforeLog) && isRestDayAcknowledged(afterLog)) {
+      telemetry().capture({
+        name: 'activity_recorded',
+        properties: { type: 'rest', is_rest: true },
+      });
+    }
+
+    return outcome;
+  }, [context.repository, date, plans, profile?.programmeStartDate, session, view.activities]);
+
   const flush = useCallback(() => {
     if (saveTimer.current !== undefined) {
       clearTimeout(saveTimer.current);
       saveTimer.current = undefined;
     }
-    const outcome = session.save();
+    const outcome = saveWithTelemetry();
     if (outcome.status === 'saved') setSaveIndicator('saved');
     else if (outcome.status === 'failed') setSaveIndicator('failed');
     else setSaveIndicator('idle');
-  }, [session]);
+  }, [saveWithTelemetry]);
 
   const update = useCallback(
     (patch: DailyLogUpdate) => {
@@ -86,7 +140,6 @@ export function useToday(): TodayState {
     [session, flush],
   );
 
-  // Let "Saved" fade back to nothing rather than sitting there demanding attention.
   useEffect(() => {
     if (saveIndicator !== 'saved') return;
     clearTimer.current = setTimeout(() => setSaveIndicator('idle'), SAVED_INDICATOR_MS);
@@ -95,10 +148,9 @@ export function useToday(): TodayState {
     };
   }, [saveIndicator]);
 
-  // Write before the phone takes the app away, and on unmount.
   useEffect(() => {
     const flushNow = () => {
-      if (session.hasUnsavedChanges()) session.save();
+      if (session.hasUnsavedChanges()) saveWithTelemetry();
     };
     const onVisibilityChange = () => {
       if (document.visibilityState === 'hidden') flushNow();
@@ -112,7 +164,7 @@ export function useToday(): TodayState {
       if (saveTimer.current !== undefined) clearTimeout(saveTimer.current);
       flushNow();
     };
-  }, [session]);
+  }, [session, saveWithTelemetry]);
 
   return {
     date,
