@@ -4,27 +4,26 @@ import { join } from 'node:path';
 import { MASCOT_STAGE_ART, mascotStageArt } from '../ui/mascotStageArt';
 
 describe('tortoise standing companion artwork', () => {
-  it('registers the reviewed Starter artwork', () => {
+  it('registers the reviewed Starter artwork without the rejected wave', () => {
     expect(mascotStageArt('tortoise', 'starter')).toEqual({
       src: '/mascots/tortoise/tortoise-starter-idle-v1.png',
       idleSrc: '/mascots/tortoise/tortoise-starter-idle-v1.webm',
-      motionSrc: '/mascots/tortoise/tortoise-starter-wave-v1.webm',
     });
   });
 
-  it('ships the reviewed Starter idle and wave alongside the standing artwork', () => {
+  it('ships the reviewed Starter idle alongside the standing artwork and exposes no wave motion', () => {
     const art = mascotStageArt('tortoise', 'starter');
 
     expect(art?.idleSrc).toBe(
       '/mascots/tortoise/tortoise-starter-idle-v1.webm',
     );
-    expect(art?.motionSrc).toBe(
-      '/mascots/tortoise/tortoise-starter-wave-v1.webm',
-    );
+    expect(art?.motionSrc).toBeUndefined();
 
     const webmPaths = (
       ['idleSrc', 'motionSrc'] as const
     ).map((key) => art?.[key]).filter((v): v is string => v !== undefined);
+
+    expect(webmPaths).toEqual(['/mascots/tortoise/tortoise-starter-idle-v1.webm']);
 
     for (const src of webmPaths) {
       const diskPath = join('public', src.replace(/^\//, ''));
@@ -134,13 +133,13 @@ describe('tortoise standing companion artwork', () => {
     expect(todayCss).toContain('.today__top-companion {');
     expect(todayCss).toContain('justify-content: center');
     expect(todayCss).toContain('.today__top-companion-art {');
-    // One box, whatever is in it. The still and the wave are the same canvas, so
-    // neither element may be sized or transformed differently from the other.
+    // One box, whatever is in it. Future still/motion swaps must not be sized or
+    // transformed differently from each other.
     expect(todayCss).toContain('.today__top-companion-art {');
     expect(todayCss).not.toMatch(/video\.today__top-companion-art/);
     expect(todayCss).not.toMatch(/transform:\s*scale\(/);
   });
-  it('lets the reviewed Today companion wave once and return to standing art', () => {
+  it('keeps the dormant Today motion path one-shot for a future reviewed asset', () => {
     const today = readFileSync(
       join('src', 'ui', 'screens', 'TodayScreen.tsx'),
       'utf8',
@@ -149,9 +148,9 @@ describe('tortoise standing companion artwork', () => {
     expect(today).toContain("useState<CompanionState>('rest')");
     expect(today).toContain('aria-label="Wave to your companion"');
     /*
-     * RE-POINTED, NOT WEAKENED. The "only wave when there is motion" test moved into
-     * `canWave`, which now also carries the reduced-motion answer. The rule is
-     * unchanged: no motion asset, no video element, no button.
+     * The control is gated by `canWave`. With no motion asset in the current registry,
+     * this code is dormant: no video element and no button reach the user. Keeping the
+     * generic branch lets a future reviewed master re-land without a second screen API.
      */
     expect(today).toContain('todayMascotArt?.motionSrc !== undefined');
     expect(today).toContain('src={todayMascotArt.motionSrc}');
@@ -161,10 +160,8 @@ describe('tortoise standing companion artwork', () => {
     expect(today).toContain("onEnded={() => setCompanionState('rest')}");
 
     /*
-     * The poster closes the decode gap. A video paints nothing until its first frame
-     * is ready, and the still it replaced would already be unmounted - a blank flash
-     * exactly where the companion was. The poster is the resting still, which is this
-     * video's own frame 0, so the two are the same pixels and the gap is invisible.
+     * A future approved video still needs a poster to close the decode gap. The asset
+     * contract must ensure that poster and motion master really are paired.
      */
     expect(today).toContain('poster={todayMascotArt.src}');
     expect(today).not.toContain('loop');
@@ -211,19 +208,19 @@ describe('tortoise standing companion artwork', () => {
     expect(today).toContain("window.matchMedia('(prefers-reduced-motion: reduce)')");
     expect(today).toContain("typeof window.matchMedia !== 'function'");
 
-    // And the consequence: no wave, and no button that would do nothing if pressed.
+    // Any future explicit motion remains disabled for reduced-motion users.
     expect(today).toContain('const canWave = todayMascotArt?.motionSrc !== undefined && !reducedMotion');
     expect(today).toContain('{canWave ? (');
   });
 
   it('keeps the companion decorative for assistive technology', () => {
     const today = readFileSync(join('src', 'ui', 'screens', 'TodayScreen.tsx'), 'utf8');
-    // The picture is never announced; only the temporary control has a name.
+    // The picture is never announced; a future temporary control has its own name.
     expect(today).not.toMatch(/alt="[^"]+"/);
     expect((today.match(/aria-label="Wave to your companion"/g) ?? []).length).toBe(1);
   });
 
-  it('keeps the wave presentation-only', () => {
+  it('keeps the optional motion presentation-only', () => {
     const today = readFileSync(join('src', 'ui', 'screens', 'TodayScreen.tsx'), 'utf8');
     const start = today.indexOf('className="today__top-companion"');
     const end = today.indexOf('<Screen title="Today"', start);
@@ -428,9 +425,7 @@ describe("Today's companion is a presence on the page, not a portrait in a box",
     expect(desktop).toContain('margin-inline: auto');
   });
 
-  it('still keeps the still and the wave in one identical box', () => {
-    // Unchanged from the slice that produced the assets; restated because the block
-    // around them moved.
+  it('keeps the shared companion media box stable for still, idle and future motion', () => {
     expect(todayCss).not.toMatch(/video\.today__top-companion-art/);
     expect(todayCss).not.toMatch(/transform:\s*scale\(/);
     expect(todayCss).not.toMatch(/transform-origin/);
@@ -446,9 +441,9 @@ describe("Today's companion is a presence on the page, not a portrait in a box",
  *
  * The approved clean idle master is the canonical resting motion and its frame 0 is
  * the resting still. This block pins the runtime contract: an occasional one-shot
- * idle that is never immediate, never a loop, never persisted, that defers to an
- * explicit tap, is reduced to nothing for reduced-motion users, and does not exist
- * before the egg has opened.
+ * idle that is never immediate, never a loop, never persisted, is reduced to nothing
+ * for reduced-motion users, and does not exist before the egg has opened. The dormant
+ * explicit-motion branch remains generic but no current Tortoise wave is registered.
  */
 
 describe('the Starter Companion idle runtime', () => {
@@ -456,9 +451,7 @@ describe('the Starter Companion idle runtime', () => {
   const strip2 = (s: string) =>
     s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\{\/\*[\s\S]*?\*\/\}/g, '').replace(/\/\/[^\n]*/g, '');
 
-  it('presents the idle, the still and the wave through one state machine', () => {
-    // The source of truth for what is on screen. A single `rest | idle | wave`
-    // state decides between the still and the two one-shot videos.
+  it('retains one generic state machine for idle and future explicit motion', () => {
     expect(today).toContain("type CompanionState = 'rest' | 'idle' | 'wave'");
     expect(today).toContain("useState<CompanionState>('rest')");
     expect(today).toContain("=== 'wave'");
@@ -467,13 +460,12 @@ describe('the Starter Companion idle runtime', () => {
     expect(today).toContain("onEnded={() => setCompanionState('rest')}");
   });
 
-  it('derives the resting still from the idle master and keeps the wave path unchanged', () => {
+  it('derives the resting still from the idle master and exposes no explicit wave motion', () => {
     const art = mascotStageArt('tortoise', 'starter');
     // The still is frame 0 of the idle master, not a separate drawing.
     expect(art?.src).toBe('/mascots/tortoise/tortoise-starter-idle-v1.png');
-    // Both one-shots are separate; the wave stays EXACTLY where it was.
     expect(art?.idleSrc).toBe('/mascots/tortoise/tortoise-starter-idle-v1.webm');
-    expect(art?.motionSrc).toBe('/mascots/tortoise/tortoise-starter-wave-v1.webm');
+    expect(art?.motionSrc).toBeUndefined();
     // Today still resolves through the registry and never learns a path.
     expect(strip2(today)).toContain('todayMascotArt.idleSrc');
     expect(today).not.toContain('/mascots/tortoise/');
@@ -485,7 +477,7 @@ describe('the Starter Companion idle runtime', () => {
     // No idle on arrival: state opens at `rest` and the arm delay is at least 20s.
     expect(today).toContain("const [companionState, setCompanionState] = useState<CompanionState>('rest')");
     expect(today).toContain('20000 + Math.floor(Math.random() * 20000)');
-    // The idle video is a one-shot like the wave: no loop, autoPlay only on mount.
+    // The idle video is a one-shot: no loop, autoPlay only on mount.
     expect(today).toContain('src={todayMascotArt.idleSrc}');
     expect(today).toContain('poster={todayMascotArt.src}');
     expect(today).toContain('autoPlay');
@@ -494,9 +486,9 @@ describe('the Starter Companion idle runtime', () => {
     expect((today.match(/loop/g) ?? []).length).toBe(0);
   });
 
-  it('returns to rest when either one-shot ends', () => {
-    // Count exactly one case of the idle returning to rest and one for the wave -
-    // both via the same `onEnded`, both back to the still.
+  it('keeps both generic one-shot endings returning to rest', () => {
+    // The source retains one end handler for idle and one for a future explicit motion
+    // branch; the latter is unreachable until the registry exposes a reviewed master.
     expect((today.match(/onEnded=\{\(\) => setCompanionState\('rest'\)\}/g) ?? []).length).toBe(2);
   });
 
@@ -509,17 +501,16 @@ describe('the Starter Companion idle runtime', () => {
     expect(today).toContain('}, [canIdle]);');
   });
 
-  it('gives an explicit tap priority over an in-progress idle', () => {
-    // The one button always moves straight to `wave`; a tap during idle therefore
-    // cancels the idle for the clean hand-off to the wave.
+  it('keeps explicit motion gated behind a registered motion asset', () => {
     const block = today.slice(
       today.indexOf('className="today__top-companion"'),
       today.indexOf('<Screen title="Today"', today.indexOf('className="today__top-companion"')),
     );
+    expect(today).toContain('const canWave = todayMascotArt?.motionSrc !== undefined && !reducedMotion');
     expect(strip2(block)).toContain("onClick={() => setCompanionState('wave')}");
     expect(block).toContain('aria-label="Wave to your companion"');
-    // The idle never stops an explicit request: there is no idle-only interlock.
     expect(strip2(block)).not.toContain("companionState !== 'rest'");
+    expect(mascotStageArt('tortoise', 'starter')?.motionSrc).toBeUndefined();
   });
 
   it('offers no idle at all under reduced motion - still only, no timer', () => {
@@ -528,7 +519,7 @@ describe('the Starter Companion idle runtime', () => {
     expect(today).toContain('const canIdle =');
     expect(today).toContain('todayMascotArt?.idleSrc !== undefined && !reducedMotion');
     expect(today).toContain('if (!canIdle) return;');
-    // The still is what reduced-motion users keep seeing (no button, no video).
+    // The still is what reduced-motion users keep seeing.
     expect(today).toContain('{canWave ? (');
     expect(today).toContain('/* No motion available, or motion is unwelcome: purely decorative. */');
   });
@@ -541,7 +532,7 @@ describe('the Starter Companion idle runtime', () => {
     expect(today).toContain('? undefined');
     expect(today).toContain('todayMascotArt?.idleSrc !== undefined');
     expect(today).toContain('if (!canIdle) return;');
-    // No idle source, no idle element, no wave - a pre-hatch user sees no species.
+    // No idle source, no explicit motion - a pre-hatch user sees no species.
     expect(today).toContain('{todayMascotArt !== undefined ? (');
   });
 
