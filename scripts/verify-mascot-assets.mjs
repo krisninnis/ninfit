@@ -7,6 +7,8 @@ const manifestPath = join(root, 'docs', 'brand', 'mascot-asset-provenance.json')
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
 const publicRoot = join(root, manifest.policy.publicRoot);
 const maxMeanGreenExcess = manifest.policy.maxMeanGreenExcess;
+const matteAlphaMin = manifest.policy.matteAlphaMin;
+const matteAlphaMax = manifest.policy.matteAlphaMax;
 const supportedExtensions = new Set(['.png', '.webp', '.webm']);
 
 function fail(message) {
@@ -54,6 +56,10 @@ function assertSameSet(actual, expected, label) {
 const ffmpegProbe = spawnSync('ffmpeg', ['-version'], { encoding: 'utf8' });
 if (ffmpegProbe.error || ffmpegProbe.status !== 0) {
   fail('ffmpeg is required for G10/G11 pixel verification and was not available');
+}
+if (!Number.isInteger(matteAlphaMin) || !Number.isInteger(matteAlphaMax)
+  || matteAlphaMin < 1 || matteAlphaMax > 254 || matteAlphaMin > matteAlphaMax) {
+  fail(`invalid matte alpha edge band ${matteAlphaMin}-${matteAlphaMax}`);
 }
 
 const approved = manifest.assets;
@@ -178,7 +184,10 @@ async function matteStats(assetPath) {
         const green = data[offset + 1];
         const blue = data[offset + 2];
         const alpha = data[offset + 3];
-        if (alpha > 0 && alpha < 255) {
+        // The summit's "semi-transparent alpha edge" excludes codec noise very near
+        // fully transparent/opaque. Reproduction against the rejected wave gives
+        // 53.74 in this 16-239 band (the recorded 53.8) while the clean idle gives 0.
+        if (alpha >= matteAlphaMin && alpha <= matteAlphaMax) {
           edgePixels += 1;
           greenExcessTotal += Math.max(0, green - Math.max(red, blue));
         }
@@ -210,11 +219,11 @@ for (const asset of approved) {
   const stats = await matteStats(asset.path);
   if (stats.meanGreenExcess > maxMeanGreenExcess) {
     fail(
-      `G11 matte spill failed: ${asset.path} mean green excess ${stats.meanGreenExcess.toFixed(2)} > ${maxMeanGreenExcess} across ${stats.edgePixels} semi-transparent pixels`,
+      `G11 matte spill failed: ${asset.path} mean green excess ${stats.meanGreenExcess.toFixed(2)} > ${maxMeanGreenExcess} across ${stats.edgePixels} alpha-${matteAlphaMin}-${matteAlphaMax} edge pixels`,
     );
   }
   console.log(
-    `G11 matte OK: ${asset.path} mean green excess ${stats.meanGreenExcess.toFixed(2)} across ${stats.edgePixels} edge pixels`,
+    `G11 matte OK: ${asset.path} mean green excess ${stats.meanGreenExcess.toFixed(2)} across ${stats.edgePixels} alpha-${matteAlphaMin}-${matteAlphaMax} edge pixels`,
   );
 }
 
