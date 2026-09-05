@@ -119,7 +119,7 @@ describe('privacy-safe telemetry', () => {
 
     expect(toCrashReport(error)).toEqual({
       name: 'TypeError',
-      stack: ['Error', 'at save (https://ninfit.app/assets/index.js'].join('\n'),
+      stack: ['Error', '    at save (https://ninfit.app/assets/index.js)'].join('\n'),
     });
   });
 
