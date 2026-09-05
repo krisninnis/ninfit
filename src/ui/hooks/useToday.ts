@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getAppContext } from '../../app/bootstrap';
 import { createTodaySession } from '../../app/todaySession';
-import { dailyLogCompletion, type DailyLogUpdate } from '../../domain/dailyLog';
+import {
+  dailyLogCompletion,
+  isActivityCompleted,
+  isRestDayAcknowledged,
+  type DailyLogUpdate,
+} from '../../domain/dailyLog';
 import { todayISO } from '../../domain/dates';
+import { deriveRewards } from '../../domain/game/rewards';
 import { resolveToday, type TodayView } from '../../domain/today';
 import type { DailyLog, ISODate } from '../../domain/types';
 import type { DailyLogCompletion } from '../../domain/dailyLog';
+import { telemetry } from '../../telemetry/runtime';
 
 /**
  * Everything the Today screen needs, and nothing it doesn't.
@@ -65,16 +72,60 @@ export function useToday(): TodayState {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const clearTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
+  const saveWithTelemetry = useCallback(() => {
+    if (!session.hasUnsavedChanges()) return { status: 'skipped' as const };
+
+    // Snapshot only the minimum truth needed to identify a completion transition.
+    // This is read before the write; no health, measurement, route or note value is
+    // ever handed to telemetry.
+    const beforeLog = context.repository.getDailyLog(date);
+    const beforeFacts = deriveRewards({
+      programmeStartDate: profile?.programmeStartDate ?? date,
+      plans,
+      logs: context.repository.listDailyLogs(),
+      measurementCount: context.repository.getMeasurements().length,
+    });
+
+    const outcome = session.save();
+    if (outcome.status !== 'saved') return outcome;
+
+    const afterLog = session.getLog();
+    const newlyCompleted = view.activities.filter(
+      (activity) =>
+        !isActivityCompleted(beforeLog, activity.id)
+        && isActivityCompleted(afterLog, activity.id),
+    );
+
+    if (newlyCompleted.length > 0 && beforeFacts.activeDays.length === 0) {
+      telemetry().capture({ name: 'first_activity_recorded' });
+    }
+    for (const activity of newlyCompleted) {
+      telemetry().capture({
+        name: 'activity_recorded',
+        properties: { type: activity.type, is_rest: false },
+      });
+    }
+
+    if (!isRestDayAcknowledged(beforeLog) && isRestDayAcknowledged(afterLog)) {
+      telemetry().capture({
+        name: 'activity_recorded',
+        properties: { type: 'rest', is_rest: true },
+      });
+    }
+
+    return outcome;
+  }, [context.repository, date, plans, profile?.programmeStartDate, session, view.activities]);
+
   const flush = useCallback(() => {
     if (saveTimer.current !== undefined) {
       clearTimeout(saveTimer.current);
       saveTimer.current = undefined;
     }
-    const outcome = session.save();
+    const outcome = saveWithTelemetry();
     if (outcome.status === 'saved') setSaveIndicator('saved');
     else if (outcome.status === 'failed') setSaveIndicator('failed');
     else setSaveIndicator('idle');
-  }, [session]);
+  }, [saveWithTelemetry]);
 
   const update = useCallback(
     (patch: DailyLogUpdate) => {
@@ -95,10 +146,12 @@ export function useToday(): TodayState {
     };
   }, [saveIndicator]);
 
-  // Write before the phone takes the app away, and on unmount.
+  // Write before the phone takes the app away, and on unmount. This goes through the
+  // same successful-write boundary as the debounce path, so hiding the app cannot make
+  // analytics observe an activity that storage did not accept.
   useEffect(() => {
     const flushNow = () => {
-      if (session.hasUnsavedChanges()) session.save();
+      if (session.hasUnsavedChanges()) saveWithTelemetry();
     };
     const onVisibilityChange = () => {
       if (document.visibilityState === 'hidden') flushNow();
@@ -112,7 +165,7 @@ export function useToday(): TodayState {
       if (saveTimer.current !== undefined) clearTimeout(saveTimer.current);
       flushNow();
     };
-  }, [session]);
+  }, [session, saveWithTelemetry]);
 
   return {
     date,
