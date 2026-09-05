@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render } from '@testing-library/react';
+import { act, cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -17,6 +17,7 @@ const todaySource = readFileSync(join('src', 'ui', 'screens', 'TodayScreen.tsx')
 
 const STANDING = '/mascots/tortoise/tortoise-starter-idle-v1.png';
 const DEFECTIVE_WAVE = '/mascots/tortoise/tortoise-starter-wave-v1.webm';
+const FUTURE_REVIEWED_MOTION = '/mascots/tortoise/future-reviewed-motion.webm';
 
 afterEach(() => cleanup());
 
@@ -80,7 +81,27 @@ describe('Starter Tortoise motion removal', () => {
     }
   });
 
-  it('leaves the generic media-failure boundary available for a future reviewed motion master', () => {
+  it('preserves the generic media-failure fallback for a future reviewed motion master', () => {
+    render(
+      <HatchCompanionMedia
+        phase="emerging"
+        standingSrc={STANDING}
+        motionSrc={FUTURE_REVIEWED_MOTION}
+        fallbackMark="T"
+      />,
+    );
+    const video = document.querySelector('video');
+    expect(video?.getAttribute('src')).toBe(FUTURE_REVIEWED_MOTION);
+
+    act(() => {
+      video?.dispatchEvent(new Event('error', { bubbles: false }));
+    });
+
+    expect(document.querySelector('video')).toBeNull();
+    expect(document.querySelector('.egg-hatch__companion')?.getAttribute('src')).toBe(STANDING);
+  });
+
+  it('leaves the generic motion boundary wired for a future reviewed master', () => {
     expect(appSource).toContain('companionMotionSrc={revealedArt?.motionSrc}');
     expect(onboardingSource).toContain('motionSrc={companionMotionSrc}');
     expect(gameHeaderSource).toContain('motionSrc={standingArt?.motionSrc}');
