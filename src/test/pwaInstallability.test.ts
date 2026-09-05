@@ -47,17 +47,26 @@ describe('PWA installability', () => {
     expect(registration).not.toContain('window.location.reload');
   });
 
-  it('keeps the service worker conservative: same-origin GETs only and network-first navigation', () => {
+  it('keeps navigation network-first while caching the exact Vite build for offline boot', () => {
     const worker = read('public/sw.js');
+    const viteConfig = read('vite.config.ts');
+    const packageJson = read('package.json');
+    const offlineBuild = read('scripts/prepare-offline-boot.mjs');
 
     expect(worker).toContain("event.request.method !== 'GET'");
     expect(worker).toContain('requestUrl.origin !== self.location.origin');
     expect(worker).toContain("event.request.mode === 'navigate'");
     expect(worker).toContain('networkFirstNavigation(event.request)');
     expect(worker).toContain("fetch(request, { cache: 'no-store' })");
-    // The offline fallback must not freeze on the first build the phone installed.
-    expect(worker).toContain("cache.put('/', response.clone())");
-    expect(worker).toContain("key.startsWith('ninfit-shell-')");
-    expect(worker).toContain("const CACHE_VERSION = 'ninfit-shell-v2'");
+    expect(worker).toContain("const OFFLINE_ASSET_MANIFEST = '/offline-assets.json'");
+    expect(worker).toContain('await cache.addAll(assets)');
+    expect(worker).toContain("cache.put('/', rootResponse.clone())");
+    expect(worker).toContain("const CACHE_VERSION = 'ninfit-shell-v3'");
+
+    expect(viteConfig).toContain('manifest: true');
+    expect(packageJson).toContain('node scripts/prepare-offline-boot.mjs');
+    expect(offlineBuild).toContain("'.vite', 'manifest.json'");
+    expect(offlineBuild).toContain("'offline-assets.json'");
+    expect(offlineBuild).toContain('manifest references missing build asset');
   });
 });
