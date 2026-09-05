@@ -6,7 +6,11 @@ import {
   gapBucket,
   toCrashReport,
 } from '../telemetry/client';
-import { setTelemetryEnabled, telemetryEnabled } from '../telemetry/preferences';
+import {
+  setTelemetryEnabled,
+  telemetryDistinctId,
+  telemetryEnabled,
+} from '../telemetry/preferences';
 import type { AnalyticsEvent, CrashReport, TelemetryTransport } from '../telemetry/types';
 
 function transport() {
@@ -24,17 +28,30 @@ function transport() {
 }
 
 describe('privacy-safe telemetry', () => {
-  it('is disabled by default and sends nothing before explicit opt-in', () => {
+  it('is disabled by default and creates no anonymous identifier before opt-in', () => {
     const store = createMemoryStorageAdapter();
     const sent = transport();
     const client = createTelemetryClient(store, sent.value);
 
     expect(telemetryEnabled(store)).toBe(false);
+    expect(telemetryDistinctId(store, () => 'should-not-exist')).toBeUndefined();
     client.capture({ name: 'onboarding_completed' });
     client.captureCrash(new Error('private details must not leave'));
 
     expect(sent.events).toEqual([]);
     expect(sent.crashes).toEqual([]);
+  });
+
+  it('creates a random device-only identifier after opt-in and removes it on opt-out', () => {
+    const store = createMemoryStorageAdapter();
+    setTelemetryEnabled(store, true);
+
+    expect(telemetryDistinctId(store, () => 'device-random-a')).toBe('device-random-a');
+    expect(telemetryDistinctId(store, () => 'device-random-b')).toBe('device-random-a');
+
+    setTelemetryEnabled(store, false);
+    setTelemetryEnabled(store, true);
+    expect(telemetryDistinctId(store, () => 'device-random-c')).toBe('device-random-c');
   });
 
   it('accepts exactly the six D-15 event shapes after opt-in', () => {
