@@ -2,6 +2,7 @@ import type { StorageAdapter } from '../storage/StorageAdapter';
 
 const TELEMETRY_ENABLED_KEY = 'ninfit:telemetry:enabled';
 const TELEMETRY_LAST_OPEN_KEY = 'ninfit:telemetry:last-open-date';
+const TELEMETRY_DISTINCT_ID_KEY = 'ninfit:telemetry:distinct-id';
 
 /**
  * Telemetry consent is intentionally outside Repository/GameSettings.
@@ -16,17 +17,38 @@ export function telemetryEnabled(store: StorageAdapter): boolean {
 export function setTelemetryEnabled(store: StorageAdapter, enabled: boolean): boolean {
   try {
     store.set(TELEMETRY_ENABLED_KEY, enabled ? 'true' : 'false');
-    if (!enabled) store.remove(TELEMETRY_LAST_OPEN_KEY);
+    if (!enabled) clearTelemetryMetadata(store);
     return true;
   } catch {
     // Fail closed: if the preference cannot be persisted, collection stays disabled.
     try {
       store.remove(TELEMETRY_ENABLED_KEY);
-      store.remove(TELEMETRY_LAST_OPEN_KEY);
+      clearTelemetryMetadata(store);
     } catch {
       // The backing store may be completely unavailable. Disabled is still the runtime default.
     }
     return false;
+  }
+}
+
+export function telemetryDistinctId(
+  store: StorageAdapter,
+  createId: () => string = () => crypto.randomUUID(),
+): string | undefined {
+  if (!telemetryEnabled(store)) return undefined;
+
+  const existing = store.get(TELEMETRY_DISTINCT_ID_KEY);
+  if (existing !== null && existing.length > 0) return existing;
+
+  try {
+    const id = createId();
+    // This ID is random, device-only and deliberately unrelated to NinFit ID, email,
+    // profile, backup or fitness history. It exists solely to measure anonymous retention.
+    store.set(TELEMETRY_DISTINCT_ID_KEY, id);
+    return id;
+  } catch {
+    // Without a stable anonymous ID we cannot measure retention honestly, so send nothing.
+    return undefined;
   }
 }
 
@@ -41,4 +63,9 @@ export function saveTelemetryLastOpenDate(store: StorageAdapter, date: string): 
   } catch {
     // Analytics metadata is best-effort and can never interfere with the app.
   }
+}
+
+function clearTelemetryMetadata(store: StorageAdapter): void {
+  store.remove(TELEMETRY_LAST_OPEN_KEY);
+  store.remove(TELEMETRY_DISTINCT_ID_KEY);
 }
