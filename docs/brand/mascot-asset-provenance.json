@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "policy": {
+    "maxMeanGreenExcess": 5,
+    "matteAlphaMin": 16,
+    "matteAlphaMax": 239,
+    "publicRoot": "public/mascots"
+  },
+  "assets": [
+    {
+      "path": "/mascots/tortoise/tortoise-starter-idle-v1.png",
+      "role": "stage-still",
+      "approval": "human-reviewed-production",
+      "watermarkFree": true,
+      "pairedMotion": "/mascots/tortoise/tortoise-starter-idle-v1.webm",
+      "reviewRecord": "PR #73 / T1A clean idle runtime"
+    },
+    {
+      "path": "/mascots/tortoise/tortoise-starter-idle-v1.webm",
+      "role": "stage-motion",
+      "approval": "human-reviewed-production",
+      "watermarkFree": true,
+      "pairedStill": "/mascots/tortoise/tortoise-starter-idle-v1.png",
+      "matteScope": "all-frames",
+      "reviewRecord": "PR #73 / T1A clean idle runtime"
+    },
+    {
+      "path": "/mascots/tortoise/tortoise-journey-walk-run.webp",
+      "role": "activity-still",
+      "approval": "human-reviewed-production",
+      "watermarkFree": true,
+      "reviewRecord": "reviewed Tortoise Journey activity set"
+    },
+    {
+      "path": "/mascots/tortoise/tortoise-journey-cycle.webp",
+      "role": "activity-still",
+      "approval": "human-reviewed-production",
+      "watermarkFree": true,
+      "reviewRecord": "reviewed Tortoise Journey activity set"
+    },
+    {
+      "path": "/mascots/tortoise/tortoise-journey-swim.webp",
+      "role": "activity-still",
+      "approval": "human-reviewed-production",
+      "watermarkFree": true,
+      "reviewRecord": "reviewed Tortoise Journey activity set"
+    }
+  ],
+  "rejected": [
+    {
+      "path": "/mascots/tortoise/tortoise-starter-wave-v1.webm",
+      "reason": "Pika watermark, green matte spill, mismatched frame-0 pairing and hatch truncation; removed from public in summit M2"
+    },
+    {
+      "path": "/mascots/tortoise/tortoise-starter-wave-rest-v1.png",
+      "reason": "proof still belonging to the rejected wave master; removed from public in summit M2"
+    },
+    {
+      "path": "/mascots/tortoise/tortoise-starter-companion-v1.png",
+      "reason": "legacy unreferenced asset with no current runtime ownership; removed from public rather than inventing provenance"
+    }
+  ]
+}

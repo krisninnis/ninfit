@@ -49,6 +49,14 @@ jobs:
       - name: Run full test suite
         run: npm test
 
+      - name: Install ffmpeg for mascot pixel verification
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+
+      - name: Verify mascot asset contracts
+        run: npm run verify:mascot-assets
+
       - name: Typecheck
         run: npm run typecheck
 
