@@ -60,6 +60,8 @@ interface WorkerHarnessOptions {
   seed?: Record<string, Record<string, string>>;
   /** Asset list the previously cached `/offline-assets.json` advertised, if any. */
   previousManifestIn?: string;
+  /** Override what the network serves as `/offline-assets.json`. */
+  servedManifest?: unknown;
 }
 
 function loadWorker(options: WorkerHarnessOptions = {}) {
@@ -87,13 +89,20 @@ function loadWorker(options: WorkerHarnessOptions = {}) {
     const path = requestPath(input);
     if (path === '/') return new Response('current deployed shell', { status: 200 });
     if (path === '/offline-assets.json') {
-      return Response.json({ version: 2, assets: BOOT_ASSETS });
+      return Response.json(
+        'servedManifest' in options ? options.servedManifest : { version: 2, assets: BOOT_ASSETS },
+      );
     }
     if (path === '/manifest.webmanifest') return new Response('{}', { status: 200 });
     if (path.startsWith('/icons/')) return new Response('icon', { status: 200 });
     if (BOOT_ASSETS.includes(path)) {
       if (failAsset === path) throw new TypeError('asset unavailable');
       return new Response(`network:${path}`, { status: 200 });
+    }
+    // A path outside the build that the origin WOULD answer. It exists so the
+    // traversal guard is what refuses it, rather than a convenient 404.
+    if (path === '/etc/passwd' || path === '/api/session') {
+      return new Response('sensitive', { status: 200 });
     }
     // A moved deployment alias no longer serves the previous build's hashed chunks.
     return new Response('not found', { status: 404 });
@@ -411,5 +420,178 @@ describe('service-worker update safety across cache generations', () => {
     for (const asset of PREVIOUS_ASSETS) {
       expect(worker.entries(worker.currentGeneration)).toContain(asset);
     }
+  });
+});
+
+/**
+ * The whole lifecycle in one sequence, in the order a phone actually runs it.
+ *
+ * The individual describes above each pin one guard. This one exists because the
+ * failure that reached a real device was not in any single handler - it was in the
+ * hand-off between them: install caches the new build, activate deletes an old
+ * generation, `clients.claim` gives the new worker a document that belongs to the
+ * old one, and only then does fetch get asked for a chunk that no longer exists.
+ */
+describe('service-worker install -> activate -> fetch, as a phone runs it', () => {
+  it('carries a previous build through a whole update without breaking it', async () => {
+    const worker = loadWorker({
+      seed: {
+        'ninfit-shell-v2': { '/assets/ancient.js': 'two builds ago' },
+        'ninfit-shell-v3': {
+          '/': 'previous offline shell',
+          '/assets/index-previous.js': 'previous js',
+          '/assets/AccountSection-previous.js': 'previous lazy account chunk',
+        },
+      },
+    });
+    const installHandler = worker.handlers.get('install');
+    const activateHandler = worker.handlers.get('activate');
+    const fetchHandler = worker.handlers.get('fetch');
+    if (!installHandler || !activateHandler || !fetchHandler) {
+      throw new Error('Missing worker handler');
+    }
+
+    // 1. Install: the new build's whole offline set lands in a NEW generation.
+    await install(installHandler);
+    for (const asset of BOOT_ASSETS) {
+      expect(worker.entries(worker.currentGeneration)).toContain(asset);
+    }
+    expect(await worker.read(worker.currentGeneration, '/')).toBe('current deployed shell');
+
+    // 2. Activate: old generations are resolved. The one a live document may still
+    //    be running survives; the one before it does not.
+    await activate(activateHandler);
+    const generations = [...worker.store.generations.keys()];
+    expect(generations).toContain(worker.currentGeneration);
+    expect(generations).toContain('ninfit-shell-v3');
+    expect(generations).not.toContain('ninfit-shell-v2');
+
+    // 3. Fetch, from the document that is STILL running the previous build. Its own
+    //    hashed chunk is gone from the deployment - the alias moved - so the cache is
+    //    the only place left that can answer, across generations.
+    worker.setOnline(false);
+    expect(await (await fetchAsset(fetchHandler, '/assets/AccountSection-previous.js')).text())
+      .toBe('previous lazy account chunk');
+    expect(await (await fetchAsset(fetchHandler, '/assets/index-previous.js')).text())
+      .toBe('previous js');
+
+    // 4. And a cold offline launch still gets the CURRENT build's coherent root.
+    expect(await (await navigateAndSettle(fetchHandler)).text()).toBe('current deployed shell');
+    for (const asset of BOOT_ASSETS) {
+      expect(await (await fetchAsset(fetchHandler, asset)).text()).toBe(`network:${asset}`);
+    }
+  });
+
+  it('serves the CURRENT generation root offline, not whichever cache was made first', async () => {
+    // `caches.match('/')` with no cache name searches every cache in creation order,
+    // so as soon as a second generation exists the OLDER root wins and an offline
+    // cold start keeps booting the previous build for as long as that generation is
+    // retained. Found by walking install -> activate -> offline fetch in sequence.
+    const worker = loadWorker({
+      seed: {
+        'ninfit-shell-v3': {
+          '/': 'previous offline shell',
+          '/assets/index-previous.js': 'previous js',
+        },
+      },
+    });
+    const installHandler = worker.handlers.get('install');
+    const activateHandler = worker.handlers.get('activate');
+    const fetchHandler = worker.handlers.get('fetch');
+    if (!installHandler || !activateHandler || !fetchHandler) {
+      throw new Error('Missing worker handler');
+    }
+
+    await install(installHandler);
+    await activate(activateHandler);
+    // The previous generation is deliberately still here - that is the lazy-chunk fix.
+    expect(await worker.read('ninfit-shell-v3', '/')).toBe('previous offline shell');
+
+    worker.setOnline(false);
+    expect(await (await navigateAndSettle(fetchHandler)).text()).toBe('current deployed shell');
+  });
+
+  it('falls back to any cached root rather than a network error', async () => {
+    // An older but complete build beats no app at all.
+    const worker = loadWorker({ seed: { 'ninfit-shell-v3': { '/': 'previous offline shell' } } });
+    const fetchHandler = worker.handlers.get('fetch');
+    if (!fetchHandler) throw new Error('Missing fetch handler');
+
+    worker.setOnline(false);
+    expect(await (await navigateAndSettle(fetchHandler)).text()).toBe('previous offline shell');
+  });
+
+  it('refuses a manifest that reaches outside the three allowed prefixes', async () => {
+    // The worker precaches whatever the manifest names. Without the prefix
+    // allow-list a wrong or tampered manifest could make every installed app fetch
+    // and store arbitrary same-origin paths, so the filter is fail-closed: one
+    // unexpected entry rejects the whole refresh rather than caching the rest.
+    const worker = loadWorker({
+      servedManifest: { version: 2, assets: [...BOOT_ASSETS, '/api/session'] },
+    });
+    const fetchHandler = worker.handlers.get('fetch');
+    if (!fetchHandler) throw new Error('Missing fetch handler');
+
+    await navigateAndSettle(fetchHandler);
+
+    expect(worker.entries(worker.currentGeneration)).not.toContain('/api/session');
+    for (const asset of BOOT_ASSETS) {
+      expect(worker.entries(worker.currentGeneration)).not.toContain(asset);
+    }
+    // The previous coherent offline root is untouched by a refusal.
+    expect(await worker.read(worker.currentGeneration, '/')).toBe('previous offline shell');
+  });
+
+  it('refuses a manifest that tries to escape with traversal', async () => {
+    // `/assets/../../etc/passwd` satisfies the prefix check on its face, so the
+    // traversal guard is the only thing standing between a wrong manifest and the
+    // worker storing an origin path the app has no business caching. The harness
+    // answers that path with 200 so a 404 cannot do the guard's job for it.
+    const worker = loadWorker({
+      servedManifest: { version: 2, assets: ['/assets/../../etc/passwd'] },
+    });
+    const fetchHandler = worker.handlers.get('fetch');
+    if (!fetchHandler) throw new Error('Missing fetch handler');
+
+    await navigateAndSettle(fetchHandler);
+
+    expect(worker.entries(worker.currentGeneration)).not.toContain('/etc/passwd');
+    expect(await worker.read(worker.currentGeneration, '/')).toBe('previous offline shell');
+  });
+
+  it('refuses a malformed manifest instead of caching an empty offline set', async () => {
+    for (const malformed of [{ version: 2 }, { version: 2, assets: 'nope' }, null]) {
+      const worker = loadWorker({ servedManifest: malformed });
+      const fetchHandler = worker.handlers.get('fetch');
+      if (!fetchHandler) throw new Error('Missing fetch handler');
+
+      await navigateAndSettle(fetchHandler);
+      expect(await worker.read(worker.currentGeneration, '/')).toBe('previous offline shell');
+    }
+  });
+
+  it('really deletes, so a worker that over-deletes cannot pass unnoticed', () => {
+    // Guard on the harness itself. The previous version stubbed `caches.delete` to a
+    // no-op and `caches.keys` to a constant, which is exactly why a worker that wiped
+    // the live generation passed the whole suite.
+    const worker = loadWorker({ seed: { 'ninfit-shell-v3': { '/assets/x.js': 'x' } } });
+    expect([...worker.store.generations.keys()]).toContain('ninfit-shell-v3');
+    worker.store.generations.delete('ninfit-shell-v3');
+    expect([...worker.store.generations.keys()]).not.toContain('ninfit-shell-v3');
+  });
+
+  it('does not reload, claim before pruning, or touch stored fitness data', () => {
+    const source = readFileSync(
+      fileURLToPath(new URL('../../public/sw.js', import.meta.url)),
+      'utf8',
+    );
+    // An automatic reload could interrupt a Journey that is recording.
+    expect(source).not.toContain('location.reload');
+    expect(source).not.toContain('navigate(');
+    // Nothing in the worker may reach app storage.
+    expect(source).not.toContain('localStorage');
+    expect(source).not.toContain('indexedDB');
+    // Claim happens only after old generations are resolved, never before.
+    expect(source).toContain('pruneOldCacheGenerations().then(() => self.clients.claim())');
   });
 });

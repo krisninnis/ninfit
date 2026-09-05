@@ -132,10 +132,31 @@ function networkFirstNavigation(event) {
 
       return response;
     } catch {
-      const cached = await caches.match('/');
+      const cached = await offlineRoot();
       return cached || Response.error();
     }
   })();
+}
+
+/**
+ * Offline, the root must come from the CURRENT generation.
+ *
+ * A bare `caches.match('/')` searches every cache in creation order, so the moment a
+ * second generation exists the OLDER root wins - and an offline cold start would keep
+ * booting the previous build for as long as that generation is retained. The whole
+ * point of caching a root and its exact hashed set together is that the pair stays
+ * coherent; choosing the root from one generation and letting subresources resolve
+ * across all of them is how an old root ends up asking for assets that belong to a
+ * build it was never part of.
+ *
+ * Falling back across generations is still better than a network error - an older but
+ * complete build beats no app at all - so it stays, second.
+ */
+async function offlineRoot() {
+  const cache = await caches.open(CACHE_VERSION);
+  const current = await cache.match('/');
+  if (current) return current;
+  return caches.match('/');
 }
 
 self.addEventListener('install', (event) => {
