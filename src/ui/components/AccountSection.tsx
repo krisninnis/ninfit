@@ -49,7 +49,7 @@ export function AccountSection() {
         if (active) setLoadingSession(false)
       })
 
-    let unsubscribe = () => undefined
+    let unsubscribe: () => void = () => {}
     try {
       unsubscribe = onAuthStateChange((nextSession) => {
         if (!active) return
