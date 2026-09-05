@@ -11,8 +11,8 @@ Last updated: **2026-09-05**
 | | |
 |---|---|
 | Remote | `https://github.com/krisninnis/ninfit.git` |
-| `main` | `d86da1f43ceb7d649e4230515509717c0e33bf41` |
-| Latest merged PR | **#220 — consolidated pre-beta real-device runbook** |
+| `main` | `85ae0476f9286130ed6ff2c3cf7b47ea68716cef` |
+| Latest merged PR | **#230 — reconcile privacy readiness with current launch truth** |
 | Current phase | **Pre-beta hardening / provider + human acceptance** |
 | Node | `24.x` |
 
@@ -26,7 +26,7 @@ NinFit is a calm, local-first fitness app for people starting or returning to mo
 
 Read `docs/LAUNCH_SUMMIT_2026-09-05.md` before changing launch scope.
 
-## Completed summit work on `main`
+## Completed summit and provider work on `main`
 
 - **M1 / #199:** defective Tortoise wave removed from runtime. Do not reintroduce it.
 - **M2 / #200:** G9/G10/G11 mascot asset contracts enforced.
@@ -34,8 +34,11 @@ Read `docs/LAUNCH_SUMMIT_2026-09-05.md` before changing launch scope.
 - **M8 preparation / #206:** H-A through H-K acceptance ledger merged.
 - **M10 preparation / #207:** rollback rehearsal record merged; rehearsal itself remains NOT RUN.
 - **#211:** Journey Home presents Walk/Run, Cycle and Swim as one centred vertical path. Its requested real-phone light/dark visual gate remains outstanding despite the merge.
-- **#213:** current OSM tile-policy evidence recorded. Normal interactive viewing is not categorically forbidden, but production provider/privacy/capacity approval remains pending and bulk/offline prefetch is prohibited by the public tile policy.
-- **#220:** consolidated H-A→H-K real-device execution runbook merged at current `main`.
+- **#213:** current OSM tile-policy evidence recorded.
+- **#220:** consolidated H-A→H-K real-device execution runbook merged.
+- **#228:** direct OSMF tiles approved only for the planned small invitation-only private beta under constrained use: viewed-area imagery only, no background/bulk/offline-map prefetch, visible attribution preserved, local route truth remains independent, and `VITE_MAP_TILE_URL` remains the exit switch. Re-review is mandatory before public beta, materially higher traffic, policy change, proxy/custom fetch, offline maps or added location-provider features.
+- **#229:** PostHog Cloud EU found technically suitable with conditions for narrow opt-in M4 diagnostics. Collection is still not approved until the intended EU project/deployment key, retention/legal processor facts, privacy notice, Settings review and real G12/G13 receipts are complete.
+- **#230:** privacy readiness reconciled with current launch truth. Viewed geography/network request metadata can reach the tile provider; raw Journey route truth remains local to the renderer. Article 6/Article 9, operator identity, retention, processor/DPA and publication facts remain human/legal decisions.
 
 ## Active launch candidates — do not merge past their gates
 
@@ -43,9 +46,9 @@ The old branches **#194, #201, #202, #203, #205, #209 and #210 are closed unmerg
 
 ### #214 — M7 support surface v2
 
-Fail-closed Help & support configuration. The beta operational choice is the temporary support address already agreed by the owner, with **reply within 3 working days** as the commitment. Values remain deployment-configured, not hard-coded.
+Fail-closed Help & support configuration. Private-beta operational choice: `krisninnis@gmail.com`, with **reply within 3 working days** as the commitment. Values remain deployment-configured, not hard-coded.
 
-Remaining: configure the actual deployment variables and visually verify Settings plus the release-identity-only mail draft. The currently connected Vercel tooling does not expose environment-variable writes.
+Remaining: configure the actual deployment variables and visually verify Settings plus the release-identity-only mail draft.
 
 ### #215 — two-path launch onboarding v2
 
@@ -63,7 +66,7 @@ Remaining: real-phone thumb/keyboard check. H-I VoiceOver/TalkBack remains a sep
 
 Automated verification is green. Keeps the map mounted and route truth available while base imagery fails, shows an honest imagery-unavailable note after repeated failures, and clears that note when imagery succeeds.
 
-Remaining: H-H real-GPU route-line proof and phone visual review in both themes. Map-provider/privacy/capacity approval is still pending.
+Private-beta map-provider suitability is now resolved by #228 under its strict constraints. Remaining: H-H real-GPU route-line proof and phone visual review in both themes, including a slow-connection case.
 
 ### #218 — M4 privacy-safe instrumentation v2
 
@@ -78,9 +81,9 @@ Intended six events:
 5. `journey_completed`
 6. `app_opened_after_gap` with a coarse gap bucket
 
-Connected PostHog discovery on 2026-09-05 found one accessible EU organization (`claw apps`) and one project (`Default project`, id `145242`). That project has existing unrelated traffic, but **none of the six NinFit events are present and no recent deliberate `$exception` receipt exists**.
+Connected PostHog discovery on 2026-09-05 found one accessible EU organization (`claw apps`) and one project (`Default project`, id `145242`). That project contains unrelated traffic and no NinFit acceptance receipts.
 
-Therefore **G12 and G13 remain NOT PASSED**. Connection/access alone is not receipt evidence. Remaining: configure the intended deployment token without committing it, opt in through NinFit Settings, exercise all six event paths and a deliberate scrubbed crash, then re-query PostHog for exact receipts plus human Settings visual acceptance.
+Therefore **G12 and G13 remain NOT PASSED**. #229 establishes technical suitability only; it does not approve collection or establish lawful basis/DPA/retention truth. Remaining: intended EU project/deployment configuration, legal/privacy facts, explicit Settings opt-in, exact six usage receipts, one deliberate scrubbed crash receipt and human Settings visual acceptance.
 
 ### #219 — M3 offline cold-start v2
 
@@ -108,7 +111,7 @@ It deliberately combines #214, #215, #216, #217, #218 and #219 so the remaining 
 
 GitHub **Verification Gate #102 passed** on the exact head: full tests, mascot asset contracts, TypeScript and production build were green.
 
-The Vercel status for that head currently points to the team **build-rate limit**, not an application build failure. Treat the preview as unavailable until a real deployment succeeds. Do not transfer human evidence from another build.
+The recorded Vercel failure for that head was the team **100 deployments / 24 hours** free-plan limit, not an application build/runtime failure. Do not transfer human evidence from another build. The ChatGPT Vercel app is currently unavailable to this session, so exact deployment inspection cannot resume until provider/tool access is restored.
 
 ## Product truth that must not regress
 
@@ -156,18 +159,19 @@ Do not fabricate any of these from CI, desktop emulation or a different build.
 
 ## Legal / provider / operations
 
-Before a stranger is invited into beta, still resolve and publish the real operator/privacy facts, provider/processor/retention/transfer truth, stable privacy notice URL, deployed support values, PostHog G12/G13 receipts and the map-provider decision. M10 production rollback rehearsal remains NOT RUN and requires explicit human authorisation.
+Before a stranger is invited into beta, still resolve and publish the real operator/privacy facts, lawful-basis decisions as applicable, provider/processor/retention/transfer truth, stable privacy notice URL, deployed support values, PostHog G12/G13 receipts and human Settings/device gates.
 
-Vercel provider state on 2026-09-05:
+Current provider boundaries:
 
-- GitHub status for #226 is blocked by the team preview build-rate limit rather than a NinFit build error;
-- the connected Vercel API currently returns a scope-authorization error for `krisninnis-projects` and needs re-authentication for that team before deployment inspection can resume;
-- no available connector action can write deployment environment variables.
+- OSMF direct tiles: approved for small invitation-only private beta only under #228 constraints; public beta/production needs re-review.
+- PostHog Cloud EU: technically suitable with conditions under #229; collection remains unapproved until config/legal/receipt/Settings gates pass.
+- Vercel: #226's recorded deployment failure was provider quota, not NinFit code. Connected Vercel tooling is currently unavailable in this ChatGPT session, so no exact preview inspection or deployment configuration can be claimed.
+- M10 production rollback rehearsal remains NOT RUN and requires explicit human authorisation.
 
 ## Next execution order
 
-1. Let the provider preview quota/access issue clear, then deploy **#226** as the single identified review candidate; do not merge it.
-2. Configure support and PostHog deployment values without committing credentials.
+1. Restore exact Vercel access and obtain a successful deployment of **#226** at head `294d9248c4d99356f16d1d78fd296e179dee430c`; do not merge #226.
+2. Configure support and intended PostHog deployment values without committing credentials.
 3. Run the consolidated phone/device sessions from the merged runbook, recording exact build/device evidence.
 4. Re-query PostHog for G12/G13 exact receipts after explicit diagnostics opt-in and deliberate test paths.
 5. Merge individual #214–#219 only when each applicable human/provider gate is satisfied, re-verifying `main` between merges.
@@ -178,15 +182,16 @@ Vercel provider state on 2026-09-05:
 
 ```text
 HANDOFF CHECKPOINT
-main SHA: d86da1f43ceb7d649e4230515509717c0e33bf41
-latest merged PR: #220 — consolidated pre-beta real-device runbook
+main SHA: 85ae0476f9286130ed6ff2c3cf7b47ea68716cef
+latest merged PR: #230 — reconcile privacy readiness with current launch truth
 current phase: pre-beta hardening / provider + human acceptance
 active launch PRs: #214, #215, #216, #217, #218, #219
 review-only PR: #226 (draft, DO NOT MERGE), head 294d9248c4d99356f16d1d78fd296e179dee430c
 superseded/closed: #194, #201, #202, #203, #205, #209, #210
 #226 GitHub gate: Verification Gate #102 PASS
-#226 Vercel: provider build-rate limited; not a NinFit runtime failure
-PostHog: connected EU project exists; G12/G13 remain NOT PASSED because six NinFit events + deliberate crash receipt are absent
+#226 Vercel: recorded failure was provider 100-deployments/24h limit; exact current preview inspection blocked by unavailable connector
+OSMF: constrained direct-tile use approved for small invitation-only private beta under #228; public beta/production requires re-review
+PostHog: Cloud EU technically suitable with conditions under #229; G12/G13 and collection approval remain open
 Android offline: earlier functional H-F observation exists; formal exact-build/device evidence remains incomplete
 Journey #211: merged; requested light/dark real-phone visual gate still outstanding
 Tortoise: clean standing + idle only; rejected Pika wave absent; future clean wave requires human approval + asset gates
