@@ -10,6 +10,8 @@ import { currentAppBuildInfo } from '../buildInfo';
 
 interface SettingsScreenProps {
   settings: GameSettings;
+  diagnosticsEnabled: boolean;
+  onDiagnosticsChange: (enabled: boolean) => void;
   onSettingsChange: (patch: Partial<GameSettings>) => void;
   onOpenData: () => void;
 }
@@ -41,6 +43,8 @@ const SOCIAL_MODES: ReadonlyArray<{ value: SocialMode; label: string }> = [
 
 export function SettingsScreen({
   settings,
+  diagnosticsEnabled,
+  onDiagnosticsChange,
   onSettingsChange,
   onOpenData,
 }: SettingsScreenProps) {
@@ -135,6 +139,12 @@ export function SettingsScreen({
       </Section>
 
       <Section title="Data & privacy">
+        <Toggle
+          label="Share basic app diagnostics"
+          hint="Optional. Sends only six basic app-use events and scrubbed crash diagnostics — never health data, measurements, routes, GPS points or notes."
+          checked={diagnosticsEnabled}
+          onChange={onDiagnosticsChange}
+        />
         <p className="settings__section-copy">
           Back up, export, restore, and review data stored by NinFit on this device.
         </p>
@@ -150,7 +160,7 @@ export function SettingsScreen({
           <span aria-hidden="true">→</span>
         </button>
         <p className="footnote">
-          NinFit remains local-first. Nothing here uploads your fitness history.
+          NinFit remains local-first. Your fitness history is never uploaded by this setting.
         </p>
       </Section>
 
