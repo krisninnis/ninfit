@@ -1,11 +1,12 @@
 const CACHE_VERSION = 'ninfit-shell-v3';
 const OFFLINE_ASSET_MANIFEST = '/offline-assets.json';
 const STABLE_SHELL = ['/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
+const OFFLINE_ASSET_PREFIXES = ['/assets/', '/mascots/', '/egg/'];
 
 /**
- * Load the build-generated list of Vite assets required to boot the application.
- * The list is generated from Vite's own production manifest, so the worker never
- * guesses content-hashed filenames.
+ * Load the build-generated list of assets required to boot and render the core app
+ * offline. Vite owns hashed build assets; the build step also enumerates stable
+ * app-owned public artwork used by the offline UI.
  */
 async function fetchOfflineAssetManifest() {
   const response = await fetch(OFFLINE_ASSET_MANIFEST, { cache: 'no-store' });
@@ -17,7 +18,9 @@ async function fetchOfflineAssetManifest() {
   }
 
   const assets = payload.assets.filter(
-    (asset) => typeof asset === 'string' && asset.startsWith('/assets/') && !asset.includes('..'),
+    (asset) => typeof asset === 'string'
+      && OFFLINE_ASSET_PREFIXES.some((prefix) => asset.startsWith(prefix))
+      && !asset.includes('..'),
   );
   if (assets.length === 0 || assets.length !== payload.assets.length) {
     throw new Error('Offline asset manifest contains invalid assets');
@@ -27,10 +30,9 @@ async function fetchOfflineAssetManifest() {
 }
 
 /**
- * Refresh the complete offline boot set atomically enough for our promise: all new
- * hashed assets are cached before the cached root HTML is replaced. If any asset
- * fails, the previous offline root remains authoritative and an online launch still
- * succeeds normally.
+ * Refresh the complete offline set atomically enough for our promise: all new assets
+ * are cached before the cached root HTML is replaced. If any asset fails, the previous
+ * offline root remains authoritative and an online launch still succeeds normally.
  */
 async function refreshOfflineBoot(rootResponse) {
   const cache = await caches.open(CACHE_VERSION);
@@ -40,8 +42,6 @@ async function refreshOfflineBoot(rootResponse) {
   await cache.put(OFFLINE_ASSET_MANIFEST, manifestResponse.clone());
   await cache.put('/', rootResponse.clone());
 
-  // Once a complete new boot set is present, remove obsolete hashed bundles so
-  // repeated deployments do not grow the cache forever.
   const keep = new Set(assets.map((asset) => new URL(asset, self.location.origin).href));
   const requests = await cache.keys();
   await Promise.all(
@@ -49,7 +49,7 @@ async function refreshOfflineBoot(rootResponse) {
       .filter((request) => {
         const url = new URL(request.url);
         return url.origin === self.location.origin
-          && url.pathname.startsWith('/assets/')
+          && OFFLINE_ASSET_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))
           && !keep.has(url.href);
       })
       .map((request) => cache.delete(request)),
@@ -58,8 +58,8 @@ async function refreshOfflineBoot(rootResponse) {
 
 /**
  * Installed-app launches prefer the live deployment. Every successful online launch
- * refreshes both the root HTML and the exact hashed JS/CSS build set needed by that
- * HTML, without reloading the running document or interrupting an active Journey.
+ * refreshes both the root HTML and the exact JS/CSS/art set needed by that build,
+ * without reloading the running document or interrupting an active Journey.
  */
 async function networkFirstNavigation(request) {
   try {
