@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
 import { getAppContext } from '../../app/bootstrap';
+import { RegionErrorBoundary } from '../components/RegionErrorBoundary';
 import { startForegroundJourneyGpsSession } from '../../app/foregroundJourneyGpsSession';
 const ActiveJourneyMap = lazy(async () => {
   const module = await import('../components/ActiveJourneyMap');
@@ -10,6 +11,7 @@ import type { ActiveJourneyGpsSession } from '../../app/activeJourneyGpsSession'
 import { createJourneyRecoveryController } from '../../app/journeyRecoveryController';
 import { journeyActiveSeconds, type Journey } from '../../domain/journey';
 import type { ISODateTime } from '../../domain/types';
+import { telemetry } from '../../telemetry/runtime';
 import {
   formatJourneyDistance,
   formatJourneyDuration,
@@ -30,18 +32,12 @@ function nowIso(): ISODateTime {
 
 function activityLabel(journey: Journey): string {
   switch (journey.activityType) {
-    case 'walk':
-      return 'Walk';
-    case 'run':
-      return 'Run';
-    case 'hike':
-      return 'Hike';
-    case 'cycle':
-      return 'Cycle';
-    case 'swim':
-      return 'Swim';
-    default:
-      return 'Journey';
+    case 'walk': return 'Walk';
+    case 'run': return 'Run';
+    case 'hike': return 'Hike';
+    case 'cycle': return 'Cycle';
+    case 'swim': return 'Swim';
+    default: return 'Journey';
   }
 }
 
@@ -62,9 +58,7 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
   const journeyRef = useRef<Journey | null>(journey);
   const sessionRef = useRef<ActiveJourneyGpsSession | null>(null);
 
-  useEffect(() => {
-    journeyRef.current = journey;
-  }, [journey]);
+  useEffect(() => { journeyRef.current = journey; }, [journey]);
 
   useEffect(() => {
     if (journey?.status !== 'recording') return undefined;
@@ -72,10 +66,6 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     return () => window.clearInterval(timer);
   }, [journey?.status]);
 
-  /*
-   * The watcher lifetime follows recorder STATUS, not the changing Journey object.
-   * Swim is deliberately excluded because phone GPS is not an honest pool recorder.
-   */
   useEffect(() => {
     const current = journeyRef.current;
     if (current === null || current.status !== 'recording') return undefined;
@@ -98,9 +88,7 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
         onError(error) {
           setGpsState(error.code === error.PERMISSION_DENIED ? 'permission_denied' : 'searching');
         },
-        onRuntimeError() {
-          setGpsState('runtime_error');
-        },
+        onRuntimeError() { setGpsState('runtime_error'); },
       });
     } catch {
       setGpsState('runtime_error');
@@ -126,9 +114,7 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
           <p className="active-journey__eyebrow">Living Journey</p>
           <h1 id="active-journey-title">No active Journey</h1>
           <p>There is no unfinished Journey on this device. Choose an activity from Journey when you are ready.</p>
-          <button type="button" className="btn btn--primary" onClick={onClose}>
-            Back to Journey
-          </button>
+          <button type="button" className="btn btn--primary" onClick={onClose}>Back to Journey</button>
         </div>
       </section>
     );
@@ -171,6 +157,7 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     setJourney(next);
     setGpsState('finished');
     setNow(changedAt);
+    telemetry().capture({ name: 'journey_completed' });
     onCompleted?.(next.id);
   };
 
@@ -183,40 +170,25 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     <section className="active-journey" aria-labelledby="active-journey-title">
       <header className="active-journey__topbar">
         <button type="button" className="active-journey__leave" onClick={leave}>
-          <span aria-hidden="true">←</span>
-          <span>Journey</span>
+          <span aria-hidden="true">←</span><span>Journey</span>
         </button>
         <div className="active-journey__identity">
           <span className="active-journey__eyebrow">Living Journey</span>
           <h1 id="active-journey-title">{activityLabel(journey)}</h1>
         </div>
-        <span
-          className={`active-journey__status active-journey__status--${statusClass}`}
-          role="status"
-        >
+        <span className={`active-journey__status active-journey__status--${statusClass}`} role="status">
           <span className="active-journey__status-dot" aria-hidden="true" />
           {journeyLiveGpsLabel(gpsState)}
         </span>
       </header>
 
-      <div
-        className={`active-journey__world active-journey__world--${usesPhoneGps ? 'map' : 'fallback'}`}
-        aria-label="Journey world surface"
-      >
+      <div className={`active-journey__world active-journey__world--${usesPhoneGps ? 'map' : 'fallback'}`} aria-label="Journey world surface">
         {usesPhoneGps ? (
-          <Suspense
-            fallback={
-              <div
-                className="active-journey__map-loading"
-                role="status"
-                aria-live="polite"
-              >
-                Loading map...
-              </div>
-            }
-          >
-            <ActiveJourneyMap journey={journey} />
-          </Suspense>
+          <RegionErrorBoundary fallback={<div className="active-journey__map-unavailable" role="status"><strong>Map unavailable</strong><span>This Journey is still recording and your distance is still being saved.</span></div>}>
+            <Suspense fallback={<div className="active-journey__map-loading" role="status" aria-live="polite">Loading map...</div>}>
+              <ActiveJourneyMap journey={journey} />
+            </Suspense>
+          </RegionErrorBoundary>
         ) : (
           <div className="active-journey__horizon" aria-hidden="true" />
         )}
@@ -236,33 +208,17 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
         </div>
         <div className="active-journey__metric">
           <span className="active-journey__metric-label">State</span>
-          <strong className="active-journey__metric-value">
-            {isCompleted ? 'Finished' : isPaused ? 'Paused' : 'Recording'}
-          </strong>
+          <strong className="active-journey__metric-value">{isCompleted ? 'Finished' : isPaused ? 'Paused' : 'Recording'}</strong>
         </div>
       </div>
 
       <div className="active-journey__dock" aria-label="Journey controls">
         {isCompleted ? (
-          <button type="button" className="btn btn--primary active-journey__dock-action" onClick={leave}>
-            Back to Journey
-          </button>
+          <button type="button" className="btn btn--primary active-journey__dock-action" onClick={leave}>Back to Journey</button>
         ) : (
           <>
-            <button
-              type="button"
-              className="btn btn--secondary active-journey__dock-action"
-              onClick={isPaused ? resume : pause}
-            >
-              {isPaused ? 'Resume' : 'Pause'}
-            </button>
-            <button
-              type="button"
-              className="btn btn--primary active-journey__dock-action"
-              onClick={finish}
-            >
-              Finish
-            </button>
+            <button type="button" className="btn btn--secondary active-journey__dock-action" onClick={isPaused ? resume : pause}>{isPaused ? 'Resume' : 'Pause'}</button>
+            <button type="button" className="btn btn--primary active-journey__dock-action" onClick={finish}>Finish</button>
           </>
         )}
       </div>

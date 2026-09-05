@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react';
+import { RegionErrorBoundary } from './RegionErrorBoundary';
 import type { AdventureMapSnapshot } from '../../domain/adventureMap';
 
 const JourneyRouteMap = lazy(async () => {
@@ -41,6 +42,13 @@ export function AdventureMapPanel({ snapshot }: AdventureMapPanelProps) {
 
       {hasRoute ? (
         <div className="journey-detail__map-frame">
+          <RegionErrorBoundary
+            fallback={
+              <div className="journey-detail__map-message" role="status">
+                Your saved Journey history is still available without the map.
+              </div>
+            }
+          >
           <Suspense
             fallback={
               <div className="journey-detail__map-message" role="status" aria-live="polite">
@@ -56,6 +64,7 @@ export function AdventureMapPanel({ snapshot }: AdventureMapPanelProps) {
               view="overview"
             />
           </Suspense>
+          </RegionErrorBoundary>
         </div>
       ) : (
         <div className="journey-detail__map-message">

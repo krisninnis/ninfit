@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import { TabBar } from './ui/components/TabBar';
+import { ScreenErrorBoundary } from './ui/components/ScreenErrorBoundary';
 import { OnboardingScreen } from './ui/screens/OnboardingScreen';
 import { NinFitIdScreen } from './ui/screens/NinFitIdScreen';
 import { DataScreen } from './ui/screens/DataScreen';
@@ -24,6 +25,7 @@ import { useGame } from './ui/hooks/useGame';
 import { visibleMascotFamily } from './domain/game/mascot';
 import { mascotStageArt } from './ui/mascotStageArt';
 import { applyThemePreference } from './ui/theme';
+import { setTelemetryEnabled, telemetryEnabled } from './telemetry/preferences';
 import {
   ACCOUNT_HASH,
   DATA_HASH,
@@ -52,11 +54,12 @@ export default function App() {
     parseRouteFromHash(window.location.hash),
   );
   const mainRef = useRef<HTMLElement>(null);
+  const store = useMemo(() => getAppContext().adapter, []);
   const game = useGame();
   const [dismissedOnboarding, setDismissedOnboarding] = useState(false);
   const [revealingCompanion, setRevealingCompanion] = useState(false);
+  const [diagnosticsEnabled, setDiagnosticsEnabled] = useState(() => telemetryEnabled(store));
 
-  const store = useMemo(() => getAppContext().adapter, []);
   const [introDone, setIntroDone] = useState(
     () =>
       !shouldPlayIntro({
@@ -83,6 +86,11 @@ export default function App() {
   const navigate = (hash: string) => {
     window.location.hash = hash;
     setRoute(parseRouteFromHash(hash));
+  };
+
+  const changeDiagnostics = (enabled: boolean) => {
+    const persisted = setTelemetryEnabled(store, enabled);
+    setDiagnosticsEnabled(persisted ? enabled : false);
   };
 
   if (!introDone) {
@@ -144,6 +152,7 @@ export default function App() {
       ? 'profile'
       : screenTab;
   const showPrimaryNav = route.kind === 'tab' || showJourneyHome || showData;
+  const screenKey = route.kind === 'tab' ? `tab:${route.tab}` : route.kind;
   const backdropId = showData
     ? 'data'
     : tab === 'journey'
@@ -156,53 +165,57 @@ export default function App() {
 
       <div className={`app${showActiveJourney ? ' app--journey' : ''}`} data-path={game.state.pathId}>
         <main className="app__main" ref={mainRef}>
-          {showNinFitId ? (
-            <NinFitIdScreen
-              returningFromConfirmation={route.confirmed}
-              onSkip={() => navigate(hashForTab('today'))}
-            />
-          ) : showData ? (
-            <DataScreen onClose={() => navigate(hashForTab('settings'))} />
-          ) : showActiveJourney ? (
-            <ActiveJourneyScreen
-              onClose={() => navigate(JOURNEY_HASH)}
-              onCompleted={(journeyId) => navigate(journeyCompleteHash(journeyId))}
-            />
-          ) : showJourneyComplete ? (
-            <JourneyCompletionScreen
-              journeyId={route.journeyId}
-              onViewJourney={() => navigate(journeyDetailHash(route.journeyId))}
-              onClose={() => navigate(JOURNEY_HASH)}
-            />
-          ) : showJourneyDetail ? (
-            <JourneyDetailScreen
-              journeyId={route.journeyId}
-              onClose={() => navigate(JOURNEY_HASH)}
-              onPreviewPostcard={() => navigate(journeyPostcardHash(route.journeyId))}
-            />
-          ) : showJourneyPostcard ? (
-            <JourneyPostcardScreen
-              journeyId={route.journeyId}
-              onClose={() => navigate(journeyDetailHash(route.journeyId))}
-            />
-          ) : showJourneyLaunch ? (
-            <JourneyLaunchScreen
-              family={route.family}
-              onClose={() => navigate(JOURNEY_HASH)}
-            />
-          ) : showJourneyHome ? (
-            <JourneyScreen />
-          ) : showPassport ? (
-            <PassportScreen onClose={() => navigate(hashForTab('profile'))} />
-          ) : screenTab === 'settings' ? (
-            <SettingsScreen
-              settings={game.settings}
-              onSettingsChange={game.updateSettings}
-              onOpenData={() => navigate(DATA_HASH)}
-            />
-          ) : (
-            CurrentScreen ? <CurrentScreen /> : null
-          )}
+          <ScreenErrorBoundary key={screenKey} homeHash={hashForTab('today')}>
+            {showNinFitId ? (
+              <NinFitIdScreen
+                returningFromConfirmation={route.confirmed}
+                onSkip={() => navigate(hashForTab('today'))}
+              />
+            ) : showData ? (
+              <DataScreen onClose={() => navigate(hashForTab('settings'))} />
+            ) : showActiveJourney ? (
+              <ActiveJourneyScreen
+                onClose={() => navigate(JOURNEY_HASH)}
+                onCompleted={(journeyId) => navigate(journeyCompleteHash(journeyId))}
+              />
+            ) : showJourneyComplete ? (
+              <JourneyCompletionScreen
+                journeyId={route.journeyId}
+                onViewJourney={() => navigate(journeyDetailHash(route.journeyId))}
+                onClose={() => navigate(JOURNEY_HASH)}
+              />
+            ) : showJourneyDetail ? (
+              <JourneyDetailScreen
+                journeyId={route.journeyId}
+                onClose={() => navigate(JOURNEY_HASH)}
+                onPreviewPostcard={() => navigate(journeyPostcardHash(route.journeyId))}
+              />
+            ) : showJourneyPostcard ? (
+              <JourneyPostcardScreen
+                journeyId={route.journeyId}
+                onClose={() => navigate(journeyDetailHash(route.journeyId))}
+              />
+            ) : showJourneyLaunch ? (
+              <JourneyLaunchScreen
+                family={route.family}
+                onClose={() => navigate(JOURNEY_HASH)}
+              />
+            ) : showJourneyHome ? (
+              <JourneyScreen />
+            ) : showPassport ? (
+              <PassportScreen onClose={() => navigate(hashForTab('profile'))} />
+            ) : screenTab === 'settings' ? (
+              <SettingsScreen
+                settings={game.settings}
+                diagnosticsEnabled={diagnosticsEnabled}
+                onDiagnosticsChange={changeDiagnostics}
+                onSettingsChange={game.updateSettings}
+                onOpenData={() => navigate(DATA_HASH)}
+              />
+            ) : (
+              CurrentScreen ? <CurrentScreen /> : null
+            )}
+          </ScreenErrorBoundary>
         </main>
 
         {showPrimaryNav ? (
