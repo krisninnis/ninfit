@@ -155,6 +155,36 @@ Before the GPS prototype becomes a production recorder:
 - [ ] A provider outage cannot corrupt the underlying Journey record.
 - [ ] Route data is not sent to the map provider unless the chosen feature actually requires it and has been reviewed.
 
+### Current shipped default — open, and blocking public beta
+
+Recorded 2026-09-05. **This checklist is not satisfied, and no item on it was
+closed by the Journey map imagery-failure fix.** That change makes the app honest
+when tiles do not arrive. It says nothing about who should be serving them.
+
+What ships today: `JourneyRouteMap` defaults to
+`https://tile.openstreetmap.org/{z}/{x}/{y}.png`, overridable by
+`VITE_MAP_TILE_URL`, which is unset in the current deployments.
+
+Two separate problems with that default, both open:
+
+1. **Usage policy.** The OSM Foundation's tile servers are a donated resource
+   intended for development and low-volume use. A distributed app pointing
+   users' devices at them is outside what that policy permits, however small the
+   beta.
+2. **Privacy.** Tile requests are driven by where the user is standing while a
+   Journey records, so the provider receives approximate location together with
+   the device IP, continuously, for the length of a walk. That is a disclosure of
+   location data to a third party, and it happens before any of NinFit's own
+   route-privacy rules apply - those govern what NinFit shares, not what the map
+   layer fetches.
+
+Neither is resolved by configuration alone. Whoever is chosen has to be reviewed
+against every box above, added to this register as an active processor, and named
+in the privacy notice before a stranger is invited into the beta.
+
+**Do not swap the provider without that review.** Pointing the default at another
+host is not a fix; it moves the same unanswered questions to a different company.
+
 ## Wearable integration checklist
 
 For Fitbit, Health Connect, HealthKit/Apple Watch or future devices:
