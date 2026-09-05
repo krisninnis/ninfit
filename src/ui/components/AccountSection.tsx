@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { getSession, onAuthStateChange, signOut } from '../../data/supabase/auth'
+import { isSupabaseConfigured } from '../../data/supabase/env'
 import { ACCOUNT_HASH } from '../tabs'
 import { Section } from './Field'
 
@@ -28,11 +29,13 @@ function errorMessage(error: unknown): string {
 
 export function AccountSection() {
   const [session, setSession] = useState<Session | null>(null)
-  const [loadingSession, setLoadingSession] = useState(true)
+  const [loadingSession, setLoadingSession] = useState(isSupabaseConfigured)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!isSupabaseConfigured) return undefined
+
     let active = true
 
     getSession()
@@ -46,11 +49,19 @@ export function AccountSection() {
         if (active) setLoadingSession(false)
       })
 
-    const unsubscribe = onAuthStateChange((nextSession) => {
-      if (!active) return
-      setSession(nextSession)
-      setLoadingSession(false)
-    })
+    let unsubscribe = () => undefined
+    try {
+      unsubscribe = onAuthStateChange((nextSession) => {
+        if (!active) return
+        setSession(nextSession)
+        setLoadingSession(false)
+      })
+    } catch (caught) {
+      if (active) {
+        setError(errorMessage(caught))
+        setLoadingSession(false)
+      }
+    }
 
     return () => {
       active = false
@@ -69,6 +80,21 @@ export function AccountSection() {
     } finally {
       setBusy(false)
     }
+  }
+
+  if (!isSupabaseConfigured) {
+    return (
+      <Section title="NinFit account" defaultOpen={false}>
+        <div className="account-journey account-journey--quiet">
+          <span className="account-journey__eyebrow">Your NinFit</span>
+          <h3 className="account-journey__title">Not available in this build</h3>
+          <p className="account-journey__copy">
+            NinFit still works without an account. Your fitness records remain on this
+            device.
+          </p>
+        </div>
+      </Section>
+    )
   }
 
   if (loadingSession) {
