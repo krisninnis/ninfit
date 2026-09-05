@@ -141,7 +141,13 @@
    * A real button, so it is reachable and announced as an action, wearing the
    * appearance of a link because it sits inside a sentence.
    */
+  /**
+   * "Sign in" is a sentence-inline control, so it measures 47x18. The text stays
+   * inline; the pseudo-element gives it a 44px thumb target without turning it
+   * into a button or reflowing the sentence around it.
+   */
   .ninfit-id__link {
+    position: relative;
     padding: 0;
     border: 0;
     background: none;
@@ -150,6 +156,12 @@
     font-weight: var(--ft-weight-semibold);
     text-decoration: underline;
     cursor: pointer;
+  }
+
+  .ninfit-id__link::after {
+    content: '';
+    position: absolute;
+    inset: -13px -8px;
   }
 
   @media (max-width: 430px) {
