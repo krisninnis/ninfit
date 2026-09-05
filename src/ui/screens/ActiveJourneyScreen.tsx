@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
 import { getAppContext } from '../../app/bootstrap';
+import { RegionErrorBoundary } from '../components/RegionErrorBoundary';
 import { startForegroundJourneyGpsSession } from '../../app/foregroundJourneyGpsSession';
 const ActiveJourneyMap = lazy(async () => {
   const module = await import('../components/ActiveJourneyMap');
@@ -204,19 +205,28 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
         aria-label="Journey world surface"
       >
         {usesPhoneGps ? (
-          <Suspense
+          <RegionErrorBoundary
             fallback={
-              <div
-                className="active-journey__map-loading"
-                role="status"
-                aria-live="polite"
-              >
-                Loading map...
+              <div className="active-journey__map-unavailable" role="status">
+                <strong>Map unavailable</strong>
+                <span>This Journey is still recording and your distance is still being saved.</span>
               </div>
             }
           >
-            <ActiveJourneyMap journey={journey} />
-          </Suspense>
+            <Suspense
+              fallback={
+                <div
+                  className="active-journey__map-loading"
+                  role="status"
+                  aria-live="polite"
+                >
+                  Loading map...
+                </div>
+              }
+            >
+              <ActiveJourneyMap journey={journey} />
+            </Suspense>
+          </RegionErrorBoundary>
         ) : (
           <div className="active-journey__horizon" aria-hidden="true" />
         )}
