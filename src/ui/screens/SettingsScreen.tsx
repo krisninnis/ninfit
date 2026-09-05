@@ -4,9 +4,11 @@ import type {
   SocialMode,
   ThemePreference,
 } from '../../domain/game/types';
+import { supportEnv } from '../../config/support';
 import { Section, SelectField, Toggle } from '../components/Field';
 import { Screen } from '../components/Screen';
 import { currentAppBuildInfo } from '../buildInfo';
+import { buildSupportMailto, LOST_DATA_GUIDANCE } from '../support';
 
 interface SettingsScreenProps {
   settings: GameSettings;
@@ -152,6 +154,41 @@ export function SettingsScreen({
         <p className="footnote">
           NinFit remains local-first. Nothing here uploads your fitness history.
         </p>
+      </Section>
+
+      <Section title="Help & support" defaultOpen={false}>
+        <h2 className="control__label">Lost your data?</h2>
+        <p className="settings__section-copy">{LOST_DATA_GUIDANCE}</p>
+
+        {supportEnv !== null ? (
+          <>
+            <p className="settings__section-copy">
+              Need help with NinFit? Email <strong>{supportEnv.email}</strong>. We aim to{' '}
+              {supportEnv.responseCommitment}.
+            </p>
+            <a
+              className="btn btn--secondary btn--block settings__destination"
+              href={buildSupportMailto(supportEnv, build)}
+            >
+              <span>
+                <strong>Email support</strong>
+                <small>Your app version and build are added to the draft automatically.</small>
+              </span>
+              <span aria-hidden="true">→</span>
+            </a>
+            <p className="footnote">
+              The draft includes release identity only. It does not attach your fitness history,
+              health notes or Journey route.
+            </p>
+          </>
+        ) : (
+          <p className="footnote">
+            A monitored support contact has not been configured for this build, so NinFit does not
+            claim a response time or show a contact address here.
+          </p>
+        )}
+
+        <p className="footnote">Build to quote in a support request: {build.fingerprint}</p>
       </Section>
 
       <Section title="About" defaultOpen={false}>
