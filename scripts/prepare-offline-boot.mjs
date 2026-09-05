@@ -1,14 +1,32 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, posix } from 'node:path';
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { join, posix, relative, sep } from 'node:path';
 
 const root = process.cwd();
 const distRoot = join(root, 'dist');
 const viteManifestPath = join(distRoot, '.vite', 'manifest.json');
 const indexPath = join(distRoot, 'index.html');
 const outputPath = join(distRoot, 'offline-assets.json');
+const stablePublicDirs = ['mascots', 'egg'];
 
 function fail(message) {
   throw new Error(`[offline-boot] ${message}`);
+}
+
+function addDirectoryFiles(directory, assetPaths) {
+  if (!existsSync(directory)) return;
+
+  for (const entry of readdirSync(directory)) {
+    const fullPath = join(directory, entry);
+    const info = statSync(fullPath);
+    if (info.isDirectory()) {
+      addDirectoryFiles(fullPath, assetPaths);
+      continue;
+    }
+    if (!info.isFile()) continue;
+
+    const relativePath = relative(distRoot, fullPath).split(sep).join('/');
+    assetPaths.add(`/${posix.normalize(relativePath)}`);
+  }
 }
 
 if (!existsSync(viteManifestPath)) fail('Vite build manifest is missing');
@@ -28,8 +46,12 @@ for (const entry of Object.values(viteManifest)) {
   }
 }
 
+for (const directory of stablePublicDirs) {
+  addDirectoryFiles(join(distRoot, directory), assetPaths);
+}
+
 const assets = [...assetPaths].sort();
-if (assets.length === 0) fail('Vite manifest produced no boot assets');
+if (assets.length === 0) fail('offline manifest produced no assets');
 
 for (const asset of assets) {
   const diskPath = join(distRoot, asset.replace(/^\//, ''));
@@ -48,9 +70,9 @@ for (const asset of indexBootAssets) {
 
 writeFileSync(
   outputPath,
-  `${JSON.stringify({ version: 1, assets }, null, 2)}\n`,
+  `${JSON.stringify({ version: 2, assets }, null, 2)}\n`,
   'utf8',
 );
 
-console.log(`Offline boot manifest: ${assets.length} built asset(s)`);
+console.log(`Offline asset manifest: ${assets.length} asset(s)`);
 for (const asset of assets) console.log(`  ${asset}`);
