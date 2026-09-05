@@ -1,16 +1,16 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 import { getAppContext } from '../../app/bootstrap';
+import { isLaunchMainGoalOption, recommendLaunchPath } from '../../app/launchPathRecommendation';
 import { EggArt } from '../components/EggArt';
 import { HatchCompanionMedia } from '../components/HatchCompanionMedia';
 import { useHatchCinematic } from '../hooks/useHatchCinematic';
 import { crackStageForProgress } from '../../domain/game/egg';
-import { FITNESS_PATHS, FITNESS_STAGE_LABELS, findPath } from '../../domain/game/paths';
+import { LAUNCH_FITNESS_PATHS, FITNESS_STAGE_LABELS, findPath } from '../../domain/game/paths';
 import {
   isReadyToRecommend,
   isRequiredQuestion,
   onboardingStages,
   prefillFromExistingData,
-  recommendPath,
   stageProgress,
   type OnboardingQuestion,
 } from '../../domain/game/onboarding';
@@ -61,6 +61,9 @@ function QuestionStage({
 }) {
   const current = readAnswer(answers, question.id);
   const headingId = `q-${question.id}`;
+  const options = (question.options ?? []).filter(
+    (option) => question.id !== 'mainGoal' || isLaunchMainGoalOption(option.value),
+  );
 
   return (
     <section className="step__panel">
@@ -82,7 +85,7 @@ function QuestionStage({
         />
       ) : (
         <div className="step__options" role="group" aria-labelledby={headingId}>
-          {(question.options ?? []).map((option) => {
+          {options.map((option) => {
             const selected =
               question.kind === 'multi'
                 ? Array.isArray(current) && current.includes(option.value)
@@ -142,7 +145,10 @@ export function OnboardingScreen({
   const progress = stageProgress(stages, safeIndex);
 
   const ready = isReadyToRecommend(answers);
-  const recommendation = useMemo(() => (ready ? recommendPath(answers) : undefined), [answers, ready]);
+  const recommendation = useMemo(
+    () => (ready ? recommendLaunchPath(answers) : undefined),
+    [answers, ready],
+  );
 
   const setAnswer = (id: string, value: unknown) => {
     setAnswers((current) => {
@@ -304,7 +310,7 @@ export function OnboardingScreen({
 
             {showAllPaths ? (
               <ul className="step__paths">
-                {FITNESS_PATHS.filter((path) => path.id !== finalPathId).map((path) => (
+                {LAUNCH_FITNESS_PATHS.filter((path) => path.id !== finalPathId).map((path) => (
                   <li className="surface step__path" key={path.id}>
                     <h2 className="onboard__path">{path.name}</h2>
                     <p className="footnote">{path.summary}</p>
