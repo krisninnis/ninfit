@@ -1,5 +1,6 @@
 import { lazy, Suspense, useMemo } from 'react';
 import { getAppContext } from '../../app/bootstrap';
+import { RegionErrorBoundary } from '../components/RegionErrorBoundary';
 import { journeyTrustedRouteSegments } from '../../domain/journeyRouteSegments';
 import { loadJourneyHistory } from '../../storage/journeyHistory';
 import {
@@ -109,20 +110,28 @@ export function JourneyDetailScreen({
 
         {drawableRoute ? (
           <div className="journey-detail__map-frame">
-            <Suspense
+            <RegionErrorBoundary
               fallback={
-                <div className="journey-detail__map-message" role="status" aria-live="polite">
-                  Loading saved route...
+                <div className="journey-detail__map-message" role="status">
+                  The saved Journey is still available without the map.
                 </div>
               }
             >
-              <ActiveJourneyMap
-                journey={journey}
-                ariaLabel="Map of this saved Journey's private trusted route"
-                unavailableMessage="The saved Journey is still available without the map."
-                view="overview"
-              />
-            </Suspense>
+              <Suspense
+                fallback={
+                  <div className="journey-detail__map-message" role="status" aria-live="polite">
+                    Loading saved route...
+                  </div>
+                }
+              >
+                <ActiveJourneyMap
+                  journey={journey}
+                  ariaLabel="Map of this saved Journey's private trusted route"
+                  unavailableMessage="The saved Journey is still available without the map."
+                  view="overview"
+                />
+              </Suspense>
+            </RegionErrorBoundary>
           </div>
         ) : (
           <div className="journey-detail__map-message">
