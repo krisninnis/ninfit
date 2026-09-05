@@ -7,11 +7,28 @@ function fakeResponse(status = 200): Response {
   return new Response('', { status });
 }
 
+type RecordedFetch = readonly [RequestInfo | URL, RequestInit | undefined];
+
+function recordingFetch() {
+  const calls: RecordedFetch[] = [];
+  const send = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    calls.push([input, init]);
+    return fakeResponse();
+  });
+  return { send, calls };
+}
+
+function firstFetch(calls: RecordedFetch[]): RecordedFetch {
+  const call = calls.at(0);
+  if (call === undefined) throw new Error('Expected one telemetry fetch');
+  return call;
+}
+
 describe('PostHog EU telemetry transport', () => {
   it('sends an anonymous analytics event with only the closed event payload', async () => {
     const store = createMemoryStorageAdapter();
     setTelemetryEnabled(store, true);
-    const send = vi.fn(async () => fakeResponse());
+    const { send, calls } = recordingFetch();
     const transport = createPostHogTransport({
       projectToken: 'phc_public_test',
       store,
@@ -25,7 +42,7 @@ describe('PostHog EU telemetry transport', () => {
     });
 
     expect(send).toHaveBeenCalledTimes(1);
-    const [url, init] = send.mock.calls[0];
+    const [url, init] = firstFetch(calls);
     expect(url).toBe('https://eu.i.posthog.com/i/v0/e/');
     expect(init?.method).toBe('POST');
     expect(JSON.parse(String(init?.body))).toEqual({
@@ -43,7 +60,7 @@ describe('PostHog EU telemetry transport', () => {
   it('sends scrubbed crash diagnostics outside the six analytics event names', async () => {
     const store = createMemoryStorageAdapter();
     setTelemetryEnabled(store, true);
-    const send = vi.fn(async () => fakeResponse());
+    const { send, calls } = recordingFetch();
     const transport = createPostHogTransport({
       projectToken: 'phc_public_test',
       store,
@@ -56,7 +73,8 @@ describe('PostHog EU telemetry transport', () => {
       stack: 'Error\nat save (https://ninfit.app/assets/index.js:10:4)',
     });
 
-    expect(JSON.parse(String(send.mock.calls[0][1]?.body))).toEqual({
+    const [, init] = firstFetch(calls);
+    expect(JSON.parse(String(init?.body))).toEqual({
       api_key: 'phc_public_test',
       event: 'ninfit_crash',
       distinct_id: 'device-random-id',
@@ -70,7 +88,7 @@ describe('PostHog EU telemetry transport', () => {
 
   it('does not create an ID or request before opt-in', async () => {
     const store = createMemoryStorageAdapter();
-    const send = vi.fn(async () => fakeResponse());
+    const { send } = recordingFetch();
     const createId = vi.fn(() => 'should-not-exist');
     const transport = createPostHogTransport({
       projectToken: 'phc_public_test',
@@ -89,7 +107,7 @@ describe('PostHog EU telemetry transport', () => {
   it('fails closed when the public project token is absent', async () => {
     const store = createMemoryStorageAdapter();
     setTelemetryEnabled(store, true);
-    const send = vi.fn(async () => fakeResponse());
+    const { send } = recordingFetch();
     const transport = createPostHogTransport({
       projectToken: '',
       store,
