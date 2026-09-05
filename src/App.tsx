@@ -25,6 +25,7 @@ import { useGame } from './ui/hooks/useGame';
 import { visibleMascotFamily } from './domain/game/mascot';
 import { mascotStageArt } from './ui/mascotStageArt';
 import { applyThemePreference } from './ui/theme';
+import { setTelemetryEnabled, telemetryEnabled } from './telemetry/preferences';
 import {
   ACCOUNT_HASH,
   DATA_HASH,
@@ -53,11 +54,12 @@ export default function App() {
     parseRouteFromHash(window.location.hash),
   );
   const mainRef = useRef<HTMLElement>(null);
+  const store = useMemo(() => getAppContext().adapter, []);
   const game = useGame();
   const [dismissedOnboarding, setDismissedOnboarding] = useState(false);
   const [revealingCompanion, setRevealingCompanion] = useState(false);
+  const [diagnosticsEnabled, setDiagnosticsEnabled] = useState(() => telemetryEnabled(store));
 
-  const store = useMemo(() => getAppContext().adapter, []);
   const [introDone, setIntroDone] = useState(
     () =>
       !shouldPlayIntro({
@@ -84,6 +86,11 @@ export default function App() {
   const navigate = (hash: string) => {
     window.location.hash = hash;
     setRoute(parseRouteFromHash(hash));
+  };
+
+  const changeDiagnostics = (enabled: boolean) => {
+    const persisted = setTelemetryEnabled(store, enabled);
+    setDiagnosticsEnabled(persisted ? enabled : false);
   };
 
   if (!introDone) {
@@ -145,9 +152,6 @@ export default function App() {
       ? 'profile'
       : screenTab;
   const showPrimaryNav = route.kind === 'tab' || showJourneyHome || showData;
-  // One boundary identity per destination. Changing route remounts the boundary, so
-  // leaving a failed screen and coming back is a real retry rather than a fallback
-  // that sticks for the rest of the session.
   const screenKey = route.kind === 'tab' ? `tab:${route.tab}` : route.kind;
   const backdropId = showData
     ? 'data'
@@ -203,6 +207,8 @@ export default function App() {
             ) : screenTab === 'settings' ? (
               <SettingsScreen
                 settings={game.settings}
+                diagnosticsEnabled={diagnosticsEnabled}
+                onDiagnosticsChange={changeDiagnostics}
                 onSettingsChange={game.updateSettings}
                 onOpenData={() => navigate(DATA_HASH)}
               />

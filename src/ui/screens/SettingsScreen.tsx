@@ -4,12 +4,16 @@ import type {
   SocialMode,
   ThemePreference,
 } from '../../domain/game/types';
+import { supportEnv } from '../../config/support';
 import { Section, SelectField, Toggle } from '../components/Field';
 import { Screen } from '../components/Screen';
 import { currentAppBuildInfo } from '../buildInfo';
+import { buildSupportMailto, LOST_DATA_GUIDANCE } from '../support';
 
 interface SettingsScreenProps {
   settings: GameSettings;
+  diagnosticsEnabled: boolean;
+  onDiagnosticsChange: (enabled: boolean) => void;
   onSettingsChange: (patch: Partial<GameSettings>) => void;
   onOpenData: () => void;
 }
@@ -41,6 +45,8 @@ const SOCIAL_MODES: ReadonlyArray<{ value: SocialMode; label: string }> = [
 
 export function SettingsScreen({
   settings,
+  diagnosticsEnabled,
+  onDiagnosticsChange,
   onSettingsChange,
   onOpenData,
 }: SettingsScreenProps) {
@@ -109,32 +115,32 @@ export function SettingsScreen({
           label="Personal challenges"
           checked={settings.challenges.personal}
           onChange={(personal) =>
-            onSettingsChange({
-              challenges: { ...settings.challenges, personal },
-            })
+            onSettingsChange({ challenges: { ...settings.challenges, personal } })
           }
         />
         <Toggle
           label="Friend challenges"
           checked={settings.challenges.friends}
           onChange={(friends) =>
-            onSettingsChange({
-              challenges: { ...settings.challenges, friends },
-            })
+            onSettingsChange({ challenges: { ...settings.challenges, friends } })
           }
         />
         <Toggle
           label="Community challenges"
           checked={settings.challenges.community}
           onChange={(community) =>
-            onSettingsChange({
-              challenges: { ...settings.challenges, community },
-            })
+            onSettingsChange({ challenges: { ...settings.challenges, community } })
           }
         />
       </Section>
 
       <Section title="Data & privacy">
+        <Toggle
+          label="Share basic app diagnostics"
+          hint="Optional. Sends only six basic app-use events and scrubbed crash diagnostics — never health data, measurements, routes, GPS points or notes."
+          checked={diagnosticsEnabled}
+          onChange={onDiagnosticsChange}
+        />
         <p className="settings__section-copy">
           Back up, export, restore, and review data stored by NinFit on this device.
         </p>
@@ -150,8 +156,43 @@ export function SettingsScreen({
           <span aria-hidden="true">→</span>
         </button>
         <p className="footnote">
-          NinFit remains local-first. Nothing here uploads your fitness history.
+          NinFit remains local-first. Your fitness history is never uploaded by this setting.
         </p>
+      </Section>
+
+      <Section title="Help & support" defaultOpen={false}>
+        <h2 className="control__label">Lost your data?</h2>
+        <p className="settings__section-copy">{LOST_DATA_GUIDANCE}</p>
+
+        {supportEnv !== null ? (
+          <>
+            <p className="settings__section-copy">
+              Need help with NinFit? Email <strong>{supportEnv.email}</strong>. We aim to{' '}
+              {supportEnv.responseCommitment}.
+            </p>
+            <a
+              className="btn btn--secondary btn--block settings__destination"
+              href={buildSupportMailto(supportEnv, build)}
+            >
+              <span>
+                <strong>Email support</strong>
+                <small>Your app version and build are added to the draft automatically.</small>
+              </span>
+              <span aria-hidden="true">→</span>
+            </a>
+            <p className="footnote">
+              The draft includes release identity only. It does not attach your fitness history,
+              health notes or Journey route.
+            </p>
+          </>
+        ) : (
+          <p className="footnote">
+            A monitored support contact has not been configured for this build, so NinFit does not
+            claim a response time or show a contact address here.
+          </p>
+        )}
+
+        <p className="footnote">Build to quote in a support request: {build.fingerprint}</p>
       </Section>
 
       <Section title="About" defaultOpen={false}>
