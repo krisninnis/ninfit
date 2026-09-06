@@ -4,6 +4,10 @@ import type {
   SocialMode,
   ThemePreference,
 } from '../../domain/game/types';
+import {
+  WEARABLE_PROVIDERS,
+  wearableProviderIsConnectable,
+} from '../../domain/wearable/provider';
 import { Section, SelectField, Toggle } from '../components/Field';
 import { Screen } from '../components/Screen';
 import { currentAppBuildInfo } from '../buildInfo';
@@ -132,6 +136,50 @@ export function SettingsScreen({
             })
           }
         />
+      </Section>
+
+      {/*
+        CONNECTED DEVICES - AN HONEST LIST, NOT A SHOP WINDOW.
+
+        Every row here is a provider NinFit has a position on, and the position is
+        printed next to it. Nothing has a Connect button, because nothing can be
+        connected: a button that opens an authorisation NinFit cannot complete would
+        teach somebody their watch is nearly working, and they would go looking for
+        their heart rate in a Journey that will never have one.
+
+        The reviewed sentence for each provider lives in the registry, so this screen
+        cannot invent a friendlier one. `wearableProviderIsConnectable` is the single
+        gate on whether an action may ever appear beside a row - it answers false for
+        every provider today, and the day it answers true for one, the action arrives
+        for that one only.
+      */}
+      <Section title="Connected devices" defaultOpen={false}>
+        <p className="settings__section-copy">
+          NinFit records Journeys with this phone. Watches and health apps would add
+          heart rate, steps and sleep alongside that - none are connected.
+        </p>
+        <div className="stats">
+          {WEARABLE_PROVIDERS.map((provider) => (
+            <div className="stat stat--row" key={provider.id}>
+              <span className="stat__label">{provider.label}</span>
+              <span className="stat__value">
+                {wearableProviderIsConnectable(provider) ? 'Available' : 'Not connected'}
+              </span>
+            </div>
+          ))}
+        </div>
+        <ul className="settings__device-notes">
+          {WEARABLE_PROVIDERS.map((provider) => (
+            <li key={provider.id}>
+              <strong>{provider.label}</strong>
+              <span>{provider.status}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="footnote">
+          Connecting a device would be a separate decision from sharing anything. A
+          watch adding heart rate to a Journey does not make that Journey public.
+        </p>
       </Section>
 
       <Section title="Data & privacy">

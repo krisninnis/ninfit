@@ -21,6 +21,23 @@ export interface JourneyGpsRuntimeIds {
   distanceMetricId: string;
 }
 
+export interface JourneyObservationContinuityPolicy {
+  /**
+   * The longest silence between two accepted points that NinFit will still call one
+   * continuously observed run.
+   *
+   * A phone watcher offers a fix every one to a few seconds. A minute of nothing is
+   * not a slow walker - it is the app frozen behind a lock screen, a tunnel, a tab
+   * the browser suspended, or a watcher that quietly stopped. NinFit did not see that
+   * stretch of ground, so it must not later draw a line across it.
+   */
+  maxObservationGapSeconds: number;
+}
+
+export const DEFAULT_JOURNEY_OBSERVATION_CONTINUITY_POLICY: JourneyObservationContinuityPolicy = {
+  maxObservationGapSeconds: 60,
+};
+
 export interface JourneyGpsIngestOptions {
   /**
    * True when this sample is the first offered by a freshly started watcher run.
@@ -31,6 +48,17 @@ export interface JourneyGpsIngestOptions {
    * bad fix happened to arrive first.
    */
   startsNewSegment?: boolean;
+
+  /**
+   * How long a silence may be before the next accepted point is treated as the start
+   * of a NEW observed run rather than the continuation of the current one.
+   *
+   * This exists because the caller cannot always tell it stopped observing. A watcher
+   * that reports an error latches `startsNewSegment` itself; a page frozen by a lock
+   * screen reports nothing at all and simply resumes minutes later. The gap in the
+   * timestamps is then the only evidence there is, and it is enough.
+   */
+  continuity?: JourneyObservationContinuityPolicy;
 }
 
 function toPoint(sample: JourneyGpsSample): JourneyGpsPoint {
@@ -108,13 +136,22 @@ export function ingestJourneyGpsSample(
     return { accepted: false, journey, reason: quality.reason };
   }
 
+  const continuity = options.continuity ?? DEFAULT_JOURNEY_OBSERVATION_CONTINUITY_POLICY;
+
   let distanceAddedM = 0;
+  /*
+   * Whether the ground between the last accepted point and this one was WATCHED, which
+   * is a different question from whether both endpoints are trustworthy. Both can be
+   * perfectly good fixes with four minutes of unobserved walking between them.
+   */
+  let unobservedGap = false;
   if (previousSample) {
     const segment = evaluateJourneySegment(previousSample, sample);
     if (!segment.accepted) {
       return { accepted: false, journey, reason: segment.reason };
     }
     distanceAddedM = segment.distanceM;
+    unobservedGap = segment.elapsedSeconds > continuity.maxObservationGapSeconds;
   }
 
   const point = toPoint(sample);
@@ -132,7 +169,18 @@ export function ingestJourneyGpsSample(
     rawPoints: [...route.rawPoints, point],
     acceptedPoints: [...route.acceptedPoints, point],
   };
-  if (options.startsNewSegment === true) {
+  /*
+   * DISTANCE IS DELIBERATELY NOT AFFECTED BY THE GAP.
+   *
+   * The two questions are separate and get separate answers. "Did they move from here
+   * to there?" is answered by the speed gate above, which already refuses a teleport;
+   * the displacement across a real gap is honest evidence of movement and is the
+   * LOWEST distance that walk can have had, so dropping it would invent a shortfall
+   * exactly as surely as drawing the line would invent a path. "Did we watch them do
+   * it?" is answered here, and only presentation may read the answer.
+   */
+  const beginsObservedRun = options.startsNewSegment === true || unobservedGap;
+  if (beginsObservedRun) {
     nextRoute.segmentStarts = [...(route.segmentStarts ?? []), route.acceptedPoints.length];
   } else if (route.segmentStarts !== undefined) {
     nextRoute.segmentStarts = [...route.segmentStarts];

@@ -1,23 +1,48 @@
-import { useMemo } from 'react';
+import { lazy, Suspense, useMemo } from 'react';
 import { getAppContext } from '../../app/bootstrap';
 import { createJourneyLaunchController } from '../../app/journeyLaunchController';
 import { createDefaultGameSettings } from '../../domain/game/defaults';
 import { journeyCompanionMessage } from '../../domain/game/journeyCompanionContext';
 import { visibleMascotFamily } from '../../domain/game/mascot';
+import {
+  journeyIsFurthestOfType,
+  journeyPersonalResult,
+} from '../../domain/journeyPersonalResult';
+import { journeyCommunityResultState } from '../../domain/journeyPublicEligibility';
+import { journeyTrustedRouteSegments } from '../../domain/journeyRouteSegments';
+import { journeyStatistics } from '../../domain/journeyStatistics';
 import { loadJourneyHistory } from '../../storage/journeyHistory';
 import { journeyActivityFamilyForType } from '../journeyActivityFamilies';
 import { journeyCompanionPresence } from '../journeyCompanionPresentation';
-import { journeyActivityLabel, journeyDetailFacts } from '../journeyDetailPresentation';
-import { formatJourneyDistance, formatJourneyDuration } from '../journeyPresentation';
+import {
+  journeyActivityLabel,
+  journeyDetailFacts,
+  journeyPrivacyLabel,
+} from '../journeyDetailPresentation';
+import {
+  formatJourneyDistance,
+  formatJourneyDuration,
+  formatJourneyPace,
+} from '../journeyPresentation';
+import {
+  journeyCommunityResultLine,
+  journeyFurthestMarker,
+  journeyPersonalResultLine,
+} from '../journeyResultPresentation';
 import { mascotActivityArt } from '../mascotActivityArt';
 
+const ActiveJourneyMap = lazy(async () => {
+  const module = await import('../components/ActiveJourneyMap');
+  return { default: module.ActiveJourneyMap };
+});
+
 /**
- * The moment after Finish - and nothing more than a moment.
+ * The moment after Finish - the result of one outing, and nothing beyond it.
  *
- * WHAT THIS SCREEN IS. A calm bridge between the recorder stopping and the durable
- * record. It reads one Journey that has ALREADY been completed and persisted by
- * `journeyRecoveryController.complete`, and shows two facts from it. It is the last
- * step of an outing, not a second one.
+ * WHAT THIS SCREEN IS. A calm read of one Journey that has ALREADY been completed and
+ * persisted by `journeyRecoveryController.complete`. It shows what that Journey
+ * recorded, where it went, and how it sits against the person's own earlier efforts.
+ * It is the last step of an outing, not a second one.
  *
  * WHAT IT IS NOT, AND MUST NEVER BECOME.
  *
@@ -34,21 +59,41 @@ import { mascotActivityArt } from '../mascotActivityArt';
  * freshness claim, and it is why the date shown is the recorded completion time
  * rather than a relative phrase.
  *
- * THE TRUTH BOUNDARY.
+ * THE TRUTH BOUNDARY, AND WHY IT MOVED.
  *
- * Two numbers, both already computed by the same helpers Journey detail uses:
- * recorded distance and pause-aware active time. Nothing else. No personal best, no
- * fastest, no longest, no calories, no pace, no streak, no comparison to any other
- * Journey - none of which this app computes, and none of which presentation is
- * allowed to invent. A Journey with no distance observation says so plainly rather
- * than presenting a confident 0.00 km, because a zero that was never measured is a
- * fabricated fact wearing a number's clothes.
+ * The first version of this screen showed two numbers and deliberately refused
+ * everything else, because nothing in the app could work out anything else honestly.
+ * That is no longer the situation: `journeyStatistics` derives pace once from the
+ * recorded distance observation and the recorder's own pause-aware timeline, and
+ * `journeyPersonalResult` compares like with like against local history. So the rule
+ * has not changed - state only what the domain established - the domain simply
+ * establishes more than it did.
+ *
+ * Everything shown still arrives already decided. This file divides nothing, ranks
+ * nothing, and composes no sentence about anybody's performance: the wording comes
+ * from `journeyResultPresentation`, which is reviewed as product copy. A Journey with
+ * no distance observation still says so plainly rather than presenting a confident
+ * 0.00 km, because a zero that was never measured is a fabricated fact wearing a
+ * number's clothes - and a Journey with nothing to compare against is told it is a
+ * first effort rather than sold a personal best out of a set of one.
+ *
+ * THE ROUTE IS SHOWN TO ITS OWNER, ON THEIR OWN DEVICE, AND GOES NO FURTHER.
+ *
+ * The same private local view the saved Journey record already offers, drawn from the
+ * same trusted segments by the same component. `journeyTrustedRouteSegments` is the
+ * only route question asked, and it answers with the stretches NinFit actually
+ * watched - a Journey without that evidence gets a plain honest message instead of an
+ * invented line. Nothing here shares, uploads, masks or publishes: the disclosure
+ * projection belongs to the postcard path, and community standing is reported by
+ * `journeyCommunityResultState`, which today can only say that NinFit has no
+ * community routes at all.
  *
  * IT GRANTS NOTHING, AND SAYS NOTHING WAS GRANTED. Finishing a Journey does not
  * currently produce a reward: `deriveRewards` reads daily logs, weekly plans and
  * measurements, and cannot see a Journey at all. So there is no XP line, no trophy,
  * no badge and no reward presenter here. Adding one would mean either bypassing the
- * durable delivery queue or inventing a grant, and both are forbidden.
+ * durable delivery queue or inventing a grant, and both are forbidden. A personal
+ * ranking is a statement about recorded facts, not a prize.
  *
  * IT STARTS NOTHING. No geolocation, no watcher, no recorder, no launch controller
  * start. The only two ways out are the durable detail record and Journey Home.
@@ -123,6 +168,8 @@ export function JourneyCompletionScreen({
   }
 
   const facts = journeyDetailFacts(journey);
+  const statistics = journeyStatistics(journey);
+  const pace = formatJourneyPace(statistics.paceSecondsPerKm);
   const family = journeyActivityFamilyForType(journey.activityType);
   /*
    * Through the one boundary, never a path. `undefined` is the ordinary answer for
@@ -134,8 +181,25 @@ export function JourneyCompletionScreen({
       ? undefined
       : mascotActivityArt(mascot.id, family);
 
+  const startedAt = new Date(journey.startedAt);
   const completedAt = new Date(journey.endedAt ?? journey.startedAt);
   const hasDistance = facts.distanceM > 0;
+
+  /*
+   * The only route question this screen asks. A run of one point is not a line, and a
+   * Journey whose segmentation evidence is missing produces no runs at all - both
+   * cases land on the honest message rather than on a drawn shape.
+   */
+  const drawableRoute = journeyTrustedRouteSegments(journey).some(
+    (segment) => segment.length >= 2,
+  );
+
+  const personal = journeyPersonalResultLine(journeyPersonalResult(journey, history));
+  const furthest = journeyIsFurthestOfType(journey, history);
+  const community = journeyCommunityResultLine(journeyCommunityResultState(journey));
+
+  const clock = (value: Date) =>
+    value.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
   return (
     <section className="journey-completion" aria-labelledby="journey-completion-title">
@@ -156,32 +220,47 @@ export function JourneyCompletionScreen({
             month: 'long',
           })}
           {' · '}
-          {completedAt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+          {clock(startedAt)}–{clock(completedAt)}
         </p>
       </header>
 
       {/*
-        The companion, present rather than congratulating. The line comes from the
-        reviewed Journey table in the domain, which contains no streak, no score and
-        no praise for a number - and is allowed to be silent for the quiet
-        personality. The picture is decorative; the name beside it is the real answer
-        to "who is this".
+        WHERE THEY ACTUALLY WENT.
+
+        The same component, the same trusted segments and the same overview framing
+        the saved Journey record uses, so the shape here and the shape there cannot
+        disagree about one walk. It is lazy for the same reason detail's is: a map
+        engine is a large download, and a Journey with no drawable route never pays
+        for it.
       */}
-      {presence !== undefined ? (
-        <div className="journey-completion__companion">
-          <div className="journey-completion__portrait" data-art={art !== undefined ? 'true' : 'false'} aria-hidden="true">
-            {art !== undefined ? (
-              <img src={art.src} alt="" />
-            ) : (
-              <span className="journey-completion__portrait-mark">{presence.family.glyph}</span>
-            )}
+      <section className="journey-completion__route" aria-labelledby="journey-completion-route-title">
+        <h2 id="journey-completion-route-title" className="journey-completion__route-title">
+          Route
+        </h2>
+        {drawableRoute ? (
+          <div className="journey-completion__map-frame">
+            <Suspense
+              fallback={
+                <div className="journey-completion__map-message" role="status" aria-live="polite">
+                  Loading your route...
+                </div>
+              }
+            >
+              <ActiveJourneyMap
+                journey={journey}
+                ariaLabel="Map of the route recorded for this Journey"
+                unavailableMessage="This Journey is saved without the map."
+                view="overview"
+              />
+            </Suspense>
           </div>
-          <p className="journey-completion__companion-name">{presence.family.name}</p>
-          {companionLine !== undefined ? (
-            <p className="journey-completion__companion-line">{companionLine}</p>
-          ) : null}
-        </div>
-      ) : null}
+        ) : (
+          <div className="journey-completion__map-message">
+            No continuous route was recorded for this Journey.
+          </div>
+        )}
+        <p className="journey-completion__route-note">{journeyPrivacyLabel(journey)}</p>
+      </section>
 
       <dl className="journey-completion__facts">
         <div className="journey-completion__fact">
@@ -206,7 +285,68 @@ export function JourneyCompletionScreen({
           </dd>
           <dd className="journey-completion__unit">Pause-aware</dd>
         </div>
+        <div className="journey-completion__fact">
+          <dt>Average pace</dt>
+          {/*
+            `formatJourneyPace` answers null whenever the domain declined to state a
+            pace - too little distance, no active time, no observation at all - and
+            the em dash is what that looks like. This screen never fills the gap.
+          */}
+          <dd className="journey-completion__value">{pace ?? '—'}</dd>
+          <dd className="journey-completion__unit">
+            {pace === null ? 'Not enough recorded' : 'per km'}
+          </dd>
+        </div>
       </dl>
+
+      {/*
+        HOW IT SITS BESIDE THEIR OWN EARLIER OUTINGS.
+
+        Both blocks render whatever the domain answered, including the answers that
+        mean "nothing to say". An absent panel would let somebody assume a comparison
+        was made and quietly withheld; a stated "first recorded effort" tells them
+        exactly where they are.
+      */}
+      <section className="journey-completion__standings" aria-label="How this Journey compares">
+        <div className="journey-completion__standing">
+          <p className="journey-completion__standing-label">Personal result</p>
+          <p className="journey-completion__standing-value">{personal.value}</p>
+          <p className="journey-completion__standing-note">{personal.note}</p>
+          {furthest ? (
+            <p className="journey-completion__standing-extra">
+              {journeyFurthestMarker(journey.activityType)}
+            </p>
+          ) : null}
+        </div>
+        <div className="journey-completion__standing">
+          <p className="journey-completion__standing-label">Community result</p>
+          <p className="journey-completion__standing-value">{community.value}</p>
+          <p className="journey-completion__standing-note">{community.note}</p>
+        </div>
+      </section>
+
+      {/*
+        The companion, present rather than congratulating. The line comes from the
+        reviewed Journey table in the domain, which contains no streak, no score and
+        no praise for a number - and is allowed to be silent for the quiet
+        personality. The picture is decorative; the name beside it is the real answer
+        to "who is this".
+      */}
+      {presence !== undefined ? (
+        <div className="journey-completion__companion">
+          <div className="journey-completion__portrait" data-art={art !== undefined ? 'true' : 'false'} aria-hidden="true">
+            {art !== undefined ? (
+              <img src={art.src} alt="" />
+            ) : (
+              <span className="journey-completion__portrait-mark">{presence.family.glyph}</span>
+            )}
+          </div>
+          <p className="journey-completion__companion-name">{presence.family.name}</p>
+          {companionLine !== undefined ? (
+            <p className="journey-completion__companion-line">{companionLine}</p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="journey-completion__actions">
         <button type="button" className="btn btn--primary btn--block" onClick={onViewJourney}>
