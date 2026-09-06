@@ -11,6 +11,7 @@ import {
 } from '../../app/game';
 import type { DerivedFacts } from '../../domain/game/rewards';
 import type { FitnessPathId, GameSettings, GameState } from '../../domain/game/types';
+import { telemetry } from '../../telemetry/runtime';
 
 /**
  * The game layer, as the screens see it.
@@ -57,7 +58,11 @@ export function useGame(): GameHook {
   const refresh = useCallback(() => setRevision((value) => value + 1), []);
 
   const hatch = useCallback(() => {
-    hatchEggNow(repository);
+    const before = repository.getGameState()?.mascot.eggState;
+    const next = hatchEggNow(repository);
+    if (before !== 'hatched' && next.mascot.eggState === 'hatched') {
+      telemetry().capture({ name: 'hatch_completed' });
+    }
     refresh();
   }, [repository, refresh]);
 
@@ -77,6 +82,7 @@ export function useGame(): GameHook {
   const completeOnboardingAndRefresh = useCallback(
     (input: FinishOnboardingInput) => {
       finishOnboarding(repository, input);
+      telemetry().capture({ name: 'onboarding_completed' });
       refresh();
     },
     [repository, refresh],

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import { registerServiceWorker } from './pwa/registerServiceWorker';
 import { getAppContext } from './app/bootstrap';
+import { startTelemetry } from './telemetry/bootstrap';
 import { applyThemePreference } from './ui/theme';
 import './styles/index.css';
 
@@ -12,6 +13,7 @@ if (!rootElement) {
 }
 
 applyThemePreference(getAppContext().repository.getGameSettings()?.theme ?? 'system');
+startTelemetry();
 
 createRoot(rootElement).render(
   <StrictMode>

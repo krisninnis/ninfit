@@ -11,6 +11,7 @@ import type { ActiveJourneyGpsSession } from '../../app/activeJourneyGpsSession'
 import { createJourneyRecoveryController } from '../../app/journeyRecoveryController';
 import { journeyActiveSeconds, type Journey } from '../../domain/journey';
 import type { ISODateTime } from '../../domain/types';
+import { telemetry } from '../../telemetry/runtime';
 import {
   formatJourneyDistance,
   formatJourneyDuration,
@@ -196,6 +197,7 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     setJourney(next);
     setGpsState('finished');
     setNow(changedAt);
+    telemetry().capture({ name: 'journey_completed' });
     onCompleted?.(next.id);
   };
 
