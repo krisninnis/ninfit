@@ -146,10 +146,18 @@ describe('distance and time come from the existing Journey facts', () => {
     expect(code).toContain('formatJourneyDuration(facts.activeSeconds)');
   });
 
-  it('computes no distance and no duration of its own', () => {
+  it('computes no distance, duration or pace of its own', () => {
     const code = strip(completion);
     expect(code).not.toMatch(/distanceBetween|haversine|rawPoints|acceptedPoints/);
     expect(code).not.toMatch(/Date\.now\(\)|setInterval|elapsed\s*=|\/\s*1000/);
+    /*
+     * Pace is a division, and a division written on a screen is how two screens end
+     * up disagreeing about one walk. `journeyStatistics` performs it once; this file
+     * may only format what came back.
+     */
+    expect(code).toContain('journeyStatistics(journey)');
+    expect(code).toContain('formatJourneyPace(statistics.paceSecondsPerKm)');
+    expect(code).not.toMatch(/paceSecondsPerKm\s*=|secondsPerKm\s*\/|distanceM\s*\//);
   });
 
   it('keeps active time pause-aware', () => {
@@ -213,12 +221,47 @@ describe('the completion moment starts no recorder and no GPS', () => {
 // --- H. Route and privacy rules are untouched -------------------------------
 
 describe('route and privacy truth is left where it is', () => {
-  it('does not read, draw, mask or restate the route', () => {
+  /*
+   * WHAT CHANGED HERE, AND WHY IT IS NOT A RELAXATION.
+   *
+   * The first version of this screen drew no route at all, because it had nothing to
+   * say about one and the safest way to say nothing is to hold no route code. It now
+   * shows the person their own walk, on their own device, through the component the
+   * saved Journey record already uses.
+   *
+   * The rule it must still obey is unchanged and is what these guards now pin: the
+   * screen may read the TRUSTED route - the stretches NinFit actually watched - and
+   * may not touch the disclosure path. Masking, privacy projection and anything that
+   * prepares route geometry to leave the device belong to the postcard, and a
+   * completion screen that learned to mask a route would be a completion screen one
+   * edit away from publishing one.
+   */
+  it('draws the private local route through the same component the saved record uses', () => {
+    const code = strip(completion);
+    expect(code).toContain('journeyTrustedRouteSegments(journey)');
+    expect(code).toContain('ActiveJourneyMap');
+    expect(code).toContain("view=\"overview\"");
+    // Lazy, exactly as detail is: a Journey with no drawable route never pays for a
+    // map engine.
+    expect(code).toContain("import('../components/ActiveJourneyMap')");
+  });
+
+  it('refuses to draw a line it cannot prove, and says so instead', () => {
+    const code = strip(completion);
+    expect(code).toContain('segment.length >= 2');
+    expect(code).toContain('No continuous route was recorded for this Journey.');
+    // Never the raw point list, which carries no evidence about continuity.
+    expect(code).not.toMatch(/acceptedPoints|rawPoints/);
+  });
+
+  it('cannot mask, project or publish the route', () => {
     const code = strip(completion);
     expect(code).not.toMatch(
-      /journeyTrustedRouteSegments|journeyRoutePrivacy|maskSensitiveStartEnd|preciseRouteCloudSync|ActiveJourneyMap|JourneyRouteMap/,
+      /journeyRoutePrivacy|projectJourneyRouteForDisclosure|maskSensitiveStartEnd|preciseRouteCloudSync/,
     );
-    expect(code).not.toMatch(/journey\.route|journey\.privacy|visibility/);
+    // Privacy is REPORTED through the reviewed label, never decided or edited here.
+    expect(code).toContain('journeyPrivacyLabel(journey)');
+    expect(code).not.toMatch(/privacy\s*[:=]|visibility\s*[:=]/);
   });
 
   it('preserves the saved privacy of a completed Journey', () => {
@@ -294,25 +337,37 @@ describe('the copy claims nothing the domain did not measure', () => {
   const literals = strip(completion).match(/'[^'\n]*'|"[^"\n]*"|>[^<>{}\n]+</g) ?? [];
   const copy = literals.join(' ').toLowerCase();
 
-  it('makes no personal-best, ranking or superlative claim', () => {
-    /*
-     * Word-bounded, not substring. "No distance recorded" is exactly the honest
-     * wording this slice needed, and a naive `record` ban would forbid the one
-     * sentence that keeps an unmeasured distance from becoming a number.
-     */
+  /*
+   * WHY THE SUPERLATIVE BAN MOVED RATHER THAN LOOSENED.
+   *
+   * This screen now reports where an effort places. The words for that are a product
+   * decision, so they live in `journeyResultPresentation` and are guarded there, in
+   * `journeyCompletedResultExperience.test.ts`, against the same list this test used
+   * to hold plus the shape of the claim itself.
+   *
+   * What is pinned HERE is the thing that keeps that guard meaningful: the screen
+   * composes no comparison sentence of its own. It asks, it renders, and it never
+   * interpolates a rank, a count or an activity into a phrase - which is exactly how
+   * a second, unreviewed vocabulary would appear.
+   */
+  it('composes no comparison sentence of its own', () => {
+    const code = strip(completion);
+    expect(code).toContain('journeyPersonalResultLine(journeyPersonalResult(journey, history))');
+    expect(code).toContain('journeyCommunityResultLine(journeyCommunityResultState(journey))');
+    expect(code).toContain('journeyFurthestMarker(journey.activityType)');
     for (const forbidden of [
       'personal best', 'personal record', 'new record', 'best ever', 'new best',
       'fastest', 'quickest', 'slowest', 'longest', 'furthest', 'farthest',
-      'faster than', 'further than', 'beat', 'streak', 'in a row',
+      'faster than', 'further than', 'beat', 'in a row',
     ]) {
       expect(copy, forbidden).not.toMatch(new RegExp(`\\b${forbidden}\\b`));
     }
   });
 
-  it('makes no calorie, pace or health-benefit claim', () => {
+  it('states no reward, no streak and no health benefit', () => {
     for (const forbidden of [
-      'calorie', 'kcal', 'burned', 'burnt', 'pace', 'min/km', 'heart rate',
-      'fitter', 'healthier', 'good for you',
+      'calorie', 'kcal', 'burned', 'burnt', 'heart rate',
+      'fitter', 'healthier', 'good for you', 'streak',
     ]) {
       expect(copy, forbidden).not.toContain(forbidden);
     }
