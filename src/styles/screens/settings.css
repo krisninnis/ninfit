@@ -72,6 +72,40 @@
     line-height: var(--ft-leading-normal);
   }
 
+  /*
+   * The connected-device notes. A definition list in spirit: the provider, then the
+   * one sentence saying where NinFit actually stands with it.
+   *
+   * `overflow-wrap` matters more than it looks here - these sentences are the longest
+   * unbroken strings on the Settings screen, and a 320px phone is where a status line
+   * would otherwise push the whole page sideways.
+   */
+  .settings__device-notes {
+    display: grid;
+    gap: var(--ft-space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .settings__device-notes li {
+    display: grid;
+    gap: var(--ft-space-1);
+    min-width: 0;
+  }
+
+  .settings__device-notes strong {
+    color: var(--ft-text-primary);
+    font-size: var(--ft-text-sm);
+  }
+
+  .settings__device-notes span {
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-xs);
+    line-height: var(--ft-leading-normal);
+    overflow-wrap: anywhere;
+  }
+
   .settings__destination {
     display: flex;
     align-items: center;
