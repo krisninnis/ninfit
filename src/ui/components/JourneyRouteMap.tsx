@@ -23,23 +23,35 @@ const ROUTE_CASING_LAYER = 'ninfit-journey-route-casing';
 const ROUTE_LAYER = 'ninfit-journey-route-line';
 const POSITION_LAYER = 'ninfit-journey-position-dot';
 
-const DEFAULT_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+/**
+ * OpenFreeMap's Liberty style gives NinFit a proper vector street map with labels and
+ * local context without shipping an API key. A production operator can swap the style
+ * through VITE_MAP_STYLE_URL without changing code. The older raster-tile override is
+ * retained for private/self-hosted deployments that already set VITE_MAP_TILE_URL.
+ */
+const DEFAULT_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
 const FALLBACK_WIDTH = 1000;
 const FALLBACK_HEIGHT = 640;
 const FALLBACK_PADDING = 54;
+const MAP_READY_TIMEOUT_MS = 4500;
 
-function tileUrl(): string {
-  const configured = import.meta.env.VITE_MAP_TILE_URL?.trim();
-  return configured || DEFAULT_TILE_URL;
+function configuredStyleUrl(): string | undefined {
+  const configured = import.meta.env.VITE_MAP_STYLE_URL?.trim();
+  return configured || undefined;
 }
 
-function baseStyle(): StyleSpecification {
+function configuredRasterTileUrl(): string | undefined {
+  const configured = import.meta.env.VITE_MAP_TILE_URL?.trim();
+  return configured || undefined;
+}
+
+function rasterStyle(tileUrl: string): StyleSpecification {
   return {
     version: 8,
     sources: {
-      osm: {
+      ninfitRaster: {
         type: 'raster',
-        tiles: [tileUrl()],
+        tiles: [tileUrl],
         tileSize: 256,
         maxzoom: 19,
         attribution:
@@ -55,10 +67,16 @@ function baseStyle(): StyleSpecification {
       {
         id: 'ninfit-map-base',
         type: 'raster',
-        source: 'osm',
+        source: 'ninfitRaster',
       },
     ],
   };
+}
+
+function mapStyle(): StyleSpecification | string {
+  const raster = configuredRasterTileUrl();
+  if (raster !== undefined) return rasterStyle(raster);
+  return configuredStyleUrl() ?? DEFAULT_STYLE_URL;
 }
 
 function addJourneyLayers(map: MapLibreMap, element: HTMLElement): void {
@@ -161,11 +179,12 @@ interface ProjectedRoute {
 }
 
 /**
- * Dependency-free projection used only when MapLibre itself cannot start.
+ * Dependency-free projection used when the real map cannot prove it rendered.
  *
- * A healthy MapLibre instance owns the visible route so geography and map imagery stay
- * in the same projection. The SVG exists solely as a last-resort record of the trusted
- * route when WebGL/map construction is unavailable on the device.
+ * The fallback is intentionally simple and local: it never asks a server for the
+ * route and it never invents a bridge between trusted route segments. It exists so a
+ * browser/WebGL/tile failure can degrade to "route line without basemap" rather than
+ * the blank rectangle found in the first real Samsung walk.
  */
 function projectedRoute(segments: JourneyGpsPoint[][]): ProjectedRoute {
   const drawable = segments.filter((segment) => segment.length >= 2);
@@ -220,7 +239,7 @@ function RouteFallback({ route }: { route: ProjectedRoute }) {
         inset: 0,
         width: '100%',
         height: '100%',
-        zIndex: 1,
+        zIndex: 2,
         pointerEvents: 'none',
       }}
     >
@@ -278,11 +297,12 @@ export function JourneyRouteMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const loadedRef = useRef(false);
+  const readyRef = useRef(false);
   const segmentsRef = useRef(segments);
   const latestPointRef = useRef(latestPoint);
   const lastCenteredAtRef = useRef<string | null>(null);
   const [mapUnavailable, setMapUnavailable] = useState(false);
-  const [imageryWarning, setImageryWarning] = useState(false);
+  const [fallbackVisible, setFallbackVisible] = useState(false);
   const fallback = useMemo(() => projectedRoute(segments), [segments]);
 
   segmentsRef.current = segments;
@@ -297,7 +317,7 @@ export function JourneyRouteMap({
       const startPoint = latestPointRef.current;
       map = new MapLibreMap({
         container,
-        style: baseStyle(),
+        style: mapStyle(),
         center: startPoint === null || startPoint === undefined
           ? [0, 20]
           : [startPoint.longitude, startPoint.latitude],
@@ -307,33 +327,60 @@ export function JourneyRouteMap({
       });
     } catch {
       setMapUnavailable(true);
+      setFallbackVisible(true);
       return undefined;
     }
 
     mapRef.current = map;
 
     const onLoad = () => {
-      addJourneyLayers(map, container);
-      loadedRef.current = true;
-      updateMapData(map, segmentsRef.current, latestPointRef.current);
+      try {
+        addJourneyLayers(map, container);
+        loadedRef.current = true;
+        updateMapData(map, segmentsRef.current, latestPointRef.current);
 
-      if (view === 'overview') {
-        fitOverview(map, segmentsRef.current);
-      } else {
-        const current = latestPointRef.current;
-        if (current !== null && current !== undefined) {
-          lastCenteredAtRef.current = current.recordedAt;
+        if (view === 'overview') {
+          fitOverview(map, segmentsRef.current);
+        } else {
+          const current = latestPointRef.current;
+          if (current !== null && current !== undefined) {
+            lastCenteredAtRef.current = current.recordedAt;
+          }
         }
+      } catch {
+        setFallbackVisible(true);
       }
     };
-    const onError = () => setImageryWarning(true);
 
+    const onIdle = () => {
+      readyRef.current = true;
+      setFallbackVisible(false);
+    };
+
+    const onError = () => setFallbackVisible(true);
+    const onContextLost = (event: Event) => {
+      event.preventDefault();
+      readyRef.current = false;
+      setFallbackVisible(true);
+    };
+
+    const canvas = map.getCanvas();
+    canvas.addEventListener('webglcontextlost', onContextLost);
     map.on('load', onLoad);
+    map.on('idle', onIdle);
     map.on('error', onError);
 
+    const readinessTimer = window.setTimeout(() => {
+      if (!readyRef.current) setFallbackVisible(true);
+    }, MAP_READY_TIMEOUT_MS);
+
     return () => {
+      window.clearTimeout(readinessTimer);
       loadedRef.current = false;
+      readyRef.current = false;
+      canvas.removeEventListener('webglcontextlost', onContextLost);
       map.off('load', onLoad);
+      map.off('idle', onIdle);
       map.off('error', onError);
       map.remove();
       if (mapRef.current === map) mapRef.current = null;
@@ -395,7 +442,8 @@ export function JourneyRouteMap({
       style={{ position: 'relative', overflow: 'hidden' }}
     >
       <div ref={containerRef} aria-hidden="true" style={{ position: 'absolute', inset: 0 }} />
-      {imageryWarning ? (
+      {fallbackVisible ? <RouteFallback route={fallback} /> : null}
+      {fallbackVisible ? (
         <div
           role="status"
           aria-live="polite"
@@ -412,7 +460,7 @@ export function JourneyRouteMap({
             fontSize: 12,
           }}
         >
-          Map imagery unavailable — your recorded route remains visible.
+          Map detail is unavailable — your recorded route is still shown.
         </div>
       ) : null}
     </div>
