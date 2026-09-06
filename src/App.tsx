@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import { TabBar } from './ui/components/TabBar';
+import { ScreenErrorBoundary } from './ui/components/ScreenErrorBoundary';
 import { OnboardingScreen } from './ui/screens/OnboardingScreen';
 import { NinFitIdScreen } from './ui/screens/NinFitIdScreen';
 import { DataScreen } from './ui/screens/DataScreen';
@@ -144,6 +145,10 @@ export default function App() {
       ? 'profile'
       : screenTab;
   const showPrimaryNav = route.kind === 'tab' || showJourneyHome || showData;
+  // One boundary identity per destination. Changing route remounts the boundary, so
+  // leaving a failed screen and coming back is a real retry rather than a fallback
+  // that sticks for the rest of the session.
+  const screenKey = route.kind === 'tab' ? `tab:${route.tab}` : route.kind;
   const backdropId = showData
     ? 'data'
     : tab === 'journey'
@@ -156,53 +161,55 @@ export default function App() {
 
       <div className={`app${showActiveJourney ? ' app--journey' : ''}`} data-path={game.state.pathId}>
         <main className="app__main" ref={mainRef}>
-          {showNinFitId ? (
-            <NinFitIdScreen
-              returningFromConfirmation={route.confirmed}
-              onSkip={() => navigate(hashForTab('today'))}
-            />
-          ) : showData ? (
-            <DataScreen onClose={() => navigate(hashForTab('settings'))} />
-          ) : showActiveJourney ? (
-            <ActiveJourneyScreen
-              onClose={() => navigate(JOURNEY_HASH)}
-              onCompleted={(journeyId) => navigate(journeyCompleteHash(journeyId))}
-            />
-          ) : showJourneyComplete ? (
-            <JourneyCompletionScreen
-              journeyId={route.journeyId}
-              onViewJourney={() => navigate(journeyDetailHash(route.journeyId))}
-              onClose={() => navigate(JOURNEY_HASH)}
-            />
-          ) : showJourneyDetail ? (
-            <JourneyDetailScreen
-              journeyId={route.journeyId}
-              onClose={() => navigate(JOURNEY_HASH)}
-              onPreviewPostcard={() => navigate(journeyPostcardHash(route.journeyId))}
-            />
-          ) : showJourneyPostcard ? (
-            <JourneyPostcardScreen
-              journeyId={route.journeyId}
-              onClose={() => navigate(journeyDetailHash(route.journeyId))}
-            />
-          ) : showJourneyLaunch ? (
-            <JourneyLaunchScreen
-              family={route.family}
-              onClose={() => navigate(JOURNEY_HASH)}
-            />
-          ) : showJourneyHome ? (
-            <JourneyScreen />
-          ) : showPassport ? (
-            <PassportScreen onClose={() => navigate(hashForTab('profile'))} />
-          ) : screenTab === 'settings' ? (
-            <SettingsScreen
-              settings={game.settings}
-              onSettingsChange={game.updateSettings}
-              onOpenData={() => navigate(DATA_HASH)}
-            />
-          ) : (
-            CurrentScreen ? <CurrentScreen /> : null
-          )}
+          <ScreenErrorBoundary key={screenKey} homeHash={hashForTab('today')}>
+            {showNinFitId ? (
+              <NinFitIdScreen
+                returningFromConfirmation={route.confirmed}
+                onSkip={() => navigate(hashForTab('today'))}
+              />
+            ) : showData ? (
+              <DataScreen onClose={() => navigate(hashForTab('settings'))} />
+            ) : showActiveJourney ? (
+              <ActiveJourneyScreen
+                onClose={() => navigate(JOURNEY_HASH)}
+                onCompleted={(journeyId) => navigate(journeyCompleteHash(journeyId))}
+              />
+            ) : showJourneyComplete ? (
+              <JourneyCompletionScreen
+                journeyId={route.journeyId}
+                onViewJourney={() => navigate(journeyDetailHash(route.journeyId))}
+                onClose={() => navigate(JOURNEY_HASH)}
+              />
+            ) : showJourneyDetail ? (
+              <JourneyDetailScreen
+                journeyId={route.journeyId}
+                onClose={() => navigate(JOURNEY_HASH)}
+                onPreviewPostcard={() => navigate(journeyPostcardHash(route.journeyId))}
+              />
+            ) : showJourneyPostcard ? (
+              <JourneyPostcardScreen
+                journeyId={route.journeyId}
+                onClose={() => navigate(journeyDetailHash(route.journeyId))}
+              />
+            ) : showJourneyLaunch ? (
+              <JourneyLaunchScreen
+                family={route.family}
+                onClose={() => navigate(JOURNEY_HASH)}
+              />
+            ) : showJourneyHome ? (
+              <JourneyScreen />
+            ) : showPassport ? (
+              <PassportScreen onClose={() => navigate(hashForTab('profile'))} />
+            ) : screenTab === 'settings' ? (
+              <SettingsScreen
+                settings={game.settings}
+                onSettingsChange={game.updateSettings}
+                onOpenData={() => navigate(DATA_HASH)}
+              />
+            ) : (
+              CurrentScreen ? <CurrentScreen /> : null
+            )}
+          </ScreenErrorBoundary>
         </main>
 
         {showPrimaryNav ? (

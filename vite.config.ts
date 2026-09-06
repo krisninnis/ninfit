@@ -16,6 +16,11 @@ export default defineConfig({
   // Relative base keeps the built app portable (any host, any sub-path).
   base: './',
   plugins: [react()],
+  build: {
+    // M3 offline cold-start consumes Vite's authoritative build graph after the
+    // production build, rather than guessing hashed filenames in the service worker.
+    manifest: true,
+  },
   server: {
     host: true,
     port: 5173,
