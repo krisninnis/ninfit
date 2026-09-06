@@ -33,11 +33,25 @@
   font-size: var(--ft-text-sm);
 }
 
+/**
+ * A quiet action still has to be reachable with a thumb.
+ *
+ * "Clear" reads as 47x26 on a phone. It stays that size visually - it must not
+ * compete with the field it sits beside - and the pseudo-element carries the 44px
+ * target instead, so nothing in `.control__head` moves.
+ */
 .control__clear {
+  position: relative;
   padding: 4px 8px;
   color: var(--ft-text-tertiary);
   font-size: var(--ft-text-xs);
   text-decoration: underline;
+}
+
+.control__clear::after {
+  content: '';
+  position: absolute;
+  inset: -9px -6px;
 }
 
 .control__readout {
@@ -253,6 +267,16 @@
   background: var(--ft-surface-sunken);
 }
 
+/**
+ * The focus ring belongs to the framed control, not to the bare input inside it.
+ *
+ * This rule used to be an unconditional `outline: none`, which sits in the
+ * `components` layer and therefore beat the global `:focus-visible` outline in
+ * `base` no matter how specific that was. Every field wearing this class - the
+ * Profile name, birth year, sex, height and programme dates, and the Settings
+ * companion-voice select - had no visible focus at all. Keyboard and switch users
+ * could not see which field they were in.
+ */
 .numberfield__input {
   flex: 1 1 auto;
   width: 100%;
@@ -260,7 +284,15 @@
   border: none;
   background: transparent;
   font-size: var(--ft-text-lg);
+}
+
+.numberfield__input:focus-visible {
   outline: none;
+}
+
+.numberfield:focus-within {
+  border-color: var(--ft-accent);
+  box-shadow: 0 0 0 3px var(--ft-accent-soft);
 }
 
 /* Spinners waste width and invite mis-taps on a phone. */
