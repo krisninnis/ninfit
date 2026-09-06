@@ -6,9 +6,16 @@
  * the screen's job is to acknowledge that and get out of the way, and anything that
  * performs excitement at them would be the app congratulating itself.
  *
- * TWO FACTS, LARGE. Distance and active time carry the weight because they are the
- * only things here that are true, measured and theirs. Everything else - the date,
- * the companion, the note - is quiet around them.
+ * THE ROUTE, THEN THE FACTS. The map is the first thing below the title because it
+ * is the thing the walk actually was; the numbers describe it. Distance, active time
+ * and pace carry the weight because they are the things here that are true, measured
+ * and theirs. Everything else - the date, the standings, the companion, the note - is
+ * quiet around them.
+ *
+ * THE STANDINGS ARE TYPE, NOT TROPHIES. A personal result is set as a sentence in a
+ * plain panel: no medal, no podium, no ribbon, no accent-coloured "1st". A first
+ * effort and a fifth-fastest one are given exactly the same visual weight, because
+ * treating one as a celebration makes the other a punishment.
  *
  * NO MOTION IS DECLARED. Not "motion that respects reduced-motion" - none at all, so
  * the screen is already complete and calm on first paint for everyone. That is why
@@ -129,13 +136,81 @@
     text-wrap: balance;
   }
 
-  /* --- The two facts ------------------------------------------------------ */
+  /* --- The route ---------------------------------------------------------- */
+
+  .journey-completion__route {
+    display: grid;
+    gap: var(--ft-space-2);
+  }
+
+  .journey-completion__route-title {
+    margin: 0;
+    font-size: var(--ft-text-xs);
+    font-weight: var(--ft-weight-semibold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ft-text-secondary);
+  }
+
+  /*
+   * A fixed aspect box rather than a fixed height, so the same frame is a sensible
+   * shape at 320px and at 430px without a media query per width. `position: relative`
+   * is load-bearing: the map fills its container with `position: absolute; inset: 0`,
+   * and without a positioned ancestor here it would escape to the page.
+   */
+  .journey-completion__map-frame {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    min-height: 220px;
+    border: 1px solid var(--ft-border-subtle);
+    border-radius: var(--ft-radius-lg);
+    background: color-mix(in srgb, var(--ft-surface-sunken) 82%, transparent);
+  }
+
+  .journey-completion__map-message {
+    display: grid;
+    place-items: center;
+    padding: var(--ft-space-5);
+    min-height: 120px;
+    border: 1px dashed var(--ft-border-subtle);
+    border-radius: var(--ft-radius-lg);
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-sm);
+    text-align: center;
+    text-wrap: balance;
+  }
+
+  .journey-completion__map-frame .journey-completion__map-message {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    background: var(--ft-surface-page);
+  }
+
+  .journey-completion__route-note {
+    margin: 0;
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-xs);
+  }
+
+  /* --- The measured facts -------------------------------------------------- */
 
   .journey-completion__facts {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--ft-space-3);
     margin: 0;
+  }
+
+  /*
+   * Three facts in a two-column grid leaves an orphan, so the third takes the whole
+   * row rather than sitting in a half-width box beside a gap. At the width where
+   * three columns fit, they simply become three.
+   */
+  .journey-completion__fact:nth-child(3) {
+    grid-column: 1 / -1;
   }
 
   .journey-completion__fact {
@@ -181,6 +256,59 @@
     font-size: var(--ft-text-xs);
   }
 
+  /* --- How it compares ----------------------------------------------------- */
+
+  .journey-completion__standings {
+    display: grid;
+    gap: var(--ft-space-3);
+  }
+
+  .journey-completion__standing {
+    display: grid;
+    gap: var(--ft-space-1);
+    min-width: 0;
+    padding: var(--ft-space-4);
+    border: 1px solid var(--ft-border-subtle);
+    border-radius: var(--ft-radius-lg);
+    background: color-mix(in srgb, var(--ft-surface-raised) 62%, transparent);
+  }
+
+  .journey-completion__standing-label {
+    margin: 0;
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-xs);
+    font-weight: var(--ft-weight-semibold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /*
+   * Deliberately the size of a strong sentence rather than of a score. It is one step
+   * below the measured numbers above, because what someone walked is a fact and where
+   * it places is a comparison.
+   */
+  .journey-completion__standing-value {
+    margin: 0;
+    color: var(--ft-text-primary);
+    font-size: var(--ft-text-lg);
+    font-weight: var(--ft-weight-medium);
+    line-height: var(--ft-leading-tight);
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+  }
+
+  .journey-completion__standing-note,
+  .journey-completion__standing-extra {
+    margin: 0;
+    color: var(--ft-text-secondary);
+    font-size: var(--ft-text-sm);
+    overflow-wrap: anywhere;
+  }
+
+  .journey-completion__standing-extra {
+    color: var(--ft-text-primary);
+  }
+
   /* --- Out ---------------------------------------------------------------- */
 
   .journey-completion__actions {
@@ -192,6 +320,20 @@
     margin: 0;
     color: var(--ft-text-secondary);
     font-size: var(--ft-text-sm);
+  }
+
+  @media (min-width: 520px) {
+    .journey-completion__facts {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .journey-completion__fact:nth-child(3) {
+      grid-column: auto;
+    }
+
+    .journey-completion__standings {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   @media (min-width: 768px) {

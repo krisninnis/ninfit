@@ -20,6 +20,27 @@ export function formatJourneyDistance(distanceM: number): string {
   return (safe / 1000).toFixed(2);
 }
 
+/**
+ * Pace as mm:ss, for a value the domain was willing to state.
+ *
+ * `null` in, `null` out, deliberately. The decision about whether a pace exists at
+ * all belongs to `journeyStatistics` - it knows the distance, the source and the
+ * active time - and a formatter that quietly turned a missing pace into "00:00"
+ * would put a fabricated number on a screen with no way for anyone to tell.
+ *
+ * Hours are not handled because a pace slower than an hour per kilometre is not a
+ * pace, it is a recording that should not have produced one.
+ */
+export function formatJourneyPace(secondsPerKm: number | null): string | null {
+  if (secondsPerKm === null) return null;
+  if (!Number.isFinite(secondsPerKm) || secondsPerKm <= 0) return null;
+
+  const total = Math.round(secondsPerKm);
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
 export function formatJourneyDuration(totalSeconds: number): string {
   const safe = Number.isFinite(totalSeconds) && totalSeconds > 0 ? Math.floor(totalSeconds) : 0;
   const hours = Math.floor(safe / 3600);
