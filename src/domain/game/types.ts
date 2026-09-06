@@ -149,7 +149,9 @@ export type RewardKind =
   | 'first_measurement'
   /** Three or seven planned activity occasions that went well. Never a daily streak. */
   | 'consistency_milestone'
-  | 'trophy_unlocked';
+  | 'trophy_unlocked'
+  /** First trusted phone-GPS walk. Grants a durable footwear cosmetic, not XP. */
+  | 'first_journey_runners';
 
 /**
  * A reward that has been granted.
@@ -200,7 +202,7 @@ export interface GameSettings {
 
 // --- Cosmetics -------------------------------------------------------------
 
-export type CosmeticSlot = 'accessory' | 'outfit' | 'colour' | 'background' | 'effect';
+export type CosmeticSlot = 'accessory' | 'outfit' | 'colour' | 'background' | 'effect' | 'footwear';
 
 /**
  * Purely visual, forever. Nothing in the progression model reads these, and no

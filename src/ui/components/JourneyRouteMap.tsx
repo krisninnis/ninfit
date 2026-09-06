@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Map as MapLibreMap,
   type GeoJSONSource,
@@ -24,6 +24,9 @@ const ROUTE_LAYER = 'ninfit-journey-route-line';
 const POSITION_LAYER = 'ninfit-journey-position-dot';
 
 const DEFAULT_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const FALLBACK_WIDTH = 1000;
+const FALLBACK_HEIGHT = 640;
+const FALLBACK_PADDING = 54;
 
 function tileUrl(): string {
   const configured = import.meta.env.VITE_MAP_TILE_URL?.trim();
@@ -151,6 +154,120 @@ function prefersReducedMotion(): boolean {
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+interface ProjectedRoute {
+  paths: string[];
+  start?: { x: number; y: number };
+  end?: { x: number; y: number };
+}
+
+/**
+ * Dependency-free projection used only when MapLibre itself cannot start.
+ *
+ * A healthy MapLibre instance owns the visible route so geography and map imagery stay
+ * in the same projection. The SVG exists solely as a last-resort record of the trusted
+ * route when WebGL/map construction is unavailable on the device.
+ */
+function projectedRoute(segments: JourneyGpsPoint[][]): ProjectedRoute {
+  const drawable = segments.filter((segment) => segment.length >= 2);
+  const points = drawable.flat();
+  if (points.length === 0) return { paths: [] };
+
+  let minLon = points[0]?.longitude ?? 0;
+  let maxLon = minLon;
+  let minLat = points[0]?.latitude ?? 0;
+  let maxLat = minLat;
+
+  for (const point of points) {
+    minLon = Math.min(minLon, point.longitude);
+    maxLon = Math.max(maxLon, point.longitude);
+    minLat = Math.min(minLat, point.latitude);
+    maxLat = Math.max(maxLat, point.latitude);
+  }
+
+  const lonSpan = Math.max(maxLon - minLon, 0.000001);
+  const latSpan = Math.max(maxLat - minLat, 0.000001);
+  const width = FALLBACK_WIDTH - FALLBACK_PADDING * 2;
+  const height = FALLBACK_HEIGHT - FALLBACK_PADDING * 2;
+  const project = (point: JourneyGpsPoint) => ({
+    x: FALLBACK_PADDING + ((point.longitude - minLon) / lonSpan) * width,
+    y: FALLBACK_PADDING + ((maxLat - point.latitude) / latSpan) * height,
+  });
+
+  const paths = drawable.map((segment) => segment
+    .map((point, index) => {
+      const projected = project(point);
+      return `${index === 0 ? 'M' : 'L'} ${projected.x.toFixed(2)} ${projected.y.toFixed(2)}`;
+    })
+    .join(' '));
+
+  return {
+    paths,
+    start: project(points[0]!),
+    end: project(points[points.length - 1]!),
+  };
+}
+
+function RouteFallback({ route }: { route: ProjectedRoute }) {
+  if (route.paths.length === 0) return null;
+  return (
+    <svg
+      className="active-journey__route-fallback"
+      viewBox={`0 0 ${FALLBACK_WIDTH} ${FALLBACK_HEIGHT}`}
+      preserveAspectRatio="none"
+      aria-hidden="true"
+      style={{
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        zIndex: 1,
+        pointerEvents: 'none',
+      }}
+    >
+      {route.paths.map((path, index) => (
+        <g key={`${index}-${path.length}`}>
+          <path
+            d={path}
+            fill="none"
+            stroke="var(--ft-surface-raised, #fff)"
+            strokeWidth="12"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d={path}
+            fill="none"
+            stroke="var(--ft-accent, #4f8065)"
+            strokeWidth="7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </g>
+      ))}
+      {route.start ? (
+        <circle
+          cx={route.start.x}
+          cy={route.start.y}
+          r="11"
+          fill="var(--ft-surface-raised, #fff)"
+          stroke="var(--ft-accent, #4f8065)"
+          strokeWidth="5"
+        />
+      ) : null}
+      {route.end ? (
+        <circle
+          cx={route.end.x}
+          cy={route.end.y}
+          r="11"
+          fill="var(--ft-accent, #4f8065)"
+          stroke="var(--ft-surface-raised, #fff)"
+          strokeWidth="5"
+        />
+      ) : null}
+    </svg>
+  );
+}
+
 export function JourneyRouteMap({
   segments,
   latestPoint = null,
@@ -165,6 +282,8 @@ export function JourneyRouteMap({
   const latestPointRef = useRef(latestPoint);
   const lastCenteredAtRef = useRef<string | null>(null);
   const [mapUnavailable, setMapUnavailable] = useState(false);
+  const [imageryWarning, setImageryWarning] = useState(false);
+  const fallback = useMemo(() => projectedRoute(segments), [segments]);
 
   segmentsRef.current = segments;
   latestPointRef.current = latestPoint;
@@ -207,12 +326,15 @@ export function JourneyRouteMap({
         }
       }
     };
+    const onError = () => setImageryWarning(true);
 
     map.on('load', onLoad);
+    map.on('error', onError);
 
     return () => {
       loadedRef.current = false;
       map.off('load', onLoad);
+      map.off('error', onError);
       map.remove();
       if (mapRef.current === map) mapRef.current = null;
     };
@@ -250,19 +372,49 @@ export function JourneyRouteMap({
 
   if (mapUnavailable) {
     return (
-      <div className="active-journey__map-unavailable" role="status" aria-live="polite">
-        <strong>Map unavailable</strong>
-        <span>{unavailableMessage}</span>
+      <div
+        className="active-journey__map"
+        role="img"
+        aria-label={ariaLabel}
+        style={{ position: 'relative', overflow: 'hidden' }}
+      >
+        <RouteFallback route={fallback} />
+        <div className="active-journey__map-unavailable" role="status" aria-live="polite">
+          <strong>Map imagery unavailable</strong>
+          <span>{fallback.paths.length > 0 ? 'Your recorded route is still shown.' : unavailableMessage}</span>
+        </div>
       </div>
     );
   }
 
   return (
     <div
-      ref={containerRef}
       className="active-journey__map"
       role="img"
       aria-label={ariaLabel}
-    />
+      style={{ position: 'relative', overflow: 'hidden' }}
+    >
+      <div ref={containerRef} aria-hidden="true" style={{ position: 'absolute', inset: 0 }} />
+      {imageryWarning ? (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'absolute',
+            left: 12,
+            right: 12,
+            bottom: 12,
+            zIndex: 4,
+            padding: '8px 10px',
+            borderRadius: 10,
+            background: 'var(--ft-surface-raised)',
+            color: 'var(--ft-text-primary)',
+            fontSize: 12,
+          }}
+        >
+          Map imagery unavailable — your recorded route remains visible.
+        </div>
+      ) : null}
+    </div>
   );
 }
