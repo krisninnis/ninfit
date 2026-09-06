@@ -57,6 +57,31 @@ export const FITNESS_PATHS: readonly FitnessPath[] = [
 ] as const;
 
 /**
+ * Paths a NEW user may start during the first-four-weeks launch.
+ *
+ * The five-path domain remains permanent so existing data stays readable and future
+ * programmes can re-open without a migration. Launch availability is deliberately a
+ * separate product decision: today NinFit can honestly deliver Start Moving and
+ * Return to Fitness, but not a dedicated strength/stamina/balanced programme yet.
+ */
+export const LAUNCH_FITNESS_PATH_IDS = [
+  'start_moving',
+  'return_to_fitness',
+] as const satisfies readonly FitnessPathId[];
+
+export const LAUNCH_FITNESS_PATHS: readonly FitnessPath[] = LAUNCH_FITNESS_PATH_IDS.map(
+  (id) => {
+    const path = FITNESS_PATHS.find((candidate) => candidate.id === id);
+    if (path === undefined) throw new Error(`Launch path is missing from FITNESS_PATHS: ${id}`);
+    return path;
+  },
+);
+
+export function isLaunchFitnessPath(id: FitnessPathId): boolean {
+  return LAUNCH_FITNESS_PATH_IDS.some((candidate) => candidate === id);
+}
+
+/**
  * The five core path mascot families. This list is closed.
  *
  * One family per fitness path, and no more: Opal is the companion and lives in
