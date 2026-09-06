@@ -85,6 +85,26 @@ export function createActiveJourneyGpsSession(
     },
     onError(error) {
       if (stopped) return;
+      /*
+       * A REPORTED ERROR IS DELIBERATELY NOT TREATED AS A BREAK IN THE ROUTE.
+       *
+       * The obvious move here is to latch `startsNewSegment` again: the watcher has
+       * just said it is not seeing anything, so surely the next point begins a new
+       * run. A browser proof showed why that is wrong. Transient POSITION_UNAVAILABLE
+       * and TIMEOUT reports arrive BETWEEN perfectly good fixes on real hardware, and
+       * a rule that breaks the run on each one turns a continuous walk into a string
+       * of one-point runs - none of which is two points, so none of which is drawable,
+       * so a route that was recorded perfectly well renders as nothing at all.
+       *
+       * The question that actually matters is not "did the watcher complain" but "did
+       * we stop seeing the ground for long enough to have missed some". That is
+       * answered by the gap between accepted timestamps, in `ingestJourneyGpsSample`,
+       * where an error that really did cost observation shows up as a silence and one
+       * that cost nothing correctly shows up as nothing.
+       *
+       * So the error is passed on for the screen to describe, and the route is left
+       * exactly as it was.
+       */
       options.onError?.(error);
     },
   });

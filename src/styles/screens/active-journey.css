@@ -274,9 +274,27 @@
     backdrop-filter: blur(16px);
   }
 
+  /*
+   * The value has to survive the narrowest phone the product supports.
+   *
+   * At 320px each metric card is about 106px of usable width, and "Recording" set at
+   * the extra-large size is wider than that - it clipped its own card, measured, on a
+   * real browser. Both defences are needed and neither is enough alone: `min-width: 0`
+   * lets the grid child actually shrink to its track, and `overflow-wrap` lets a long
+   * word break rather than run past the rounded edge. The step down below 360px is
+   * what keeps it from breaking mid-word in the ordinary case.
+   */
   .active-journey__metric-value {
+    min-width: 0;
     font-size: var(--ft-text-xl);
     font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+
+  @media (max-width: 359px) {
+    .active-journey__metric-value {
+      font-size: var(--ft-text-lg);
+    }
   }
 
   .active-journey__dock {

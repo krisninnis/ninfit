@@ -6,6 +6,7 @@ const ActiveJourneyMap = lazy(async () => {
   return { default: module.ActiveJourneyMap };
 });
 import { journeyUsesPhoneGps } from '../../app/journeyLaunchController';
+import { keepJourneyScreenAwake } from '../../app/journeyScreenWakeLock';
 import type { ActiveJourneyGpsSession } from '../../app/activeJourneyGpsSession';
 import { createJourneyRecoveryController } from '../../app/journeyRecoveryController';
 import { journeyActiveSeconds, type Journey } from '../../domain/journey';
@@ -113,6 +114,30 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
       if (sessionRef.current === session) sessionRef.current = null;
     };
   }, [journey?.status, journey?.activityType, store]);
+
+  /*
+   * THE SCREEN STAYS AWAKE WHILE - AND ONLY WHILE - SOMETHING IS BEING RECORDED.
+   *
+   * A locked screen suspends the page, and a suspended page collects no GPS. The
+   * Journey survives that intact, but the walk between the last fix and the next one
+   * was never observed, so the route is left honestly broken across it. Holding a
+   * wake lock is how that hole is avoided rather than explained.
+   *
+   * It follows recorder STATUS, exactly as the watcher above does. Paused means the
+   * person has deliberately stopped, and a phone that will not sleep while nothing is
+   * being recorded is a battery complaint, not a feature. Finishing runs the same
+   * cleanup, so nothing is still holding the screen on after Finish.
+   *
+   * Failure here is not a failure. Every branch that cannot get a lock - an
+   * unsupported browser, a refusal, a hidden page - returns a handle that holds
+   * nothing, and recording is identical either way. There is deliberately no state,
+   * no message and no retry button.
+   */
+  useEffect(() => {
+    if (journey?.status !== 'recording') return undefined;
+    const wakeLock = keepJourneyScreenAwake();
+    return () => wakeLock.release();
+  }, [journey?.status]);
 
   const stopGps = () => {
     sessionRef.current?.stop();
