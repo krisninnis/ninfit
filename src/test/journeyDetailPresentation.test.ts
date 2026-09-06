@@ -64,14 +64,28 @@ describe('Journey detail presentation', () => {
     expect(journeyActivityLabel('other')).toBe('Journey');
   });
 
-  it('describes privacy without changing it', () => {
-    expect(journeyPrivacyLabel(journey())).toBe('Private on this device');
+  it('makes owner visibility explicit while preserving disclosure privacy', () => {
+    expect(journeyPrivacyLabel(journey())).toBe('Private · visible only to you on this device');
+    expect(journeyPrivacyLabel(journey({
+      privacy: {
+        visibility: 'summary_only',
+        maskSensitiveStartEnd: false,
+        preciseRouteCloudSync: false,
+      },
+    }))).toBe('Full private view for you · summary only if disclosed');
     expect(journeyPrivacyLabel(journey({
       privacy: {
         visibility: 'masked_route',
         maskSensitiveStartEnd: false,
         preciseRouteCloudSync: false,
       },
-    }))).toBe('Route masking enabled for disclosure');
+    }))).toBe('Full private view for you · route masked if disclosed');
+    expect(journeyPrivacyLabel(journey({
+      privacy: {
+        visibility: 'full_route',
+        maskSensitiveStartEnd: true,
+        preciseRouteCloudSync: false,
+      },
+    }))).toBe('Full private view for you · route ends masked if disclosed');
   });
 });

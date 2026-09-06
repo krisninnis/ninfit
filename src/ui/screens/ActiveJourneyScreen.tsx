@@ -60,6 +60,7 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
   const [journey, setJourney] = useState<Journey | null>(() => recovery.load());
   const [now, setNow] = useState<ISODateTime>(() => nowIso());
   const [gpsState, setGpsState] = useState<JourneyLiveGpsState>(() => initialGpsState(journey));
+  const [controlsLocked, setControlsLocked] = useState(false);
   const journeyRef = useRef<Journey | null>(journey);
   const sessionRef = useRef<ActiveJourneyGpsSession | null>(null);
 
@@ -139,6 +140,15 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     return () => wakeLock.release();
   }, [journey?.status]);
 
+  /*
+   * A lock belongs only to an actively recording Journey. If recorder state changes
+   * for any other reason, discard the presentation lock rather than carrying stale
+   * locked controls into a paused/completed screen.
+   */
+  useEffect(() => {
+    if (journey?.status !== 'recording' && controlsLocked) setControlsLocked(false);
+  }, [journey?.status, controlsLocked]);
+
   const stopGps = () => {
     sessionRef.current?.stop();
     sessionRef.current = null;
@@ -163,11 +173,12 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
   const activeSeconds = journeyActiveSeconds(journey, now);
   const isPaused = journey.status === 'paused';
   const isCompleted = journey.status === 'completed';
+  const isRecording = journey.status === 'recording';
   const usesPhoneGps = journeyUsesPhoneGps(journey.activityType);
   const statusClass = gpsState === 'live' ? 'receiving' : 'waiting';
 
   const pause = () => {
-    if (journey.status !== 'recording') return;
+    if (controlsLocked || journey.status !== 'recording') return;
     stopGps();
     const changedAt = nowIso();
     const next = recovery.pause(journeyRef.current ?? journey, changedAt);
@@ -178,7 +189,7 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
   };
 
   const resume = () => {
-    if (journey.status !== 'paused') return;
+    if (controlsLocked || journey.status !== 'paused') return;
     const changedAt = nowIso();
     const next = recovery.resume(journeyRef.current ?? journey, changedAt);
     journeyRef.current = next;
@@ -188,6 +199,7 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
   };
 
   const finish = () => {
+    if (controlsLocked) return;
     if (journey.status !== 'recording' && journey.status !== 'paused') return;
     stopGps();
     const changedAt = nowIso();
@@ -200,14 +212,23 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
   };
 
   const leave = () => {
+    if (controlsLocked) return;
     stopGps();
     onClose();
   };
 
   return (
-    <section className="active-journey" aria-labelledby="active-journey-title">
+    <section
+      className={`active-journey${controlsLocked ? ' active-journey--controls-locked' : ''}`}
+      aria-labelledby="active-journey-title"
+    >
       <header className="active-journey__topbar">
-        <button type="button" className="active-journey__leave" onClick={leave}>
+        <button
+          type="button"
+          className="active-journey__leave"
+          onClick={leave}
+          disabled={controlsLocked}
+        >
           <span aria-hidden="true">←</span>
           <span>Journey</span>
         </button>
@@ -262,16 +283,44 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
         <div className="active-journey__metric">
           <span className="active-journey__metric-label">State</span>
           <strong className="active-journey__metric-value">
-            {isCompleted ? 'Finished' : isPaused ? 'Paused' : 'Recording'}
+            {isCompleted
+              ? 'Finished'
+              : isPaused
+                ? 'Paused'
+                : controlsLocked
+                  ? 'Recording · controls locked'
+                  : 'Recording'}
           </strong>
         </div>
       </div>
+
+      {isRecording ? (
+        <div className="active-journey__recording-lock">
+          <button
+            type="button"
+            className={`btn btn--block${controlsLocked ? ' btn--primary' : ''}`}
+            onClick={() => setControlsLocked((value) => !value)}
+            aria-pressed={controlsLocked}
+          >
+            {controlsLocked ? 'Unlock Journey controls' : 'Lock Journey controls'}
+          </button>
+          <p className="active-journey__recording-lock-note">
+            {controlsLocked
+              ? 'Accidental taps are blocked. Recording and the screen-awake request continue.'
+              : 'Locks NinFit controls while recording. True locked-phone background GPS needs the native app.'}
+          </p>
+        </div>
+      ) : null}
 
       <div className="active-journey__dock" aria-label="Journey controls">
         {isCompleted ? (
           <button type="button" className="btn btn--primary active-journey__dock-action" onClick={leave}>
             Back to Journey
           </button>
+        ) : controlsLocked ? (
+          <div className="active-journey__locked-dock" role="status" aria-live="polite">
+            Journey controls locked · recording continues
+          </div>
         ) : (
           <>
             <button

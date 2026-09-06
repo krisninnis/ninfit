@@ -9,8 +9,10 @@ import {
   updateGameSettings,
   type FinishOnboardingInput,
 } from '../../app/game';
+import { syncFirstWalkRunners } from '../../app/journeyFirstWalkReward';
 import type { DerivedFacts } from '../../domain/game/rewards';
 import type { FitnessPathId, GameSettings, GameState } from '../../domain/game/types';
+import { loadJourneyHistory } from '../../storage/journeyHistory';
 
 /**
  * The game layer, as the screens see it.
@@ -51,8 +53,16 @@ export function useGame(): GameHook {
 
   const sync = useMemo(() => {
     void revision;
-    return syncGame(repository);
-  }, [repository, revision]);
+    const base = syncGame(repository);
+    const journeyReward = syncFirstWalkRunners(
+      repository,
+      loadJourneyHistory(context.adapter),
+    );
+    return {
+      ...base,
+      state: journeyReward.state ?? base.state,
+    };
+  }, [context.adapter, repository, revision]);
 
   const refresh = useCallback(() => setRevision((value) => value + 1), []);
 

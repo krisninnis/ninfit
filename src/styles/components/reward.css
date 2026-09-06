@@ -69,6 +69,56 @@
     font-variant-numeric: tabular-nums;
   }
 
+  .reward__first-journey {
+    display: grid;
+    justify-items: center;
+    gap: var(--ft-space-2);
+    padding: var(--ft-space-3) var(--ft-space-2) var(--ft-space-4);
+    text-align: center;
+  }
+
+  .reward__first-journey-title {
+    margin: 0;
+    max-width: 34ch;
+    font-family: var(--ft-font-display);
+    font-size: var(--ft-text-xl);
+    font-weight: var(--ft-weight-bold);
+    line-height: var(--ft-leading-tight);
+  }
+
+  .reward__first-journey-copy,
+  .reward__first-journey-state {
+    margin: 0;
+    max-width: 42ch;
+    color: var(--ft-text-secondary);
+  }
+
+  .reward__first-journey-state {
+    font-size: var(--ft-text-xs);
+    font-weight: var(--ft-weight-semibold);
+  }
+
+  .reward__runners-plinth {
+    width: min(132px, 44vw);
+    aspect-ratio: 11 / 8;
+    display: grid;
+    place-items: center;
+    margin-block: var(--ft-space-1);
+    border: 1px solid var(--ft-border-subtle);
+    border-radius: var(--ft-radius-xl);
+    background:
+      radial-gradient(circle at 50% 34%, var(--ft-surface-raised), transparent 56%),
+      var(--ft-accent-soft);
+    box-shadow: var(--ft-shadow-reward);
+  }
+
+  .reward__runners-display {
+    display: inline-block;
+    font-size: clamp(3rem, 14vw, 4rem);
+    transform-origin: 50% 72%;
+    animation: reward-runners-turn var(--ft-motion-reward) var(--ft-ease-reward) both;
+  }
+
   /*
    * Arrival only. Nothing loops, pulses or repeats, and the global reduced-motion
    * rule collapses this to nothing - which costs the movement and keeps the message.
@@ -80,6 +130,22 @@
     }
     to {
       opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes reward-runners-turn {
+    from {
+      transform: perspective(240px) rotateY(-14deg) translateY(0);
+    }
+    to {
+      transform: perspective(240px) rotateY(14deg) translateY(-2px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reward__runners-display {
+      animation: none;
       transform: none;
     }
   }

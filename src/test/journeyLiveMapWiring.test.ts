@@ -48,10 +48,11 @@ describe('Journey Live Map truth boundary', () => {
     expect(presentation).not.toContain('rawPoints');
   });
 
-  it('uses an open, no-key basemap with visible OpenStreetMap attribution', () => {
-    expect(renderer).toContain("https://tile.openstreetmap.org/{z}/{x}/{y}.png");
-    expect(renderer).toContain('&copy; OpenStreetMap contributors');
+  it('uses an open, no-key vector basemap with configurable provider fallbacks', () => {
+    expect(renderer).toContain('https://tiles.openfreemap.org/styles/liberty');
+    expect(renderer).toContain('VITE_MAP_STYLE_URL');
     expect(renderer).toContain('VITE_MAP_TILE_URL');
+    expect(renderer).toContain('&copy; OpenStreetMap contributors');
     expect(renderer).toContain('interactive: false');
   });
 
@@ -60,9 +61,12 @@ describe('Journey Live Map truth boundary', () => {
     expect(screen).not.toContain('â');
   });
 
-  it('contains map-renderer startup failure so recording UI can stay alive', () => {
-    expect(renderer).toContain('try {');
+  it('contains map-renderer startup and runtime degradation so recording UI can stay alive', () => {
     expect(renderer).toContain('setMapUnavailable(true)');
+    expect(renderer).toContain("map.on('error', onError)");
+    expect(renderer).toContain("webglcontextlost");
+    expect(renderer).toContain('MAP_READY_TIMEOUT_MS');
+    expect(renderer).toContain('<RouteFallback route={fallback} />');
     expect(map).toContain('Your Journey recording continues safely.');
   });
 
