@@ -145,16 +145,27 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
   }, [journey?.status, journey?.activityType, store]);
 
   /*
-   * Keep the screen-awake request for both normal recording and automatic stationary
-   * pause. Auto-pause is still an actively tracked Journey: the location provider is
-   * waiting for movement so it can resume without a tap. A manual pause releases the
-   * request as before.
+   * Normal recording owns the original status-bound wake-lock lifetime. Keeping this
+   * effect status-only makes the cleanup rule explicit: a manual pause or completion
+   * always releases this lock.
    */
   useEffect(() => {
-    if (journey?.status !== 'recording' && !autoPaused) return undefined;
+    if (journey?.status !== 'recording') return undefined;
     const wakeLock = keepJourneyScreenAwake();
     return () => wakeLock.release();
-  }, [journey?.status, autoPaused]);
+  }, [journey?.status]);
+
+  /*
+   * Auto-pause is different from a manual pause: tracking is still active and the
+   * provider is waiting for trusted movement evidence. It therefore owns a separate,
+   * mutually-exclusive wake-lock request while auto-paused. This never overlaps the
+   * recording effect because auto-paused Journeys have recorder status `paused`.
+   */
+  useEffect(() => {
+    if (!autoPaused) return undefined;
+    const wakeLock = keepJourneyScreenAwake();
+    return () => wakeLock.release();
+  }, [autoPaused]);
 
   /*
    * A control lock may remain through an automatic pause because tracking is still
