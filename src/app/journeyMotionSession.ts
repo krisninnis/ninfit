@@ -38,6 +38,8 @@ export interface JourneyMotionSessionOptions {
 export interface JourneyMotionSession {
   getJourney(): Journey;
   getMotionState(): JourneyMotionState;
+  /** Process one sample through the exact same trusted motion path used by the live provider. */
+  processSample(sample: JourneyGpsSample): void;
   stop(): void;
 }
 
@@ -91,6 +93,9 @@ function initialDetectorState(journey: Journey, pauseOrigin: JourneyPauseOrigin)
  * conservative movement evidence; samples are not added to distance/route until the
  * recorder has been resumed. A manual pause is never auto-resumed because this session
  * refuses to start for a paused Journey without explicit `auto_stationary` provenance.
+ *
+ * `processSample` is deliberately exposed so durable native replay can enter this exact
+ * same path. Replay therefore cannot bypass GPS trust, route, distance or auto-pause rules.
  */
 export function startJourneyMotionSession(options: JourneyMotionSessionOptions): JourneyMotionSession {
   const pauseOrigin = options.journey.status === 'paused'
@@ -166,13 +171,18 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
     if (result.accepted) publishJourney(result.journey);
   }
 
+  function processSample(sample: JourneyGpsSample): void {
+    if (stopped) throw new Error('Journey motion session is stopped');
+    if (motionState === 'auto_paused') handleAutoPausedSample(sample);
+    else handleRecordingSample(sample);
+  }
+
   try {
     providerSession = provider.start({
       onSample(sample) {
         if (stopped) return;
         try {
-          if (motionState === 'auto_paused') handleAutoPausedSample(sample);
-          else handleRecordingSample(sample);
+          processSample(sample);
         } catch (cause) {
           options.onRuntimeError?.(cause);
           stop();
@@ -201,6 +211,7 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
     getMotionState() {
       return motionState;
     },
+    processSample,
     stop,
   };
 }
