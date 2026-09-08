@@ -5,7 +5,10 @@ import type {
   JourneyLocationProviderCallbacks,
 } from '../app/journeyLocationProvider';
 import { createJourneyNativeReplayMotionProcessor } from '../app/journeyNativeReplayMotionProcessor';
-import { createNativeJourneyPositionBuffer } from '../app/journeyNativePositionBuffer';
+import {
+  createNativeJourneyPositionBuffer,
+  type NativeJourneyPositionBufferSnapshot,
+} from '../app/journeyNativePositionBuffer';
 import { replayNativeJourneyPositions } from '../app/journeyNativePositionReplay';
 import type { Journey } from '../domain/journey';
 import { createMemoryStorageAdapter } from '../storage/StorageAdapter';
@@ -109,12 +112,11 @@ describe('Journey motion session', () => {
       idFactory: () => 'distance-1',
     });
 
-    let snapshot: Parameters<ReturnType<typeof createNativeJourneyPositionBuffer>['pending']>[0] | undefined;
-    const durable: { snapshot: any } = { snapshot: null };
+    const durable: { snapshot: NativeJourneyPositionBufferSnapshot | null } = { snapshot: null };
     const buffer = createNativeJourneyPositionBuffer({
       journeyId: initial.id,
       store: {
-        load() { return durable.snapshot; },
+        load() { return durable.snapshot ? structuredClone(durable.snapshot) : null; },
         save(next) { durable.snapshot = structuredClone(next); },
         remove() { durable.snapshot = null; },
       },
@@ -136,7 +138,6 @@ describe('Journey motion session', () => {
     expect(buffer.pending()).toEqual([]);
     expect(session.getJourney().route?.acceptedPoints).toHaveLength(1);
     expect(loadActiveJourneySnapshot(storage)?.journey.route?.acceptedPoints).toHaveLength(1);
-    void snapshot;
   });
 
   it('never starts automatic observation for a manual or unproven pause', () => {
