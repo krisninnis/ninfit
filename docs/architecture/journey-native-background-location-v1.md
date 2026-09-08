@@ -60,13 +60,48 @@ The native service stays alive through `auto_stationary` so movement can be dete
 
 A manual pause stops the active provider lifecycle and requires explicit user Resume.
 
+## Completion
+
+Finish is the moment a native suffix is easiest to lose: the last stretch of a walk is
+still sitting in the native queue while the WebView catches up.
+
+`completeJourneyAfterNativeReconciliation` (`src/app/journeyNativeSafeCompletion.ts`) owns
+the ordering, and `ActiveJourneyScreen` routes Finish through it whenever a live motion
+session and an injected native queue both exist:
+
+1. quiesce the live provider so no new callback races the final drain;
+2. replay the durable suffix through the same trusted motion path used while recording;
+3. clear the Journey-scoped native queue;
+4. choose the completion time after replay, so it cannot precede the newest native fix;
+5. persist completed history, then permanently stop the motion session.
+
+The screen passes its own replay coordinator, so startup reconciliation, foreground
+reconciliation and Finish share one owner of the queue rather than three competing
+read/acknowledge sequences.
+
+Any replay, clear or persistence failure persists nothing and clears nothing. The Journey
+stays active and recoverable with the provider quiesced, the screen says so, and Finish can
+be pressed again.
+
+Browser/PWA recording, Swim and a manually paused Journey have no session or no queue to
+drain, and keep the original synchronous completion.
+
+### Parked: reconciling the durable suffix on manual Pause
+
+A manual Pause stops the motion session outright. Fixes the native process had already
+buffered before that moment are therefore left in the queue: nothing is discarded, but
+nothing replays them either, and a later Finish from the manually paused state takes the
+synchronous path. This is unreachable today because no shell injects a queue yet. It is a
+separate slice - draining before the provider stops on Pause - and must land before the
+Samsung acceptance run in step 3 below.
+
 ## Privacy
 
 Background location is sensitive. NinFit must request it only in the context of a user-started Journey and explain why it is needed. Precise route data remains local unless a later explicit sharing/cloud-sync feature says otherwise. Native plugin HTTP upload/sync features must remain disabled for the local-first recorder unless separately designed and consented.
 
 ## Implementation sequence
 
-1. Dependency-free native bridge contract and tests. **Done in this branch.**
+1. Dependency-free native bridge contract, durable replay, safe completion and tests. **Done in this branch.**
 2. Add Capacitor shell/dependencies and Android project in a dedicated integration slice.
 3. Implement Android bridge first and prove locked-screen recording on the existing Samsung test device.
 4. Add lifecycle/recovery tests around app background/foreground transitions.
