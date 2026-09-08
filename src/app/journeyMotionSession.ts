@@ -14,12 +14,12 @@ import {
   type JourneyPauseOrigin,
 } from '../storage/journeyPauseProvenance';
 import { createJourneyGpsRuntimeController } from './journeyGpsRuntimeController';
-import {
-  createBrowserJourneyLocationProvider,
-  type JourneyLocationProvider,
-  type JourneyLocationProviderError,
-  type JourneyLocationProviderSession,
+import type {
+  JourneyLocationProvider,
+  JourneyLocationProviderError,
+  JourneyLocationProviderSession,
 } from './journeyLocationProvider';
+import { createRuntimeJourneyLocationProvider } from './journeyLocationProviderRuntime';
 import { createJourneyRecoveryController } from './journeyRecoveryController';
 
 export type JourneyMotionState = 'recording' | 'auto_paused';
@@ -96,6 +96,11 @@ function initialDetectorState(journey: Journey, pauseOrigin: JourneyPauseOrigin)
  *
  * `processSample` is deliberately exposed so durable native replay can enter this exact
  * same path. Replay therefore cannot bypass GPS trust, route, distance or auto-pause rules.
+ *
+ * If a caller does not inject a provider explicitly, provider selection is resolved at
+ * session start through the runtime registry. That is the live switch which makes the
+ * startup-installed native bridge authoritative inside the installed shell while web/PWA
+ * continues to fail safely to browser geolocation.
  */
 export function startJourneyMotionSession(options: JourneyMotionSessionOptions): JourneyMotionSession {
   const pauseOrigin = options.journey.status === 'paused'
@@ -118,7 +123,7 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
     distanceMetricId,
   });
   const recovery = createJourneyRecoveryController(options.storage);
-  const provider = options.provider ?? createBrowserJourneyLocationProvider();
+  const provider = options.provider ?? createRuntimeJourneyLocationProvider();
 
   let currentJourney = options.journey;
   let detector = initialDetectorState(currentJourney, pauseOrigin);
