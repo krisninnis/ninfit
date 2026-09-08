@@ -31,7 +31,15 @@ Those remain owned by the existing Journey domain/runtime.
 
 ## Replay and duplicate safety
 
-The concrete native adapter must preserve sequence numbers across process restarts. The WebView replay consumer must process fixes serially and acknowledge only the successfully processed prefix. The next implementation slice will add the replay consumer and durable native storage adapter; the current TypeScript buffer establishes and tests the contract first.
+The native adapter must preserve sequence numbers across process restarts. The replay consumer processes fixes serially and acknowledges only the successfully processed prefix. A failed fix and every later fix remain available for retry.
+
+Replay is deliberately at-least-once: if Journey processing succeeds but transport acknowledgement is interrupted, that fix can arrive again. The trusted GPS runtime already rejects non-forward route samples. Auto-pause/resume motion evidence now also records the last reliable evidence timestamp and ignores equal/older evidence. This is essential because a duplicate movement fix must not count twice toward the two-fix auto-resume threshold.
+
+Legacy/recovered auto-pause state without the new evidence timestamp remains supported; once it consumes its first new reliable fix, forward-time replay protection is established.
+
+## Current implementation boundary
+
+The TypeScript Journey buffer, ordered replay consumer and replay-through-motion-session path are implemented. The remaining production step is a concrete native process-level store behind the Capacitor/background-location layer so fixes remain durable even when the WebView or app process is suspended.
 
 ## Privacy and lifecycle
 
