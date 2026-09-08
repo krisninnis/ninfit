@@ -39,45 +39,21 @@ describe('Journey product ownership', () => {
     expect(app).toContain('<JourneyScreen />');
     expect(app).toContain('<ActiveJourneyScreen');
     expect(app).toContain('onClose={() => navigate(JOURNEY_HASH)}');
-    /*
-     * RE-POINTED, NOT WEAKENED. Finish now lands on the completion moment rather than
-     * straight on the durable record. Both are read-only views of the same completed
-     * Journey, and the id is still the only thing that crosses - so what this guards
-     * is unchanged: completion navigates by stable id and never by carrying a Journey
-     * object through the router. The completion screen's own onward route back to the
-     * detail record is pinned in `journeyCompletionDetailWiring.test.ts`.
-     */
     expect(app).toContain('onCompleted={(journeyId) => navigate(journeyCompleteHash(journeyId))}');
     expect(app).not.toContain('JourneyLauncher');
   });
 
   it('starts activities through the launch controller, never by building a Journey', () => {
-    /*
-     * RE-POINTED, NOT WEAKENED. The four activity tiles became three activity-family
-     * doors, and Walk/Run now chooses its type on the companion launch screen - so the
-     * property is asserted across BOTH screens instead of one. What it protects is
-     * unchanged and is the important part: all four activity types are still offered,
-     * and neither screen ever constructs a Journey, a recording status or a GPS source
-     * for itself.
-     */
     for (const [name, source] of [['Journey Home', home], ['launch screen', launch]] as const) {
       expect(source, name).toContain('createJourneyLaunchController');
       expect(source, name).not.toContain("status: 'recording'");
       expect(source, name).not.toContain("kind: 'ninfit_phone_gps'");
     }
 
-    // Journey Home still starts a direct-launch family in one tap, exactly as it has
-    // since before families existed. Swim is the one that still uses this path.
     expect(home).toContain('launch.start(activityType, nowIso())');
-    /*
-     * The launch screen starts the chosen type, and only that. `chosen` is the user's
-     * selection on a two-activity door and the door's own single type on a one-
-     * activity door - never an inference, and never a seeded default.
-     */
     expect(launch).toContain('launch.start(chosen, nowIso())');
     expect(launch).toContain('const chosen = sole ?? selected');
 
-    // All four activity types remain reachable, and remain four.
     for (const activityType of ["'walk'", "'run'", "'cycle'", "'swim'"]) {
       expect(families, activityType).toContain(activityType);
     }
@@ -103,38 +79,24 @@ describe('Journey GPS ownership', () => {
     expect(screen).toContain("setGpsState('not_applicable')");
   });
 
-  it('stops GPS before persisting a manual pause transition', () => {
+  it('uses durable-safe manual pause when a native queue exists and preserves the synchronous fallback', () => {
     const pause = between(screen, 'const pause = () => {', 'const resume = () => {');
+    expect(pause).toContain('if (session === null || durableQueue === null) {');
     expect(pause).toContain('stopGps();');
     expect(pause).toContain('recovery.pause');
     expect(pause).toContain("saveJourneyPauseOrigin(store, next.id, 'manual')");
-    expect(pause.indexOf('stopGps();')).toBeLessThan(pause.indexOf('recovery.pause'));
+    expect(pause).toContain('pauseJourneyAfterNativeReconciliation({');
+
+    const nativePath = pause.slice(pause.indexOf('setPausing(true);'));
+    expect(nativePath).not.toContain('recovery.pause');
+    expect(nativePath).not.toContain("saveJourneyPauseOrigin(store, next.id, 'manual')");
   });
 
-  /*
-   * RE-POINTED, NOT WEAKENED. Finish now has two paths, so the single ordering
-   * assertion became two - one per path - and the property they protect is unchanged:
-   * location observation is always quiesced before completion may persist history.
-   *
-   * The synchronous path (no motion session, or no injected native queue) still stops
-   * GPS before `recovery.complete`. The durable-safe path hands the session to
-   * `completeJourneyAfterNativeReconciliation`, which quiesces the provider as its
-   * first act before replaying and persisting - proven behaviourally, not by reading
-   * source, in `journeyNativeSafeCompletion.test.ts` and
-   * `activeJourneyFinishNativeReplay.dom.test.tsx`.
-   *
-   * The new assertion is the stronger one: the screen must not reach `recovery.complete`
-   * on the native path at all, because that call persists completed history without
-   * draining the durable queue first.
-   */
   it('stops GPS before completion can persist history and clear recovery', () => {
     const finish = between(screen, 'const finish = () => {', '  const leave = () => {');
     expect(finish).toContain('stopGps();');
     expect(finish).toContain('recovery.complete');
     expect(finish.indexOf('stopGps();')).toBeLessThan(finish.indexOf('recovery.complete'));
-
-    // The synchronous path is the fallback, and it is guarded by the absence of a
-    // session or of a native queue - never taken while a durable suffix could exist.
     expect(finish).toContain('if (session === null || durableQueue === null) {');
     const nativePath = between(finish, 'setFinishing(true);', '});');
     expect(nativePath).toContain('completeJourneyAfterNativeReconciliation({');
@@ -158,7 +120,7 @@ describe('Journey GPS ownership', () => {
     const lifecycleEffect = between(
       screen,
       'return subscribeInjectedJourneyAppLifecycle((state) => {',
-      '/*\n   * A control lock may remain',
+      'useEffect(() => {\n    if (journey?.status !==',
     );
     expect(lifecycleEffect).toContain("if (state === 'backgrounded') {");
     expect(lifecycleEffect).toContain('setControlsLocked(true);');
