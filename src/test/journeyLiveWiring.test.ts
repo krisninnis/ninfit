@@ -84,16 +84,16 @@ describe('Journey product ownership', () => {
   });
 });
 
-describe('foreground GPS ownership', () => {
-  it('binds the screen to the hardened foreground session', () => {
-    expect(screen).toContain('startForegroundJourneyGpsSession');
+describe('Journey GPS ownership', () => {
+  it('binds the screen to the motion-aware provider session', () => {
+    expect(screen).toContain('startJourneyMotionSession');
     expect(screen).toContain('sessionRef');
     expect(screen).not.toContain('navigator.geolocation');
     expect(screen).not.toContain('watchPosition(');
   });
 
-  it('keys watcher lifetime to recorder status and activity type, not the changing Journey object', () => {
-    const dependencies = effectDependenciesAfter(screen, 'startForegroundJourneyGpsSession({');
+  it('keys provider lifetime to recorder status and activity type, not the changing Journey object', () => {
+    const dependencies = effectDependenciesAfter(screen, 'startJourneyMotionSession({');
     expect(dependencies).toEqual(['journey?.activityType', 'journey?.status', 'store']);
     expect(dependencies).not.toContain('journey');
   });
@@ -103,10 +103,11 @@ describe('foreground GPS ownership', () => {
     expect(screen).toContain("setGpsState('not_applicable')");
   });
 
-  it('stops GPS before persisting a pause transition', () => {
+  it('stops GPS before persisting a manual pause transition', () => {
     const pause = between(screen, 'const pause = () => {', 'const resume = () => {');
     expect(pause).toContain('stopGps();');
     expect(pause).toContain('recovery.pause');
+    expect(pause).toContain("saveJourneyPauseOrigin(store, next.id, 'manual')");
     expect(pause.indexOf('stopGps();')).toBeLessThan(pause.indexOf('recovery.pause'));
   });
 
@@ -117,15 +118,28 @@ describe('foreground GPS ownership', () => {
     expect(finish.indexOf('stopGps();')).toBeLessThan(finish.indexOf('recovery.complete'));
   });
 
-  it('stops foreground GPS when leaving without discarding recovery', () => {
+  it('stops the Journey location session when leaving without discarding recovery', () => {
     const leave = between(screen, 'const leave = () => {', 'return (');
     expect(leave).toContain('stopGps();');
     expect(leave).toContain('onClose();');
     expect(leave).not.toContain('recovery.discard');
   });
 
-  it('contains synchronous watcher startup failures instead of crashing the Journey screen', () => {
+  it('contains synchronous provider/session startup failures instead of crashing the Journey screen', () => {
     expect(screen).toContain('try {');
     expect(screen).toContain("setGpsState('runtime_error')");
+  });
+
+  it('protects Journey controls on native background and uses foreground only to reconcile durable fixes', () => {
+    expect(screen).toContain('subscribeInjectedJourneyAppLifecycle');
+    const lifecycleEffect = between(
+      screen,
+      'return subscribeInjectedJourneyAppLifecycle((state) => {',
+      '/*\n   * A control lock may remain',
+    );
+    expect(lifecycleEffect).toContain("if (state === 'backgrounded') {");
+    expect(lifecycleEffect).toContain('setControlsLocked(true);');
+    expect(lifecycleEffect).toContain('durableReplay.reconcile()');
+    expect(lifecycleEffect).not.toContain('setControlsLocked(false)');
   });
 });
