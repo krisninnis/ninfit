@@ -40,6 +40,9 @@ export interface JourneyMotionSession {
   getMotionState(): JourneyMotionState;
   /** Process one sample through the exact same trusted motion path used by the live provider. */
   processSample(sample: JourneyGpsSample): void;
+  /** Stop new provider callbacks while keeping durable replay processing available. */
+  stopProvider(): void;
+  /** Permanently stop both the provider and any further replay processing. */
   stop(): void;
 }
 
@@ -97,6 +100,11 @@ function initialDetectorState(journey: Journey, pauseOrigin: JourneyPauseOrigin)
  * `processSample` is deliberately exposed so durable native replay can enter this exact
  * same path. Replay therefore cannot bypass GPS trust, route, distance or auto-pause rules.
  *
+ * `stopProvider` is deliberately weaker than `stop`: completion/pause coordination can
+ * first quiesce new native callbacks, drain the already-durable native suffix through
+ * `processSample`, and only then permanently stop the motion session. Late callbacks
+ * from a provider that races its own stop are ignored.
+ *
  * If a caller does not inject a provider explicitly, provider selection is resolved at
  * session start through the runtime registry. That is the live switch which makes the
  * startup-installed native bridge authoritative inside the installed shell while web/PWA
@@ -130,6 +138,7 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
   let motionState: JourneyMotionState =
     currentJourney.status === 'paused' ? 'auto_paused' : 'recording';
   let stopped = false;
+  let providerStopped = false;
   let providerSession: JourneyLocationProviderSession | null = null;
   let startsNewSegment = true;
 
@@ -182,10 +191,23 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
     else handleRecordingSample(sample);
   }
 
+  function stopProvider(): void {
+    if (providerStopped) return;
+    providerStopped = true;
+    providerSession?.stop();
+    providerSession = null;
+  }
+
+  function stop(): void {
+    if (stopped) return;
+    stopProvider();
+    stopped = true;
+  }
+
   try {
     providerSession = provider.start({
       onSample(sample) {
-        if (stopped) return;
+        if (stopped || providerStopped) return;
         try {
           processSample(sample);
         } catch (cause) {
@@ -194,19 +216,12 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
         }
       },
       onError(error) {
-        if (!stopped) options.onProviderError?.(error);
+        if (!stopped && !providerStopped) options.onProviderError?.(error);
       },
     });
   } catch (cause) {
     options.onRuntimeError?.(cause);
     throw cause;
-  }
-
-  function stop(): void {
-    if (stopped) return;
-    stopped = true;
-    providerSession?.stop();
-    providerSession = null;
   }
 
   return {
@@ -217,6 +232,7 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
       return motionState;
     },
     processSample,
+    stopProvider,
     stop,
   };
 }
