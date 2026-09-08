@@ -12,12 +12,20 @@ function session(): JourneyMotionSession {
   } as JourneyMotionSession;
 }
 
+function deferred(): { promise: Promise<void>; resolve(): void } {
+  let resolvePromise!: () => void;
+  const promise = new Promise<void>((resolve) => {
+    resolvePromise = resolve;
+  });
+  return { promise, resolve: resolvePromise };
+}
+
 describe('native Journey durable replay coordinator', () => {
   it('shares an in-flight reconciliation and allows a later fresh drain', async () => {
-    let releaseFirst: (() => void) | null = null;
+    const firstReadGate = deferred();
     const readPending = vi.fn(async () => {
       if (readPending.mock.calls.length === 1) {
-        await new Promise<void>((resolve) => { releaseFirst = resolve; });
+        await firstReadGate.promise;
       }
       return [];
     });
@@ -37,7 +45,7 @@ describe('native Journey durable replay coordinator', () => {
     expect(overlapping).toBe(first);
     expect(readPending).toHaveBeenCalledTimes(1);
 
-    releaseFirst?.();
+    firstReadGate.resolve();
     await first;
 
     await coordinator.reconcile();
