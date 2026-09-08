@@ -106,9 +106,9 @@ describe('durable-safe native Journey completion', () => {
     };
     const reconcile = vi.fn(async () => ({
       processed: 2,
-      acknowledgedThrough: 2,
+      lastAcknowledgedSequence: 2,
+      stoppedAtSequence: null,
       stopReason: null,
-      failedSequence: null,
     }));
 
     const result = await completeJourneyAfterNativeReconciliation({
