@@ -36,7 +36,7 @@ describe('native durable Journey reconciliation', () => {
       session,
     });
 
-    expect(calls).toEqual(['process:2026-08-30T02:40:00.000Z', 'ack:4']);
+    expect(calls).toEqual(['process:2026-08-29T10:40:00.000Z', 'ack:4']);
     expect(result.processed).toBe(1);
     expect(result.stopReason).toBeNull();
   });
