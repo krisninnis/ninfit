@@ -24,8 +24,8 @@ export interface JourneyAutoPauseState {
   anchor: JourneyGpsSample | null;
   stationarySinceMs: number | null;
   resumeConfirmations: number;
-  /** Last reliable sample time consumed as motion evidence. */
-  lastEvaluatedMs: number | null;
+  /** Last reliable sample time consumed as motion evidence. Optional for recovered legacy state. */
+  lastEvaluatedMs?: number | null;
 }
 
 export const INITIAL_JOURNEY_AUTO_PAUSE_STATE: JourneyAutoPauseState = {
@@ -78,7 +78,11 @@ export function evaluateJourneyAutoPause(
     return { state: previous, signal: 'none' };
   }
 
-  if (previous.lastEvaluatedMs !== null && timeMs <= previous.lastEvaluatedMs) {
+  if (
+    previous.lastEvaluatedMs !== null
+    && previous.lastEvaluatedMs !== undefined
+    && timeMs <= previous.lastEvaluatedMs
+  ) {
     return { state: previous, signal: 'none' };
   }
 
