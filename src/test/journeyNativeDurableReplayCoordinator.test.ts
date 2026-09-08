@@ -8,6 +8,7 @@ function session(): JourneyMotionSession {
     getJourney: vi.fn(),
     getMotionState: vi.fn(),
     processSample: vi.fn(),
+    stopProvider: vi.fn(),
     stop: vi.fn(),
   } as JourneyMotionSession;
 }
