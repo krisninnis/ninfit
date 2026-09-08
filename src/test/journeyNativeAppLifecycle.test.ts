@@ -16,12 +16,12 @@ describe('native Journey app lifecycle bridge', () => {
   });
 
   it('forwards only valid foreground/background lifecycle states', () => {
-    let emit: ((state: string) => void) | null = null;
+    const listeners: Array<(state: string) => void> = [];
     const unsubscribe = vi.fn();
     const host = {
       [NINFIT_NATIVE_APP_LIFECYCLE_KEY]: {
         subscribe(listener: (state: string) => void) {
-          emit = listener;
+          listeners.push(listener);
           return unsubscribe;
         },
       },
@@ -29,9 +29,11 @@ describe('native Journey app lifecycle bridge', () => {
     const listener = vi.fn();
 
     const dispose = subscribeInjectedJourneyAppLifecycle(listener, host);
-    emit?.('backgrounded');
-    emit?.('unexpected');
-    emit?.('foregrounded');
+    const emit = listeners[0];
+    if (!emit) throw new Error('native lifecycle listener not registered');
+    emit('backgrounded');
+    emit('unexpected');
+    emit('foregrounded');
     dispose();
 
     expect(listener.mock.calls).toEqual([['backgrounded'], ['foregrounded']]);
