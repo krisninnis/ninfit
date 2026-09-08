@@ -4,6 +4,9 @@ import type {
   JourneyLocationProvider,
   JourneyLocationProviderCallbacks,
 } from '../app/journeyLocationProvider';
+import { createJourneyNativeReplayMotionProcessor } from '../app/journeyNativeReplayMotionProcessor';
+import { createNativeJourneyPositionBuffer } from '../app/journeyNativePositionBuffer';
+import { replayNativeJourneyPositions } from '../app/journeyNativePositionReplay';
 import type { Journey } from '../domain/journey';
 import { createMemoryStorageAdapter } from '../storage/StorageAdapter';
 import { loadActiveJourneySnapshot, saveActiveJourneySnapshot } from '../storage/activeJourneySnapshot';
@@ -92,6 +95,48 @@ describe('Journey motion session', () => {
     expect(session.getMotionState()).toBe('recording');
     expect(states).toEqual(['auto_paused', 'recording']);
     expect(loadActiveJourneySnapshot(storage)?.journey.status).toBe('recording');
+  });
+
+  it('replays durable native fixes through the same trusted motion path and acknowledges them', () => {
+    const storage = createMemoryStorageAdapter();
+    const initial = journey();
+    saveActiveJourneySnapshot(storage, initial, initial.startedAt);
+    const source = fakeProvider();
+    const session = startJourneyMotionSession({
+      storage,
+      journey: initial,
+      provider: source.provider,
+      idFactory: () => 'distance-1',
+    });
+
+    let snapshot: Parameters<ReturnType<typeof createNativeJourneyPositionBuffer>['pending']>[0] | undefined;
+    const durable: { snapshot: any } = { snapshot: null };
+    const buffer = createNativeJourneyPositionBuffer({
+      journeyId: initial.id,
+      store: {
+        load() { return durable.snapshot; },
+        save(next) { durable.snapshot = structuredClone(next); },
+        remove() { durable.snapshot = null; },
+      },
+    });
+    buffer.append({
+      latitude: 51.5,
+      longitude: -3.5,
+      accuracyM: 5,
+      timestampMs: Date.parse('2026-09-07T06:00:01.000Z'),
+    });
+
+    const result = replayNativeJourneyPositions({
+      buffer,
+      processor: createJourneyNativeReplayMotionProcessor(session),
+    });
+
+    expect(result.processed).toBe(1);
+    expect(result.stoppedAtSequence).toBeNull();
+    expect(buffer.pending()).toEqual([]);
+    expect(session.getJourney().route?.acceptedPoints).toHaveLength(1);
+    expect(loadActiveJourneySnapshot(storage)?.journey.route?.acceptedPoints).toHaveLength(1);
+    void snapshot;
   });
 
   it('never starts automatic observation for a manual or unproven pause', () => {
