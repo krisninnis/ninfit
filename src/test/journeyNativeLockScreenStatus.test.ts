@@ -8,7 +8,6 @@ function journey(status: Journey['status'] = 'recording'): Journey {
     activityType: 'walk',
     status,
     startedAt: '2026-09-08T17:00:00.000Z',
-    endedAt: null,
     pauses: status === 'paused' ? [{ startedAt: '2026-09-08T17:05:00.000Z' }] : [],
     metrics: [{
       id: 'distance-1',
