@@ -1,7 +1,8 @@
-import { lazy, Suspense, useMemo } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { getAppContext } from '../../app/bootstrap';
 import { journeyTrustedRouteSegments } from '../../domain/journeyRouteSegments';
 import { loadJourneyHistory } from '../../storage/journeyHistory';
+import { journeyName, saveJourneyName } from '../../storage/journeyNames';
 import {
   formatJourneyDistance,
   formatJourneyDuration,
@@ -37,6 +38,9 @@ export function JourneyDetailScreen({
     () => loadJourneyHistory(storage).find((item) => item.id === journeyId) ?? null,
     [journeyId, storage],
   );
+  const [savedName, setSavedName] = useState(() => journeyName(storage, journeyId) ?? '');
+  const [draftName, setDraftName] = useState(() => journeyName(storage, journeyId) ?? '');
+  const [nameSaved, setNameSaved] = useState(false);
 
   if (journey === null) {
     return (
@@ -62,6 +66,13 @@ export function JourneyDetailScreen({
   const drawableRoute = journeyTrustedRouteSegments(journey)
     .some((segment) => segment.length >= 2);
 
+  const saveName = () => {
+    const next = saveJourneyName(storage, journey.id, draftName) ?? '';
+    setSavedName(next);
+    setDraftName(next);
+    setNameSaved(true);
+  };
+
   return (
     <section className="journey-detail" aria-labelledby="journey-detail-title">
       <header className="journey-detail__header">
@@ -71,7 +82,7 @@ export function JourneyDetailScreen({
         </button>
         <div>
           <p className="journey-detail__eyebrow">Completed Journey</p>
-          <h1 id="journey-detail-title">{journeyActivityLabel(journey.activityType)}</h1>
+          <h1 id="journey-detail-title">{savedName || journeyActivityLabel(journey.activityType)}</h1>
           <p className="journey-detail__date">
             {when.toLocaleDateString(undefined, {
               weekday: 'long',
@@ -84,6 +95,38 @@ export function JourneyDetailScreen({
           </p>
         </div>
       </header>
+
+      <section className="journey-detail__name-card" aria-labelledby="journey-name-title">
+        <div className="journey-detail__section-heading">
+          <div>
+            <p className="journey-detail__eyebrow">Make it yours</p>
+            <h2 id="journey-name-title">Name this Journey</h2>
+          </div>
+        </div>
+        <div className="journey-detail__name-controls">
+          <input
+            type="text"
+            value={draftName}
+            maxLength={80}
+            placeholder="e.g. Sunday walk around Bettws"
+            aria-label="Journey name"
+            onChange={(event) => {
+              setDraftName(event.target.value);
+              setNameSaved(false);
+            }}
+          />
+          <button type="button" className="btn btn--primary" onClick={saveName}>
+            Save name
+          </button>
+        </div>
+        <p className="journey-detail__name-status" role="status" aria-live="polite">
+          {nameSaved
+            ? savedName
+              ? 'Journey name saved on this device.'
+              : 'Journey name cleared.'
+            : 'You can change this any time.'}
+        </p>
+      </section>
 
       <div className="journey-detail__hero">
         <div className="journey-detail__primary-stat">

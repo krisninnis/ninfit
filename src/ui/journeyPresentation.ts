@@ -65,6 +65,38 @@ export function journeyGpsLabel(state: JourneyGpsPresentationState): string {
   return state === 'receiving' ? 'GPS points saved' : 'GPS waiting';
 }
 
+/**
+ * Why a Finish attempt stopped without completing the Journey.
+ *
+ * Declared here rather than imported so the presentation layer keeps its domain-only
+ * import boundary. It mirrors `JourneyNativeSafeCompletionFailure` exactly; the Active
+ * Journey screen assigns one to the other, so a new failure reason in the application
+ * layer fails typecheck here instead of reaching a user as a missing message.
+ */
+export type JourneyFinishFailure =
+  | 'replay_failed'
+  | 'queue_clear_failed'
+  | 'completion_failed';
+
+/**
+ * Honest wording for a Finish that stopped safely.
+ *
+ * Every message says the same three things in the same order: nothing was lost, the
+ * Journey is still on the device, and Finish can be tried again. A failed Finish never
+ * persists completed history and never clears the native queue, so that is true - and
+ * the calm-by-default contract means it is said without alarm or blame.
+ */
+export function journeyFinishFailureNote(reason: JourneyFinishFailure): string {
+  switch (reason) {
+    case 'replay_failed':
+      return 'Finish stopped safely: GPS collected while your phone was locked could not be read back yet. This Journey is still recording on this device. Try Finish again.';
+    case 'queue_clear_failed':
+      return 'Finish stopped safely while tidying up background GPS. This Journey is still recording on this device. Try Finish again.';
+    case 'completion_failed':
+      return 'Finish could not be saved. This Journey is still recording on this device. Try Finish again.';
+  }
+}
+
 export function journeyLiveGpsLabel(state: JourneyLiveGpsState): string {
   switch (state) {
     case 'connecting':
