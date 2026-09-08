@@ -5,6 +5,7 @@ import { clearJourneyPauseOrigin } from '../storage/journeyPauseProvenance';
 import { createJourneyRecoveryController } from './journeyRecoveryController';
 import type { JourneyMotionSession } from './journeyMotionSession';
 import { reconcileNativeJourneyDurablePositions } from './journeyNativeDurableReconciliation';
+import type { NativeJourneyDurableReplayCoordinator } from './journeyNativeDurableReplayCoordinator';
 import type {
   NativeJourneyDurablePositionQueue,
   NativeJourneyDurableReplayResult,
@@ -38,6 +39,11 @@ export type JourneyNativeSafeCompletionResult =
  * 4. choose completion time after replay so it cannot precede the newest native fix;
  * 5. persist completed history, then permanently stop replay processing.
  *
+ * If startup/foreground reconciliation is already in flight, callers pass the same
+ * coordinator used by the Active Journey screen. Completion then shares ownership of
+ * that in-flight drain instead of starting a competing read/ack sequence. Once it has
+ * resolved, the queue can be cleared safely before completed history becomes authoritative.
+ *
  * Any replay/queue/persistence failure leaves the Journey active and recoverable. The
  * provider remains quiesced so a retry cannot race new observations. Completion never
  * silently discards an unreconciled native suffix.
@@ -46,6 +52,7 @@ export async function completeJourneyAfterNativeReconciliation(options: {
   storage: StorageAdapter;
   session: JourneyMotionSession;
   queue?: NativeJourneyDurablePositionQueue | null;
+  replayCoordinator?: NativeJourneyDurableReplayCoordinator | null;
   now: () => ISODateTime;
 }): Promise<JourneyNativeSafeCompletionResult> {
   options.session.stopProvider();
@@ -54,11 +61,13 @@ export async function completeJourneyAfterNativeReconciliation(options: {
   const journeyId = options.session.getJourney().id;
 
   if (options.queue) {
-    replay = await reconcileNativeJourneyDurablePositions({
-      journeyId,
-      queue: options.queue,
-      session: options.session,
-    });
+    replay = options.replayCoordinator
+      ? await options.replayCoordinator.reconcile()
+      : await reconcileNativeJourneyDurablePositions({
+          journeyId,
+          queue: options.queue,
+          session: options.session,
+        });
     if (replay.stopReason !== null) {
       return { completed: false, reason: 'replay_failed', replay };
     }
