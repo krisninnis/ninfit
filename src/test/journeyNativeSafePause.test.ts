@@ -89,6 +89,46 @@ describe('durable-safe native Journey manual pause', () => {
     expect(loadJourneyPauseOrigin(storage, 'journey-safe-pause')).toBe('manual');
   });
 
+  it('keeps explicit manual authority when replay itself reaches auto-pause', async () => {
+    const storage = createMemoryStorageAdapter();
+    const { session } = motionSession(storage);
+    const queue: NativeJourneyDurablePositionQueue = {
+      async readPending() {
+        return [
+          {
+            sequence: 1,
+            latitude: 51.5074,
+            longitude: -3.5792,
+            accuracyM: 5,
+            timestampMs: Date.parse('2026-09-08T12:00:01.000Z'),
+          },
+          {
+            sequence: 2,
+            latitude: 51.5074,
+            longitude: -3.5792,
+            accuracyM: 5,
+            timestampMs: Date.parse('2026-09-08T12:00:06.000Z'),
+          },
+        ];
+      },
+      acknowledgeThrough: vi.fn(async () => undefined),
+      clear: vi.fn(async () => undefined),
+    };
+
+    const result = await pauseJourneyAfterNativeReconciliation({
+      storage,
+      session,
+      queue,
+      now: () => '2026-09-08T12:00:07.000Z',
+    });
+
+    expect(result.paused).toBe(true);
+    if (!result.paused) throw new Error('expected pause success');
+    expect(result.journey.status).toBe('paused');
+    expect(result.journey.pauses).toHaveLength(1);
+    expect(loadJourneyPauseOrigin(storage, 'journey-safe-pause')).toBe('manual');
+  });
+
   it('does not pause or clear the queue when durable replay fails', async () => {
     const storage = createMemoryStorageAdapter();
     const { session, providerStop } = motionSession(storage);
