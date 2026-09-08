@@ -11,6 +11,7 @@ import {
   createNativeJourneyDurableReplayCoordinator,
   type NativeJourneyDurableReplayCoordinator,
 } from '../../app/journeyNativeDurableReplayCoordinator';
+import { completeJourneyAfterNativeReconciliation } from '../../app/journeyNativeSafeCompletion';
 const ActiveJourneyMap = lazy(async () => {
   const module = await import('../components/ActiveJourneyMap');
   return { default: module.ActiveJourneyMap };
@@ -29,8 +30,10 @@ import {
   formatJourneyDistance,
   formatJourneyDuration,
   journeyDistanceM,
+  journeyFinishFailureNote,
   journeyLiveGpsLabel,
   journeyLiveGpsNote,
+  type JourneyFinishFailure,
   type JourneyLiveGpsState,
 } from '../journeyPresentation';
 
@@ -75,6 +78,8 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
   const [now, setNow] = useState<ISODateTime>(() => nowIso());
   const [gpsState, setGpsState] = useState<JourneyLiveGpsState>(() => initialGpsState(journey));
   const [controlsLocked, setControlsLocked] = useState(false);
+  const [finishing, setFinishing] = useState(false);
+  const [finishFailure, setFinishFailure] = useState<JourneyFinishFailure | null>(null);
   const [autoPaused, setAutoPaused] = useState(() =>
     journey !== null
     && journey.status === 'paused'
@@ -288,23 +293,80 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     setNow(changedAt);
   };
 
-  const finish = () => {
-    if (controlsLocked) return;
-    if (journey.status !== 'recording' && journey.status !== 'paused') return;
-    stopGps();
-    const changedAt = nowIso();
-    const next = recovery.complete(journeyRef.current ?? journey, changedAt);
+  /*
+   * The one place a completed Journey becomes visible to the rest of the app. Both
+   * completion paths below converge here so a durable-safe Finish and an ordinary
+   * Finish cannot drift into two different notions of "finished".
+   */
+  const settleCompletion = (next: Journey) => {
     clearJourneyPauseOrigin(store, next.id);
     journeyRef.current = next;
     setJourney(next);
     setAutoPaused(false);
+    setFinishFailure(null);
     setGpsState('finished');
-    setNow(changedAt);
+    setNow(next.endedAt ?? nowIso());
     onCompleted?.(next.id);
   };
 
+  /*
+   * Finish must not discard native fixes that were durably captured while the WebView
+   * was suspended - the last stretch of a locked-screen walk is exactly the part a user
+   * would notice missing.
+   *
+   * When a live motion session and an injected native queue both exist, completion runs
+   * through the durable-safe coordinator: quiesce the provider, replay the native suffix
+   * through the same trusted motion path, clear the Journey-scoped queue, and only then
+   * persist completed history. The screen hands over its own replay coordinator, so
+   * startup reconciliation, a foreground reconciliation and Finish share one owner of
+   * that queue instead of racing three read/acknowledge sequences against each other.
+   *
+   * A failure persists nothing and clears nothing. The Journey stays active and
+   * recoverable with the provider quiesced, and Finish can simply be pressed again.
+   *
+   * With no session or no native queue - browser/PWA recording, swim, or a manually
+   * paused Journey whose provider is already stopped - there is no durable suffix this
+   * screen can replay, and completion keeps its original synchronous shape.
+   */
+  const finish = () => {
+    if (controlsLocked || finishing) return;
+    if (journey.status !== 'recording' && journey.status !== 'paused') return;
+
+    const session = sessionRef.current;
+    const durableQueue = session === null ? null : resolveInjectedNativeJourneyDurableQueue();
+    if (session === null || durableQueue === null) {
+      stopGps();
+      settleCompletion(recovery.complete(journeyRef.current ?? journey, nowIso()));
+      return;
+    }
+
+    setFinishing(true);
+    setFinishFailure(null);
+    void completeJourneyAfterNativeReconciliation({
+      storage: store,
+      session,
+      queue: durableQueue,
+      replayCoordinator: durableReplayRef.current,
+      now: nowIso,
+    }).then((result) => {
+      setFinishing(false);
+      if (!result.completed) {
+        setFinishFailure(result.reason);
+        setGpsState('runtime_error');
+        return;
+      }
+      sessionRef.current = null;
+      durableReplayRef.current = null;
+      settleCompletion(result.journey);
+    }).catch(() => {
+      setFinishing(false);
+      setFinishFailure('completion_failed');
+      setGpsState('runtime_error');
+    });
+  };
+
   const leave = () => {
-    if (controlsLocked) return;
+    if (controlsLocked || finishing) return;
     stopGps();
     onClose();
   };
@@ -319,7 +381,7 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
           type="button"
           className="active-journey__leave"
           onClick={leave}
-          disabled={controlsLocked}
+          disabled={controlsLocked || finishing}
         >
           <span aria-hidden="true">←</span>
           <span>Journey</span>
@@ -408,6 +470,12 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
         </div>
       ) : null}
 
+      {finishFailure === null ? null : (
+        <p className="active-journey__finish-error" role="alert">
+          {journeyFinishFailureNote(finishFailure)}
+        </p>
+      )}
+
       <div className="active-journey__dock" aria-label="Journey controls">
         {isCompleted ? (
           <button type="button" className="btn btn--primary active-journey__dock-action" onClick={leave}>
@@ -423,6 +491,7 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
               type="button"
               className="btn btn--secondary active-journey__dock-action"
               onClick={isPaused ? resume : pause}
+              disabled={finishing}
             >
               {isPaused ? 'Resume' : 'Pause'}
             </button>
@@ -430,8 +499,9 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
               type="button"
               className="btn btn--primary active-journey__dock-action"
               onClick={finish}
+              disabled={finishing}
             >
-              Finish
+              {finishing ? 'Finishing...' : 'Finish'}
             </button>
           </>
         )}

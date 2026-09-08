@@ -111,11 +111,34 @@ describe('Journey GPS ownership', () => {
     expect(pause.indexOf('stopGps();')).toBeLessThan(pause.indexOf('recovery.pause'));
   });
 
+  /*
+   * RE-POINTED, NOT WEAKENED. Finish now has two paths, so the single ordering
+   * assertion became two - one per path - and the property they protect is unchanged:
+   * location observation is always quiesced before completion may persist history.
+   *
+   * The synchronous path (no motion session, or no injected native queue) still stops
+   * GPS before `recovery.complete`. The durable-safe path hands the session to
+   * `completeJourneyAfterNativeReconciliation`, which quiesces the provider as its
+   * first act before replaying and persisting - proven behaviourally, not by reading
+   * source, in `journeyNativeSafeCompletion.test.ts` and
+   * `activeJourneyFinishNativeReplay.dom.test.tsx`.
+   *
+   * The new assertion is the stronger one: the screen must not reach `recovery.complete`
+   * on the native path at all, because that call persists completed history without
+   * draining the durable queue first.
+   */
   it('stops GPS before completion can persist history and clear recovery', () => {
-    const finish = between(screen, 'const finish = () => {', 'const leave = () => {');
+    const finish = between(screen, 'const finish = () => {', '  const leave = () => {');
     expect(finish).toContain('stopGps();');
     expect(finish).toContain('recovery.complete');
     expect(finish.indexOf('stopGps();')).toBeLessThan(finish.indexOf('recovery.complete'));
+
+    // The synchronous path is the fallback, and it is guarded by the absence of a
+    // session or of a native queue - never taken while a durable suffix could exist.
+    expect(finish).toContain('if (session === null || durableQueue === null) {');
+    const nativePath = between(finish, 'setFinishing(true);', '});');
+    expect(nativePath).toContain('completeJourneyAfterNativeReconciliation({');
+    expect(nativePath).not.toContain('recovery.complete');
   });
 
   it('stops the Journey location session when leaving without discarding recovery', () => {
