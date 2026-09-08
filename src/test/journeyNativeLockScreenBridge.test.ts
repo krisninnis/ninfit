@@ -25,7 +25,7 @@ describe('native Journey lock-screen bridge', () => {
     expect(resolveInjectedNativeJourneyLockScreenBridge({} as typeof globalThis)).toBeNull();
     expect(resolveInjectedNativeJourneyLockScreenBridge({
       [NINFIT_NATIVE_JOURNEY_LOCK_SCREEN_KEY]: { update() {} },
-    } as typeof globalThis)).toBeNull();
+    } as unknown as typeof globalThis)).toBeNull();
   });
 
   it('publishes only through a valid injected bridge', async () => {
