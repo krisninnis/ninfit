@@ -129,4 +129,16 @@ describe('Journey GPS ownership', () => {
     expect(screen).toContain('try {');
     expect(screen).toContain("setGpsState('runtime_error')");
   });
+
+  it('protects Journey controls when the installed native app backgrounds and never auto-unlocks on foreground', () => {
+    expect(screen).toContain('subscribeInjectedJourneyAppLifecycle');
+    const lifecycleEffect = between(
+      screen,
+      'return subscribeInjectedJourneyAppLifecycle((state) => {',
+      '/*\n   * A control lock may remain',
+    );
+    expect(lifecycleEffect).toContain("if (state === 'backgrounded') setControlsLocked(true)");
+    expect(lifecycleEffect).not.toContain("state === 'foregrounded'");
+    expect(lifecycleEffect).not.toContain('setControlsLocked(false)');
+  });
 });
