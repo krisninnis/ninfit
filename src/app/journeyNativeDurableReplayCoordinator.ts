@@ -27,10 +27,11 @@ export function createNativeJourneyDurableReplayCoordinator(options: {
     reconcile() {
       if (inFlight !== null) return inFlight;
       const run = reconcileNativeJourneyDurablePositions(options);
-      inFlight = run.finally(() => {
-        if (inFlight === run) inFlight = null;
+      const wrapped = run.finally(() => {
+        if (inFlight === wrapped) inFlight = null;
       });
-      return inFlight;
+      inFlight = wrapped;
+      return wrapped;
     },
   };
 }
