@@ -9,6 +9,7 @@ describe('native durable Journey reconciliation', () => {
     const session = {
       getJourney: vi.fn(),
       getMotionState: vi.fn(),
+      stopProvider: vi.fn(),
       stop: vi.fn(),
       processSample(sample) {
         calls.push(`process:${sample.recordedAt}`);
