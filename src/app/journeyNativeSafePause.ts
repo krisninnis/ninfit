@@ -30,8 +30,13 @@ export type JourneyNativeSafePauseResult =
  * 4. persist a manual pause using the post-replay Journey;
  * 5. save explicit manual provenance and permanently stop the motion session.
  *
- * Failure before persistence leaves the Journey recording and recoverable with its
- * provider quiesced. A retry may safely reuse the same replay coordinator.
+ * Replay may itself cross the stationary threshold and auto-pause the Journey. The
+ * user's explicit Pause still wins: that existing pause is re-labelled `manual` rather
+ * than creating a duplicate pause interval. A later movement fix therefore cannot
+ * auto-resume a Journey the user deliberately paused.
+ *
+ * Failure before persistence leaves the Journey active/recoverable with its provider
+ * quiesced. A retry may safely reuse the same replay coordinator.
  */
 export async function pauseJourneyAfterNativeReconciliation(options: {
   storage: StorageAdapter;
@@ -67,8 +72,10 @@ export async function pauseJourneyAfterNativeReconciliation(options: {
 
   let paused: Journey;
   try {
-    const recovery = createJourneyRecoveryController(options.storage);
-    paused = recovery.pause(options.session.getJourney(), options.now());
+    const current = options.session.getJourney();
+    paused = current.status === 'paused'
+      ? current
+      : createJourneyRecoveryController(options.storage).pause(current, options.now());
     saveJourneyPauseOrigin(options.storage, paused.id, 'manual');
   } catch {
     return { paused: false, reason: 'pause_failed', replay };
