@@ -12,6 +12,7 @@ import {
   type NativeJourneyDurableReplayCoordinator,
 } from '../../app/journeyNativeDurableReplayCoordinator';
 import { completeJourneyAfterNativeReconciliation } from '../../app/journeyNativeSafeCompletion';
+import { pauseJourneyAfterNativeReconciliation } from '../../app/journeyNativeSafePause';
 const ActiveJourneyMap = lazy(async () => {
   const module = await import('../components/ActiveJourneyMap');
   return { default: module.ActiveJourneyMap };
@@ -78,6 +79,8 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
   const [now, setNow] = useState<ISODateTime>(() => nowIso());
   const [gpsState, setGpsState] = useState<JourneyLiveGpsState>(() => initialGpsState(journey));
   const [controlsLocked, setControlsLocked] = useState(false);
+  const [pausing, setPausing] = useState(false);
+  const [pauseFailure, setPauseFailure] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [finishFailure, setFinishFailure] = useState<JourneyFinishFailure | null>(null);
   const [autoPaused, setAutoPaused] = useState(() =>
@@ -177,35 +180,18 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     };
   }, [journey?.status, journey?.activityType, store]);
 
-  /*
-   * Normal recording owns the original status-bound wake-lock lifetime. Keeping this
-   * effect status-only makes the cleanup rule explicit: a manual pause or completion
-   * always releases this lock.
-   */
   useEffect(() => {
     if (journey?.status !== 'recording') return undefined;
     const wakeLock = keepJourneyScreenAwake();
     return () => wakeLock.release();
   }, [journey?.status]);
 
-  /*
-   * Auto-pause is different from a manual pause: tracking is still active and the
-   * provider is waiting for trusted movement evidence. It therefore owns a separate,
-   * mutually-exclusive wake-lock request while auto-paused. This never overlaps the
-   * recording effect because auto-paused Journeys have recorder status `paused`.
-   */
   useEffect(() => {
     if (!autoPaused) return undefined;
     const wakeLock = keepJourneyScreenAwake();
     return () => wakeLock.release();
   }, [autoPaused]);
 
-  /*
-   * Native backgrounding (screen lock, Home, app switch) protects Journey controls.
-   * Returning to foreground deliberately does not unlock them. Foregrounding also asks
-   * the durable native queue to reconcile any fixes collected while the WebView was
-   * suspended. Overlapping startup/foreground drains are serialized by the coordinator.
-   */
   useEffect(() => {
     const isTracking = journey?.status === 'recording' || autoPaused;
     if (!isTracking) return undefined;
@@ -226,11 +212,6 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     });
   }, [journey?.status, autoPaused]);
 
-  /*
-   * A control lock may remain through an automatic pause because tracking is still
-   * active. Manual pause/completion discards it so stale locked controls cannot leak
-   * into an inactive state.
-   */
   useEffect(() => {
     if (journey?.status !== 'recording' && !autoPaused && controlsLocked) {
       setControlsLocked(false);
@@ -267,21 +248,56 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
   const usesPhoneGps = journeyUsesPhoneGps(journey.activityType);
   const statusClass = gpsState === 'live' ? 'receiving' : 'waiting';
 
-  const pause = () => {
-    if (controlsLocked || journey.status !== 'recording') return;
-    stopGps();
-    const changedAt = nowIso();
-    const next = recovery.pause(journeyRef.current ?? journey, changedAt);
-    saveJourneyPauseOrigin(store, next.id, 'manual');
+  const settlePause = (next: Journey) => {
     journeyRef.current = next;
     setJourney(next);
     setAutoPaused(false);
+    setPauseFailure(false);
     setGpsState(journeyUsesPhoneGps(next.activityType) ? 'paused' : 'not_applicable');
-    setNow(changedAt);
+    setNow(next.pauses.at(-1)?.startedAt ?? nowIso());
+  };
+
+  const pause = () => {
+    if (controlsLocked || pausing || finishing || journey.status !== 'recording') return;
+
+    const session = sessionRef.current;
+    const durableQueue = session === null ? null : resolveInjectedNativeJourneyDurableQueue();
+    if (session === null || durableQueue === null) {
+      stopGps();
+      const changedAt = nowIso();
+      const next = recovery.pause(journeyRef.current ?? journey, changedAt);
+      saveJourneyPauseOrigin(store, next.id, 'manual');
+      settlePause(next);
+      return;
+    }
+
+    setPausing(true);
+    setPauseFailure(false);
+    void pauseJourneyAfterNativeReconciliation({
+      storage: store,
+      session,
+      queue: durableQueue,
+      replayCoordinator: durableReplayRef.current,
+      now: nowIso,
+    }).then((result) => {
+      setPausing(false);
+      if (!result.paused) {
+        setPauseFailure(true);
+        setGpsState('runtime_error');
+        return;
+      }
+      sessionRef.current = null;
+      durableReplayRef.current = null;
+      settlePause(result.journey);
+    }).catch(() => {
+      setPausing(false);
+      setPauseFailure(true);
+      setGpsState('runtime_error');
+    });
   };
 
   const resume = () => {
-    if (controlsLocked || journey.status !== 'paused') return;
+    if (controlsLocked || pausing || finishing || journey.status !== 'paused') return;
     stopGps();
     const changedAt = nowIso();
     const next = recovery.resume(journeyRef.current ?? journey, changedAt);
@@ -289,47 +305,25 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     journeyRef.current = next;
     setJourney(next);
     setAutoPaused(false);
+    setPauseFailure(false);
     setGpsState(journeyUsesPhoneGps(next.activityType) ? 'connecting' : 'not_applicable');
     setNow(changedAt);
   };
 
-  /*
-   * The one place a completed Journey becomes visible to the rest of the app. Both
-   * completion paths below converge here so a durable-safe Finish and an ordinary
-   * Finish cannot drift into two different notions of "finished".
-   */
   const settleCompletion = (next: Journey) => {
     clearJourneyPauseOrigin(store, next.id);
     journeyRef.current = next;
     setJourney(next);
     setAutoPaused(false);
+    setPauseFailure(false);
     setFinishFailure(null);
     setGpsState('finished');
     setNow(next.endedAt ?? nowIso());
     onCompleted?.(next.id);
   };
 
-  /*
-   * Finish must not discard native fixes that were durably captured while the WebView
-   * was suspended - the last stretch of a locked-screen walk is exactly the part a user
-   * would notice missing.
-   *
-   * When a live motion session and an injected native queue both exist, completion runs
-   * through the durable-safe coordinator: quiesce the provider, replay the native suffix
-   * through the same trusted motion path, clear the Journey-scoped queue, and only then
-   * persist completed history. The screen hands over its own replay coordinator, so
-   * startup reconciliation, a foreground reconciliation and Finish share one owner of
-   * that queue instead of racing three read/acknowledge sequences against each other.
-   *
-   * A failure persists nothing and clears nothing. The Journey stays active and
-   * recoverable with the provider quiesced, and Finish can simply be pressed again.
-   *
-   * With no session or no native queue - browser/PWA recording, swim, or a manually
-   * paused Journey whose provider is already stopped - there is no durable suffix this
-   * screen can replay, and completion keeps its original synchronous shape.
-   */
   const finish = () => {
-    if (controlsLocked || finishing) return;
+    if (controlsLocked || pausing || finishing) return;
     if (journey.status !== 'recording' && journey.status !== 'paused') return;
 
     const session = sessionRef.current;
@@ -366,7 +360,7 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
   };
 
   const leave = () => {
-    if (controlsLocked || finishing) return;
+    if (controlsLocked || pausing || finishing) return;
     stopGps();
     onClose();
   };
@@ -381,7 +375,7 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
           type="button"
           className="active-journey__leave"
           onClick={leave}
-          disabled={controlsLocked || finishing}
+          disabled={controlsLocked || pausing || finishing}
         >
           <span aria-hidden="true">←</span>
           <span>Journey</span>
@@ -470,6 +464,12 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
         </div>
       ) : null}
 
+      {pauseFailure ? (
+        <p className="active-journey__finish-error" role="alert">
+          NinFit could not safely pause yet because recent background GPS has not finished reconciling. Your Journey remains recoverable; try Pause again.
+        </p>
+      ) : null}
+
       {finishFailure === null ? null : (
         <p className="active-journey__finish-error" role="alert">
           {journeyFinishFailureNote(finishFailure)}
@@ -491,15 +491,15 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
               type="button"
               className="btn btn--secondary active-journey__dock-action"
               onClick={isPaused ? resume : pause}
-              disabled={finishing}
+              disabled={pausing || finishing}
             >
-              {isPaused ? 'Resume' : 'Pause'}
+              {pausing ? 'Pausing...' : isPaused ? 'Resume' : 'Pause'}
             </button>
             <button
               type="button"
               className="btn btn--primary active-journey__dock-action"
               onClick={finish}
-              disabled={finishing}
+              disabled={pausing || finishing}
             >
               {finishing ? 'Finishing...' : 'Finish'}
             </button>
