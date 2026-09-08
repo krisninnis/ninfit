@@ -5,6 +5,7 @@ import {
   type JourneyMotionSession,
   type JourneyMotionState,
 } from '../../app/journeyMotionSession';
+import { subscribeInjectedJourneyAppLifecycle } from '../../app/journeyNativeAppLifecycle';
 const ActiveJourneyMap = lazy(async () => {
   const module = await import('../components/ActiveJourneyMap');
   return { default: module.ActiveJourneyMap };
@@ -166,6 +167,20 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     const wakeLock = keepJourneyScreenAwake();
     return () => wakeLock.release();
   }, [autoPaused]);
+
+  /*
+   * Native backgrounding (screen lock, Home, app switch) protects Journey controls.
+   * Returning to foreground deliberately does not unlock them: the user must explicitly
+   * unlock inside NinFit after re-entering the app. Browser/PWA builds have no injected
+   * native lifecycle bridge and this subscription is therefore a safe no-op.
+   */
+  useEffect(() => {
+    const isTracking = journey?.status === 'recording' || autoPaused;
+    if (!isTracking) return undefined;
+    return subscribeInjectedJourneyAppLifecycle((state) => {
+      if (state === 'backgrounded') setControlsLocked(true);
+    });
+  }, [journey?.status, autoPaused]);
 
   /*
    * A control lock may remain through an automatic pause because tracking is still
@@ -347,8 +362,8 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
           </button>
           <p className="active-journey__recording-lock-note">
             {controlsLocked
-              ? 'Accidental taps are blocked. Tracking and the screen-awake request continue.'
-              : 'Locks NinFit controls while tracking. True locked-phone background GPS needs the native app.'}
+              ? 'Accidental taps are blocked. Tracking continues; unlock NinFit controls when you are ready.'
+              : 'Locks NinFit controls while tracking. The installed app will also protect them when your phone backgrounds.'}
           </p>
         </div>
       ) : null}
