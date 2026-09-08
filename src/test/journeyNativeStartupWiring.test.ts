@@ -7,21 +7,26 @@ const SRC = fileURLToPath(new URL('..', import.meta.url));
 const main = readFileSync(join(SRC, 'main.tsx'), 'utf8');
 
 describe('native Journey startup wiring', () => {
-  it('settles native provider and durable queue registration before React can start a Journey', () => {
+  it('settles concrete Capacitor queue, native provider and generic durable queue registration before React', () => {
+    const capacitorQueueAt = main.indexOf('installCapacitorJourneyDurableQueueBridge();');
     const providerAt = main.indexOf('installInjectedNativeJourneyBridge();');
     const queueAt = main.indexOf('installInjectedNativeJourneyDurableQueue();');
     const renderAt = main.indexOf('createRoot(rootElement).render(');
 
+    expect(capacitorQueueAt).toBeGreaterThan(-1);
     expect(providerAt).toBeGreaterThan(-1);
     expect(queueAt).toBeGreaterThan(-1);
     expect(renderAt).toBeGreaterThan(-1);
+    expect(capacitorQueueAt).toBeLessThan(queueAt);
     expect(providerAt).toBeLessThan(renderAt);
     expect(queueAt).toBeLessThan(renderAt);
   });
 
   it('does not make application startup depend on native transport being present', () => {
+    expect(main).toContain('installCapacitorJourneyDurableQueueBridge();');
     expect(main).toContain('installInjectedNativeJourneyBridge();');
     expect(main).toContain('installInjectedNativeJourneyDurableQueue();');
+    expect(main).not.toContain('await installCapacitorJourneyDurableQueueBridge');
     expect(main).not.toContain('await installInjectedNativeJourneyBridge');
     expect(main).not.toContain('await installInjectedNativeJourneyDurableQueue');
   });
