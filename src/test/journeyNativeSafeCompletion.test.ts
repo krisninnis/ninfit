@@ -94,6 +94,37 @@ describe('durable-safe native Journey completion', () => {
     expect(completed?.route?.acceptedPoints).toHaveLength(1);
   });
 
+  it('shares an existing replay coordinator instead of racing a second native queue drain', async () => {
+    const storage = createMemoryStorageAdapter();
+    const { session } = motionSession(storage);
+    const readPending = vi.fn(async () => []);
+    const clear = vi.fn(async () => undefined);
+    const queue: NativeJourneyDurablePositionQueue = {
+      readPending,
+      acknowledgeThrough: vi.fn(async () => undefined),
+      clear,
+    };
+    const reconcile = vi.fn(async () => ({
+      processed: 2,
+      acknowledgedThrough: 2,
+      stopReason: null,
+      failedSequence: null,
+    }));
+
+    const result = await completeJourneyAfterNativeReconciliation({
+      storage,
+      session,
+      queue,
+      replayCoordinator: { reconcile },
+      now: () => '2026-09-08T11:00:05.000Z',
+    });
+
+    expect(result.completed).toBe(true);
+    expect(reconcile).toHaveBeenCalledTimes(1);
+    expect(readPending).not.toHaveBeenCalled();
+    expect(clear).toHaveBeenCalledWith('journey-safe-finish');
+  });
+
   it('does not complete or clear the native queue when durable replay fails', async () => {
     const storage = createMemoryStorageAdapter();
     const { session, providerStop } = motionSession(storage);
