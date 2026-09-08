@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import { registerServiceWorker } from './pwa/registerServiceWorker';
 import { getAppContext } from './app/bootstrap';
+import { installCapacitorJourneyDurableQueueBridge } from './app/journeyCapacitorDurableQueueBridge';
 import { installInjectedNativeJourneyBridge } from './app/journeyNativeBootstrap';
 import { installInjectedNativeJourneyDurableQueue } from './app/journeyNativeDurableQueueRuntime';
 import { applyThemePreference } from './ui/theme';
@@ -14,11 +15,14 @@ if (!rootElement) {
 }
 
 /*
- * Native shells inject their Journey location bridge and durable process queue before
- * this bundle executes. Web/PWA has neither and therefore stays on the foreground-only
- * browser provider with no native replay queue. Registering both here guarantees the
- * installed-shell transport boundary is settled before the first Journey can start.
+ * The installed Android shell exposes its concrete durable queue through Capacitor.
+ * Install that adapter onto the same global boundary used by the vendor-independent
+ * Journey runtime before the generic bootstrap inspects it. Web/PWA is a no-op here.
+ *
+ * The location provider remains independently injectable because the selected native
+ * background-location plugin is still behind the provider boundary.
  */
+installCapacitorJourneyDurableQueueBridge();
 installInjectedNativeJourneyBridge();
 installInjectedNativeJourneyDurableQueue();
 
