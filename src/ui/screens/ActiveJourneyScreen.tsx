@@ -6,6 +6,11 @@ import {
   type JourneyMotionState,
 } from '../../app/journeyMotionSession';
 import { subscribeInjectedJourneyAppLifecycle } from '../../app/journeyNativeAppLifecycle';
+import { resolveInjectedNativeJourneyDurableQueue } from '../../app/journeyNativeDurableQueueBootstrap';
+import {
+  createNativeJourneyDurableReplayCoordinator,
+  type NativeJourneyDurableReplayCoordinator,
+} from '../../app/journeyNativeDurableReplayCoordinator';
 const ActiveJourneyMap = lazy(async () => {
   const module = await import('../components/ActiveJourneyMap');
   return { default: module.ActiveJourneyMap };
@@ -76,6 +81,7 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     && loadJourneyPauseOrigin(store, journey.id) === 'auto_stationary');
   const journeyRef = useRef<Journey | null>(journey);
   const sessionRef = useRef<JourneyMotionSession | null>(null);
+  const durableReplayRef = useRef<NativeJourneyDurableReplayCoordinator | null>(null);
 
   useEffect(() => {
     journeyRef.current = journey;
@@ -139,9 +145,30 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     }
     sessionRef.current = session;
 
+    const durableQueue = resolveInjectedNativeJourneyDurableQueue();
+    const durableReplay = durableQueue === null
+      ? null
+      : createNativeJourneyDurableReplayCoordinator({
+          journeyId: current.id,
+          queue: durableQueue,
+          session,
+        });
+    durableReplayRef.current = durableReplay;
+
+    if (durableReplay !== null) {
+      void durableReplay.reconcile().then((result) => {
+        if (sessionRef.current === session && result.stopReason !== null) {
+          setGpsState('runtime_error');
+        }
+      }).catch(() => {
+        if (sessionRef.current === session) setGpsState('runtime_error');
+      });
+    }
+
     return () => {
       session.stop();
       if (sessionRef.current === session) sessionRef.current = null;
+      if (durableReplayRef.current === durableReplay) durableReplayRef.current = null;
     };
   }, [journey?.status, journey?.activityType, store]);
 
@@ -170,15 +197,27 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
 
   /*
    * Native backgrounding (screen lock, Home, app switch) protects Journey controls.
-   * Returning to foreground deliberately does not unlock them: the user must explicitly
-   * unlock inside NinFit after re-entering the app. Browser/PWA builds have no injected
-   * native lifecycle bridge and this subscription is therefore a safe no-op.
+   * Returning to foreground deliberately does not unlock them. Foregrounding also asks
+   * the durable native queue to reconcile any fixes collected while the WebView was
+   * suspended. Overlapping startup/foreground drains are serialized by the coordinator.
    */
   useEffect(() => {
     const isTracking = journey?.status === 'recording' || autoPaused;
     if (!isTracking) return undefined;
     return subscribeInjectedJourneyAppLifecycle((state) => {
-      if (state === 'backgrounded') setControlsLocked(true);
+      if (state === 'backgrounded') {
+        setControlsLocked(true);
+        return;
+      }
+      const durableReplay = durableReplayRef.current;
+      if (durableReplay === null) return;
+      void durableReplay.reconcile().then((result) => {
+        if (durableReplayRef.current === durableReplay && result.stopReason !== null) {
+          setGpsState('runtime_error');
+        }
+      }).catch(() => {
+        if (durableReplayRef.current === durableReplay) setGpsState('runtime_error');
+      });
     });
   }, [journey?.status, autoPaused]);
 
@@ -196,6 +235,7 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
   const stopGps = () => {
     sessionRef.current?.stop();
     sessionRef.current = null;
+    durableReplayRef.current = null;
   };
 
   if (journey === null) {
