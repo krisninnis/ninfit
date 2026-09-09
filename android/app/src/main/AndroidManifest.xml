@@ -50,7 +50,21 @@
         </provider>
     </application>
 
-    <!-- Permissions -->
+    <!--
+      Journey location permissions.
 
+      NinFit starts tracking only from an explicit user-started Journey. The native
+      foreground location service then keeps that same Journey alive while the screen is
+      locked. ACCESS_BACKGROUND_LOCATION is deliberately NOT declared here: the selected
+      Capgo tracking mode uses an Android foreground service with a persistent notification,
+      and NinFit is not opting into background geofencing. Adding Always/background access
+      later would require a separate product, privacy and Play-policy decision.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- Android 13+: required so the foreground Journey notification can be visible. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
 </manifest>
