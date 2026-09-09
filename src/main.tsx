@@ -7,6 +7,7 @@ import { installCapacitorJourneyDurableQueueBridge } from './app/journeyCapacito
 import { installCapacitorJourneyLockScreenBridge } from './app/journeyCapacitorLockScreenBridge';
 import { installInjectedNativeJourneyBridge } from './app/journeyNativeBootstrap';
 import { installInjectedNativeJourneyDurableQueue } from './app/journeyNativeDurableQueueRuntime';
+import { startNativeJourneyLockScreenStatusRuntime } from './app/journeyNativeLockScreenStatusRuntime';
 import { applyThemePreference } from './ui/theme';
 import './styles/index.css';
 
@@ -27,6 +28,7 @@ installCapacitorJourneyDurableQueueBridge();
 installCapacitorJourneyLockScreenBridge();
 installInjectedNativeJourneyBridge();
 installInjectedNativeJourneyDurableQueue();
+startNativeJourneyLockScreenStatusRuntime(getAppContext().adapter);
 
 applyThemePreference(getAppContext().repository.getGameSettings()?.theme ?? 'system');
 
