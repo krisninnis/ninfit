@@ -22,6 +22,14 @@ const config: CapacitorConfig = {
      * would be weaker than the browser the same code runs in.
      */
     allowMixedContent: false,
+    /*
+     * Capgo's Android background-geolocation integration currently requires the legacy
+     * Capacitor bridge so callbacks are not silently lost after the WebView has spent
+     * several minutes in the background. This is a deliberate Journey reliability
+     * setting, not a general compatibility switch. The durable native queue remains the
+     * authority for fixes produced while JavaScript is suspended.
+     */
+    useLegacyBridge: true,
   },
   server: {
     /*
