@@ -37,6 +37,8 @@ export interface JourneyNativeDiagnosticEntry {
   readonly lastAcknowledgedSequence?: number | null;
   readonly stoppedAtSequence?: number | null;
   readonly stopReason?: string | null;
+  /** Whether the durable prefix is still advancing: a state name, never a measurement. */
+  readonly collectionHealth?: string;
   /** A failure category, never a message that could carry user data. */
   readonly failure?: string;
 }
@@ -58,7 +60,12 @@ export function recordJourneyNativeDiagnostic(
 export function recordJourneyNativeReplayDiagnostic(
   event: JourneyNativeDiagnosticEvent,
   result: NativeJourneyDurableReplayResult,
-  context?: { journeyStatus?: string; sessionStopped?: boolean; providerStopped?: boolean },
+  context?: {
+    journeyStatus?: string;
+    sessionStopped?: boolean;
+    providerStopped?: boolean;
+    collectionHealth?: string;
+  },
 ): void {
   recordJourneyNativeDiagnostic({
     event,
@@ -103,6 +110,7 @@ export function formatJourneyNativeDiagnostics(
       }
       if (entry.sessionStopped !== undefined) parts.push(`session=${entry.sessionStopped ? 'stopped' : 'live'}`);
       if (entry.providerStopped !== undefined) parts.push(`provider=${entry.providerStopped ? 'stopped' : 'live'}`);
+      if (entry.collectionHealth !== undefined) parts.push(`collection=${entry.collectionHealth}`);
       if (entry.failure !== undefined) parts.push(`failure=${entry.failure}`);
       return parts.join(' ');
     })

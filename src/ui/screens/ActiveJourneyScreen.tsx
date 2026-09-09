@@ -17,6 +17,16 @@ import {
   createNativeJourneyDurableReplayCoordinator,
   type NativeJourneyDurableReplayCoordinator,
 } from '../../app/journeyNativeDurableReplayCoordinator';
+import {
+  advanceJourneyCollectionHealth,
+  classifyJourneyDrainOutcome,
+  initialJourneyCollectionHealth,
+  journeyCollectionHoldsActiveTime,
+  journeyDrainRejectedOutcome,
+  journeyDurableDrainDelayMs,
+  type JourneyCollectionHealthState,
+  type JourneyDrainOutcome,
+} from '../../app/journeyCollectionHealth';
 import { completeJourneyAfterNativeReconciliation } from '../../app/journeyNativeSafeCompletion';
 import { pauseJourneyAfterNativeReconciliation } from '../../app/journeyNativeSafePause';
 const ActiveJourneyMap = lazy(async () => {
@@ -40,6 +50,7 @@ import {
   journeyFinishFailureNote,
   journeyLiveGpsLabel,
   journeyLiveGpsNote,
+  journeyCollectionBlockedNote,
   journeyRecorderStopNote,
   type JourneyFinishFailure,
   type JourneyLiveGpsState,
@@ -107,6 +118,14 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
    */
   const [stopReason, setStopReason] = useState<ActiveJourneyStopReason | null>(null);
   const [recorderStopped, setRecorderStopped] = useState(false);
+  /*
+   * Whether the durable prefix is still advancing. `recorderStopped` answers "is the
+   * recorder running"; this answers "is what it records actually reaching Journey state".
+   * A physical Samsung proved those are not the same question.
+   */
+  const [collection, setCollection] = useState<JourneyCollectionHealthState>(
+    initialJourneyCollectionHealth,
+  );
   const [autoPaused, setAutoPaused] = useState(() =>
     journey !== null
     && journey.status === 'paused'
@@ -114,26 +133,51 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
   const journeyRef = useRef<Journey | null>(journey);
   const sessionRef = useRef<JourneyMotionSession | null>(null);
   const durableReplayRef = useRef<NativeJourneyDurableReplayCoordinator | null>(null);
+  const collectionRef = useRef<JourneyCollectionHealthState>(initialJourneyCollectionHealth());
+  /** Set while a durable poll loop is live, so a person can retry without waiting out a backoff. */
+  const drainNowRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     journeyRef.current = journey;
   }, [journey]);
+
+  /** Fold one drain outcome into collection health. Touches refs and state setters only. */
+  const applyDrainOutcome = (outcome: JourneyDrainOutcome): JourneyCollectionHealthState => {
+    const next = advanceJourneyCollectionHealth(collectionRef.current, outcome, Date.now());
+    collectionRef.current = next;
+    setCollection(next);
+    return next;
+  };
+
+  const resetCollectionHealth = () => {
+    collectionRef.current = initialJourneyCollectionHealth();
+    setCollection(collectionRef.current);
+  };
 
   /*
    * ACTIVE TIME CONTRACT.
    *
    * Active time is derived from the Journey's own start/pause record, so it is never
    * invented and never destroyed. What this clock decides is whether NinFit keeps
-   * *claiming* that time is still accruing. Once the native recorder is known to have
-   * stopped and could not be restarted, it does not: the displayed time holds where the
-   * recording actually stopped instead of counting on over a recorder that cannot
-   * produce another fix. Finishing still writes the Journey's real record.
+   * *claiming* that time is still accruing. It stops claiming in two cases, and they are
+   * different failures:
+   *
+   *   - the native recorder is known to have stopped and could not be restarted; or
+   *   - the recorder is running, but its observations have not reached Journey state
+   *     across a sustained run of failures, so the durable prefix is blocked.
+   *
+   * The second is the one a Samsung found the hard way: a live provider and a live
+   * session are not evidence of a trustworthy recording if nothing can be filed. Neither
+   * case touches the Journey record - Finish still writes its real active time.
    */
+  const collectionHoldsClock = journeyCollectionHoldsActiveTime(collection);
+  const activeTimeHeld = recorderStopped || collectionHoldsClock;
+
   useEffect(() => {
-    if (journey?.status !== 'recording' || recorderStopped) return undefined;
+    if (journey?.status !== 'recording' || activeTimeHeld) return undefined;
     const timer = window.setInterval(() => setNow(nowIso()), 1000);
     return () => window.clearInterval(timer);
-  }, [journey?.status, recorderStopped]);
+  }, [journey?.status, activeTimeHeld]);
 
   /*
    * The location provider follows recorder truth. A normal manual pause stops location
@@ -188,6 +232,8 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     }
     sessionRef.current = session;
     setRecorderStopped(false);
+    collectionRef.current = initialJourneyCollectionHealth();
+    setCollection(collectionRef.current);
     recordJourneyNativeDiagnostic({
       event: 'session_started',
       journeyStatus: current.status,
@@ -204,15 +250,35 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
         });
     durableReplayRef.current = durableReplay;
 
-    const reconcileDurableQueue = () => {
-      if (durableReplay === null) return;
+    let drainTimer: number | null = null;
+    let disposed = false;
+
+    /*
+     * Schedule the next drain only once the previous one has settled. A fixed interval
+     * could stack drains on a slow bridge; this cannot, and it is also where the retry
+     * cadence lives. A blocked prefix backs off instead of failing once a second for the
+     * length of the Journey - a storm that buries the very diagnostics needed to read it.
+     * Backoff never applies to a foreground/resume, a Pause, a Finish, or the person's
+     * own retry: those all drain immediately.
+     */
+    const scheduleNextDrain = (state: JourneyCollectionHealthState) => {
+      if (disposed || durableReplay === null) return;
+      drainTimer = window.setTimeout(reconcileDurableQueue, journeyDurableDrainDelayMs(state));
+    };
+
+    function reconcileDurableQueue(): void {
+      if (durableReplay === null || disposed) return;
+      drainTimer = null;
       void durableReplay.reconcile().then((result) => {
         if (sessionRef.current !== session) return;
+        const health = applyDrainOutcome(classifyJourneyDrainOutcome(result));
         recordJourneyNativeReplayDiagnostic('poll_drain', result, {
           journeyStatus: journeyRef.current?.status,
           sessionStopped: session.isStopped(),
           providerStopped: session.isProviderStopped(),
+          collectionHealth: health.health,
         });
+        scheduleNextDrain(health);
         if (result.stopReason !== null) {
           /*
            * `session_stopped` means this drain outlived its session, not that anything
@@ -237,24 +303,38 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
         ));
       }).catch(() => {
         if (sessionRef.current !== session) return;
-        recordJourneyNativeDiagnostic({ event: 'runtime_error', failure: 'poll_drain_rejected' });
+        const health = applyDrainOutcome(journeyDrainRejectedOutcome());
+        recordJourneyNativeDiagnostic({
+          event: 'runtime_error',
+          failure: 'poll_drain_rejected',
+          collectionHealth: health.health,
+        });
+        scheduleNextDrain(health);
         setStopReason('queue_unavailable');
         setGpsState('runtime_error');
       });
-    };
+    }
+
+    // Installed Android records into SQLite independently of the WebView. While the UI
+    // is awake, drain that durable queue so the visible route/distance follows the native
+    // recorder without starting a second browser geolocation watch. Browsers/PWAs have no
+    // injected queue and therefore create no polling loop at all.
+    drainNowRef.current = durableReplay === null
+      ? null
+      : () => {
+        if (drainTimer !== null) {
+          window.clearTimeout(drainTimer);
+          drainTimer = null;
+        }
+        reconcileDurableQueue();
+      };
 
     reconcileDurableQueue();
 
-    // Installed Android records into SQLite independently of the WebView. While the UI
-    // is awake, drain that durable queue once per second so the visible route/distance
-    // follows the native recorder without starting a second browser geolocation watch.
-    // Browsers/PWAs have no injected queue and therefore create no polling timer.
-    const durablePollTimer = durableReplay === null
-      ? null
-      : window.setInterval(reconcileDurableQueue, 1_000);
-
     return () => {
-      if (durablePollTimer !== null) window.clearInterval(durablePollTimer);
+      disposed = true;
+      if (drainTimer !== null) window.clearTimeout(drainTimer);
+      drainNowRef.current = null;
       session.stop();
       if (sessionRef.current === session) sessionRef.current = null;
       if (durableReplayRef.current === durableReplay) durableReplayRef.current = null;
@@ -285,8 +365,10 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
       if (durableReplay === null) return;
       void durableReplay.reconcile().then((result) => {
         if (durableReplayRef.current !== durableReplay) return;
+        const health = applyDrainOutcome(classifyJourneyDrainOutcome(result));
         recordJourneyNativeReplayDiagnostic('foreground_drain', result, {
           journeyStatus: journeyRef.current?.status,
+          collectionHealth: health.health,
         });
         if (result.stopReason === null) {
           setStopReason(null);
@@ -297,7 +379,12 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
         setGpsState('runtime_error');
       }).catch(() => {
         if (durableReplayRef.current !== durableReplay) return;
-        recordJourneyNativeDiagnostic({ event: 'runtime_error', failure: 'foreground_drain_rejected' });
+        const health = applyDrainOutcome(journeyDrainRejectedOutcome());
+        recordJourneyNativeDiagnostic({
+          event: 'runtime_error',
+          failure: 'foreground_drain_rejected',
+          collectionHealth: health.health,
+        });
         setStopReason('queue_unavailable');
         setGpsState('runtime_error');
       });
@@ -421,6 +508,7 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     setPauseFailure(false);
     setStopReason(null);
     setRecorderStopped(false);
+    resetCollectionHealth();
     setGpsState(journeyUsesPhoneGps(next.activityType) ? 'connecting' : 'not_applicable');
     setNow(changedAt);
   };
@@ -434,6 +522,7 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     setFinishFailure(null);
     setStopReason(null);
     setRecorderStopped(false);
+    resetCollectionHealth();
     setGpsState('finished');
     setNow(next.endedAt ?? nowIso());
     onCompleted?.(next.id);
@@ -558,7 +647,7 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
       <div className="active-journey__metrics" aria-label="Live Journey metrics">
         <div className="active-journey__metric">
           <span className="active-journey__metric-label">
-            {recorderStopped ? 'Active time · held' : 'Active time'}
+            {activeTimeHeld ? 'Active time · held' : 'Active time'}
           </span>
           <strong className="active-journey__metric-value">{formatJourneyDuration(activeSeconds)}</strong>
         </div>
@@ -573,9 +662,11 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
                   ? 'Paused'
                   : recorderStopped
                     ? 'Recording stopped · not collecting'
-                    : controlsLocked
-                      ? 'Recording · controls locked'
-                      : 'Recording'}
+                    : collectionHoldsClock
+                      ? 'Recording · not filing GPS'
+                      : controlsLocked
+                        ? 'Recording · controls locked'
+                        : 'Recording'}
           </strong>
         </div>
       </div>
@@ -621,7 +712,24 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
         </p>
       )}
 
-      {stopReason === null ? null : (
+      {/*
+        * Shown only once the durable prefix has been blocked long enough to stop the
+        * clock, so it never fires on a single bad drain. The retry exists because the
+        * drain loop backs off at this point: the person should never have to wait out a
+        * backoff they cannot see.
+        */}
+      {collectionHoldsClock ? (
+        <div className="active-journey__note" role="status" aria-live="polite" data-collection-health="blocked">
+          <p>{journeyCollectionBlockedNote()}</p>
+          {drainNowRef.current === null ? null : (
+            <button type="button" className="btn" onClick={() => drainNowRef.current?.()}>
+              Try background GPS again
+            </button>
+          )}
+        </div>
+      ) : null}
+
+      {stopReason === null && !collectionHoldsClock ? null : (
         <details className="active-journey__diagnostics">
           <summary>Technical details (for support)</summary>
           <pre>{formatJourneyNativeDiagnostics()}</pre>

@@ -16,7 +16,14 @@ function plugin() {
         timestampMs: Date.parse('2026-09-08T18:00:00.000Z'),
       }],
     })),
-    acknowledgeThrough: vi.fn(async () => undefined),
+    // The native plugin answers an acknowledgement with a receipt naming the Journey and
+    // the prefix it actually retired, plus the pending depth that survived the same
+    // transaction. A bare resolve is no longer evidence that anything was committed.
+    acknowledgeThrough: vi.fn(async (options: { journeyId: string; sequence: number }) => ({
+      journeyId: options.journeyId,
+      acknowledgedThrough: options.sequence,
+      remaining: 0,
+    })),
     clear: vi.fn(async () => undefined),
   };
 }

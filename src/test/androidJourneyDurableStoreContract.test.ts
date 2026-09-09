@@ -32,7 +32,7 @@ describe('Android Journey durable store contract', () => {
   });
 
   it('acknowledges only pending rows and deliberately keeps the monotonic cursor until terminal clear', () => {
-    const acknowledge = store.slice(store.indexOf('void acknowledgeThrough('), store.indexOf('void clear('));
+    const acknowledge = store.slice(store.indexOf('int acknowledgeThrough('), store.indexOf('void clear('));
     expect(acknowledge).toContain('sequence <= ?');
     expect(acknowledge).not.toContain('db.delete("journey_cursor"');
 

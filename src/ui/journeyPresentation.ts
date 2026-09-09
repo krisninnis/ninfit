@@ -152,6 +152,18 @@ export function journeyRecorderStopNote(reason: JourneyRecorderStopReason): stri
   }
 }
 
+/**
+ * What to say once background GPS has been unfilable for long enough to matter.
+ *
+ * This is deliberately stronger than the momentary "try again in a moment" notes above.
+ * It is shown only when the durable prefix has not advanced across a sustained run of
+ * failures, and it is the sentence that must be true when NinFit stops counting active
+ * time: nothing is lost, the Journey is still here, and Finish is the way out.
+ */
+export function journeyCollectionBlockedNote(): string {
+  return 'Background GPS has not been filed away for a while, so NinFit has stopped counting active time rather than claim a recording it cannot trust. Nothing collected has been lost, and this Journey is still on your phone. Try again, or Finish to save what you have.';
+}
+
 export function journeyLiveGpsLabel(state: JourneyLiveGpsState): string {
   switch (state) {
     case 'connecting':

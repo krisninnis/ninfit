@@ -3,10 +3,23 @@ import type { NativeJourneyBufferedPosition } from './journeyNativePositionBuffe
 import type { NativeJourneyDurablePositionQueue } from './journeyNativeDurableQueue';
 import { NINFIT_NATIVE_JOURNEY_DURABLE_QUEUE_KEY } from './journeyNativeDurableQueueRuntime';
 
+/**
+ * The Android `NinFitJourneyQueue` plugin surface, named exactly as the Java
+ * `@PluginMethod`s and argument keys are named.
+ *
+ * `acknowledgeThrough` resolves a receipt rather than nothing. See
+ * `assertNativeJourneyAcknowledgementReceipt` for why.
+ */
 interface NinFitJourneyQueuePlugin {
   readPending(options: { journeyId: string }): Promise<{ positions: unknown }>;
-  acknowledgeThrough(options: { journeyId: string; sequence: number }): Promise<void>;
+  acknowledgeThrough(options: { journeyId: string; sequence: number }): Promise<unknown>;
   clear(options: { journeyId: string }): Promise<void>;
+}
+
+export interface NativeJourneyAcknowledgementReceipt {
+  readonly journeyId: string;
+  readonly acknowledgedThrough: number;
+  readonly remaining: number;
 }
 
 interface CapacitorRuntimeFacade {
@@ -25,6 +38,46 @@ const runtime: CapacitorRuntimeFacade = {
 
 const nativePlugin = registerPlugin<NinFitJourneyQueuePlugin>('NinFitJourneyQueue');
 
+/**
+ * Accept a native acknowledgement only when the receipt proves what was acknowledged.
+ *
+ * A resolved call is not by itself evidence. Before this check, the durable prefix
+ * advanced on the mere fact that the bridge came back, so a plugin that acknowledged a
+ * different Journey, a different prefix, or nothing at all was indistinguishable from
+ * one that committed the delete - and the sample would have been dropped from the queue
+ * on that assumption. The receipt is compared against the exact call that was made:
+ * anything else throws, replay stops with `acknowledgement_error`, and every sample
+ * stays durable.
+ *
+ * `remaining` is the pending depth the native store measured inside the acknowledging
+ * transaction. It is a count of rows, never a position, and it is what lets a device run
+ * show the queue draining.
+ */
+export function assertNativeJourneyAcknowledgementReceipt(
+  value: unknown,
+  journeyId: string,
+  sequence: number,
+): NativeJourneyAcknowledgementReceipt {
+  if (typeof value !== 'object' || value === null) {
+    throw new Error('Native Journey queue returned a malformed acknowledgement receipt');
+  }
+  const receipt = value as Partial<NativeJourneyAcknowledgementReceipt>;
+  if (receipt.journeyId !== journeyId) {
+    throw new Error('Native Journey queue acknowledged a different Journey');
+  }
+  if (receipt.acknowledgedThrough !== sequence) {
+    throw new Error('Native Journey queue acknowledged a different sequence');
+  }
+  if (
+    typeof receipt.remaining !== 'number'
+    || !Number.isSafeInteger(receipt.remaining)
+    || receipt.remaining < 0
+  ) {
+    throw new Error('Native Journey queue returned a malformed pending depth');
+  }
+  return { journeyId, acknowledgedThrough: sequence, remaining: receipt.remaining };
+}
+
 function asPositionArray(value: unknown): NativeJourneyBufferedPosition[] {
   if (!Array.isArray(value)) throw new Error('Native Journey queue returned malformed pending positions');
   // The durable replay boundary performs the authoritative per-field validation before
@@ -42,7 +95,8 @@ export function createCapacitorJourneyDurableQueue(
       return asPositionArray(result.positions);
     },
     async acknowledgeThrough(journeyId, sequence) {
-      await plugin.acknowledgeThrough({ journeyId, sequence });
+      const receipt = await plugin.acknowledgeThrough({ journeyId, sequence });
+      assertNativeJourneyAcknowledgementReceipt(receipt, journeyId, sequence);
     },
     async clear(journeyId) {
       await plugin.clear({ journeyId });

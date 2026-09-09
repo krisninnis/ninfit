@@ -180,7 +180,19 @@ final class JourneyDurableStore extends SQLiteOpenHelper {
         return positions;
     }
 
-    void acknowledgeThrough(String journeyId, long sequence) {
+    /**
+     * Delete the acknowledged prefix and report the pending depth that survived it.
+     *
+     * The count is taken inside the same transaction as the delete, so the number the
+     * caller receives can only describe state that then committed. It is a depth, never
+     * a position. Acknowledging a prefix that is already gone deletes nothing and
+     * succeeds: retry after a lost receipt must be safe, and it must not disturb the
+     * unacknowledged suffix.
+     *
+     * @return pending positions remaining for this Journey after the acknowledged prefix
+     *     was removed.
+     */
+    int acknowledgeThrough(String journeyId, long sequence) {
         requireJourneyId(journeyId);
         if (sequence < 1L) throw new IllegalArgumentException("Invalid Journey acknowledgement sequence");
 
@@ -192,9 +204,11 @@ final class JourneyDurableStore extends SQLiteOpenHelper {
                 "journey_id = ? AND sequence <= ?",
                 new String[] { journeyId, Long.toString(sequence) }
             );
+            int remaining = pendingCount(db, journeyId);
             // Do not delete journey_cursor here. Its monotonic next_sequence must survive
             // even when every pending row has been acknowledged.
             db.setTransactionSuccessful();
+            return remaining;
         } finally {
             db.endTransaction();
         }
