@@ -13,6 +13,8 @@ import {
   saveJourneyPauseOrigin,
   type JourneyPauseOrigin,
 } from '../storage/journeyPauseProvenance';
+import { createAndroidJourneyServiceLocationProvider } from './journeyAndroidServiceLocationProvider';
+import { resolveInjectedNativeJourneyDurableQueue } from './journeyNativeDurableQueueBootstrap';
 import { createJourneyGpsRuntimeController } from './journeyGpsRuntimeController';
 import type {
   JourneyLocationProvider,
@@ -105,10 +107,11 @@ function initialDetectorState(journey: Journey, pauseOrigin: JourneyPauseOrigin)
  * `processSample`, and only then permanently stop the motion session. Late callbacks
  * from a provider that races its own stop are ignored.
  *
- * If a caller does not inject a provider explicitly, provider selection is resolved at
- * session start through the runtime registry. That is the live switch which makes the
- * startup-installed native bridge authoritative inside the installed shell while web/PWA
- * continues to fail safely to browser geolocation.
+ * When the installed Android queue exists, provider selection deliberately chooses the
+ * Android foreground Journey service rather than browser geolocation. That service emits
+ * no direct samples: GPS observations enter SQLite first and the durable replay path is
+ * the sole route into `processSample`. Web/PWA continues to use the normal runtime/browser
+ * provider. An explicitly injected provider still wins for tests and controlled callers.
  */
 export function startJourneyMotionSession(options: JourneyMotionSessionOptions): JourneyMotionSession {
   const pauseOrigin = options.journey.status === 'paused'
@@ -131,7 +134,11 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
     distanceMetricId,
   });
   const recovery = createJourneyRecoveryController(options.storage);
-  const provider = options.provider ?? createRuntimeJourneyLocationProvider();
+  const nativeQueue = resolveInjectedNativeJourneyDurableQueue();
+  const provider = options.provider
+    ?? (nativeQueue === null
+      ? createRuntimeJourneyLocationProvider()
+      : createAndroidJourneyServiceLocationProvider(options.journey.id));
 
   let currentJourney = options.journey;
   let detector = initialDetectorState(currentJourney, pauseOrigin);
@@ -179,8 +186,6 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
     publishJourney(resumed);
     publishMotion('recording');
 
-    // The movement-confirming sample belongs to the resumed Journey. It is still
-    // subjected to the normal GPS acceptance/speed/distance gates before persistence.
     const result = runtime.ingest(resumed, sample, { startsNewSegment: false });
     if (result.accepted) publishJourney(result.journey);
   }
