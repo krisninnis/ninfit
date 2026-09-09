@@ -5,6 +5,7 @@ import { clearJourneyPauseOrigin } from '../storage/journeyPauseProvenance';
 import { createJourneyRecoveryController } from './journeyRecoveryController';
 import type { JourneyMotionSession } from './journeyMotionSession';
 import { reconcileNativeJourneyDurablePositions } from './journeyNativeDurableReconciliation';
+import { isRetryableNativeJourneyReplayStop } from './journeyNativeDurableQueue';
 import type { NativeJourneyDurableReplayCoordinator } from './journeyNativeDurableReplayCoordinator';
 import type {
   NativeJourneyDurablePositionQueue,
@@ -26,6 +27,15 @@ export type JourneyNativeSafeCompletionResult =
       completed: false;
       reason: JourneyNativeSafeCompletionFailure;
       replay: NativeJourneyDurableReplayResult | null;
+      /**
+       * Whether the native recorder is collecting again after the refusal.
+       *
+       * A refused Finish leaves the Journey logically recording. If the provider stayed
+       * quiesced, that state would be a lie: a Recording Journey over a recorder that
+       * can never produce another fix, with active time still climbing. False here is
+       * the screen's signal to stop claiming healthy recording.
+       */
+      recording: boolean;
     };
 
 /**
@@ -55,27 +65,65 @@ export async function completeJourneyAfterNativeReconciliation(options: {
   replayCoordinator?: NativeJourneyDurableReplayCoordinator | null;
   now: () => ISODateTime;
 }): Promise<JourneyNativeSafeCompletionResult> {
+  /*
+   * A refusal must not silently end the recording it interrupted. See the same note in
+   * journeyNativeSafePause: re-arming never prompts for a permission, and a permanently
+   * stopped session stays stopped and reports it.
+   */
+  const failed = (
+    reason: JourneyNativeSafeCompletionFailure,
+    replay: NativeJourneyDurableReplayResult | null,
+  ): JourneyNativeSafeCompletionResult => ({
+    completed: false,
+    reason,
+    replay,
+    recording: options.session.resumeProvider(),
+  });
+
   options.session.stopProvider();
 
   let replay: NativeJourneyDurableReplayResult | null = null;
   const journeyId = options.session.getJourney().id;
 
   if (options.queue) {
+    const queue = options.queue;
+    const drain = () => reconcileNativeJourneyDurablePositions({
+      journeyId,
+      queue,
+      session: options.session,
+    });
+
+    /*
+     * Never adopt the polling drain's result. `runExclusive` waits for whatever drain is
+     * already holding the durable prefix, discards its outcome, and then reads again with
+     * the session THIS call was handed. A drain that stopped because its own session was
+     * replaced says nothing about ours, and treating it as our failure is what left a
+     * person unable to pause or finish a Journey at all.
+     */
     replay = options.replayCoordinator
-      ? await options.replayCoordinator.reconcile()
-      : await reconcileNativeJourneyDurablePositions({
-          journeyId,
-          queue: options.queue,
-          session: options.session,
-        });
+      ? await options.replayCoordinator.runExclusive(drain)
+      : await drain();
+
+    /*
+     * One bounded retry, and only for the lifecycle boundary. Our own session was live
+     * when this call started; if it was stopped underneath us mid-drain the durable
+     * suffix is untouched and a single re-read settles it. Every other stop reason is a
+     * real fault and still refuses - fail-closed is unchanged.
+     */
+    if (isRetryableNativeJourneyReplayStop(replay.stopReason) && !options.session.isStopped()) {
+      replay = options.replayCoordinator
+        ? await options.replayCoordinator.runExclusive(drain)
+        : await drain();
+    }
+
     if (replay.stopReason !== null) {
-      return { completed: false, reason: 'replay_failed', replay };
+      return failed('replay_failed', replay);
     }
 
     try {
       await options.queue.clear(journeyId);
     } catch {
-      return { completed: false, reason: 'queue_clear_failed', replay };
+      return failed('queue_clear_failed', replay);
     }
   }
 
@@ -84,7 +132,7 @@ export async function completeJourneyAfterNativeReconciliation(options: {
     const recovery = createJourneyRecoveryController(options.storage);
     completed = recovery.complete(options.session.getJourney(), options.now());
   } catch {
-    return { completed: false, reason: 'completion_failed', replay };
+    return failed('completion_failed', replay);
   }
 
   // Completion has already made the sidecar irrelevant. Cleanup is best-effort so a

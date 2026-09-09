@@ -7,6 +7,9 @@ function session(): JourneyMotionSession {
   return {
     getJourney: vi.fn(),
     getMotionState: vi.fn(),
+    isStopped: () => false,
+    isProviderStopped: () => false,
+    resumeProvider: () => false,
     processSample: vi.fn(),
     stopProvider: vi.fn(),
     stop: vi.fn(),

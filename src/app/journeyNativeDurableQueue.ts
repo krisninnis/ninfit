@@ -1,3 +1,4 @@
+import { JourneyMotionSessionStoppedError } from './journeyMotionSession';
 import type { NativeJourneyBufferedPosition } from './journeyNativePositionBuffer';
 import type { NativeJourneyPositionProcessor } from './journeyNativePositionReplay';
 
@@ -13,7 +14,22 @@ export type NativeJourneyDurableReplayStopReason =
   | 'sequence_gap'
   | 'processor_error'
   | 'acknowledgement_error'
-  | 'queue_read_error';
+  | 'queue_read_error'
+  /**
+   * The motion session this drain was reading into was stopped underneath it - normally
+   * because the Journey changed status and the screen rebuilt its session. Nothing was
+   * lost: the unprocessed suffix is still durable and the live session will read it.
+   * This is the one stop reason that is a lifecycle boundary rather than a fault, so
+   * Pause and Finish retry it against their own session instead of refusing.
+   */
+  | 'session_stopped';
+
+/** Stop reasons that mean "read again against a live session", not "something is broken". */
+export function isRetryableNativeJourneyReplayStop(
+  reason: NativeJourneyDurableReplayStopReason | null,
+): boolean {
+  return reason === 'session_stopped';
+}
 
 export interface NativeJourneyDurableReplayResult {
   processed: number;
@@ -99,12 +115,14 @@ export async function replayNativeJourneyDurableQueue(options: {
         accuracyM: position.accuracyM,
         timestampMs: position.timestampMs,
       });
-    } catch {
+    } catch (cause) {
       return {
         processed,
         lastAcknowledgedSequence,
         stoppedAtSequence: position.sequence,
-        stopReason: 'processor_error',
+        stopReason: cause instanceof JourneyMotionSessionStoppedError
+          ? 'session_stopped'
+          : 'processor_error',
       };
     }
 

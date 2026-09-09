@@ -7,6 +7,12 @@ import {
 } from '../../app/journeyMotionSession';
 import { subscribeInjectedJourneyAppLifecycle } from '../../app/journeyNativeAppLifecycle';
 import { resolveInjectedNativeJourneyDurableQueue } from '../../app/journeyNativeDurableQueueBootstrap';
+import type { NativeJourneyDurableReplayStopReason } from '../../app/journeyNativeDurableQueue';
+import {
+  formatJourneyNativeDiagnostics,
+  recordJourneyNativeDiagnostic,
+  recordJourneyNativeReplayDiagnostic,
+} from '../../app/journeyNativeDiagnostics';
 import {
   createNativeJourneyDurableReplayCoordinator,
   type NativeJourneyDurableReplayCoordinator,
@@ -34,6 +40,7 @@ import {
   journeyFinishFailureNote,
   journeyLiveGpsLabel,
   journeyLiveGpsNote,
+  journeyRecorderStopNote,
   type JourneyFinishFailure,
   type JourneyLiveGpsState,
 } from '../journeyPresentation';
@@ -64,6 +71,15 @@ function activityLabel(journey: Journey): string {
   }
 }
 
+/**
+ * Every way native recording can stop, from the application layer's own vocabulary plus
+ * the one case the boundary itself cannot report - a queue that could not be reached at
+ * all. Passing this to `journeyRecorderStopNote` is what enforces the link between the
+ * two unions: add a stop reason to the durable replay boundary without giving it a
+ * sentence and this file stops compiling, rather than a user meeting a blank note.
+ */
+type ActiveJourneyStopReason = NativeJourneyDurableReplayStopReason | 'queue_unavailable';
+
 function initialGpsState(journey: Journey | null): JourneyLiveGpsState {
   if (journey === null) return 'finished';
   if (!journeyUsesPhoneGps(journey.activityType)) return 'not_applicable';
@@ -83,6 +99,14 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
   const [pauseFailure, setPauseFailure] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [finishFailure, setFinishFailure] = useState<JourneyFinishFailure | null>(null);
+  /*
+   * What the native transport last said, and whether the recorder is still collecting.
+   * `recorderStopped` is the honest-state flag: it is set only when a refused Pause or
+   * Finish could not get the provider going again, and it is what stops NinFit
+   * presenting an ever-growing active time over a recorder that is not running.
+   */
+  const [stopReason, setStopReason] = useState<ActiveJourneyStopReason | null>(null);
+  const [recorderStopped, setRecorderStopped] = useState(false);
   const [autoPaused, setAutoPaused] = useState(() =>
     journey !== null
     && journey.status === 'paused'
@@ -95,11 +119,21 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     journeyRef.current = journey;
   }, [journey]);
 
+  /*
+   * ACTIVE TIME CONTRACT.
+   *
+   * Active time is derived from the Journey's own start/pause record, so it is never
+   * invented and never destroyed. What this clock decides is whether NinFit keeps
+   * *claiming* that time is still accruing. Once the native recorder is known to have
+   * stopped and could not be restarted, it does not: the displayed time holds where the
+   * recording actually stopped instead of counting on over a recorder that cannot
+   * produce another fix. Finishing still writes the Journey's real record.
+   */
   useEffect(() => {
-    if (journey?.status !== 'recording') return undefined;
+    if (journey?.status !== 'recording' || recorderStopped) return undefined;
     const timer = window.setInterval(() => setNow(nowIso()), 1000);
     return () => window.clearInterval(timer);
-  }, [journey?.status]);
+  }, [journey?.status, recorderStopped]);
 
   /*
    * The location provider follows recorder truth. A normal manual pause stops location
@@ -148,10 +182,17 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
         },
       });
     } catch {
+      recordJourneyNativeDiagnostic({ event: 'session_start_failed', journeyStatus: current.status });
       setGpsState('runtime_error');
       return undefined;
     }
     sessionRef.current = session;
+    setRecorderStopped(false);
+    recordJourneyNativeDiagnostic({
+      event: 'session_started',
+      journeyStatus: current.status,
+      queuePresent: resolveInjectedNativeJourneyDurableQueue() !== null,
+    });
 
     const durableQueue = resolveInjectedNativeJourneyDurableQueue();
     const durableReplay = durableQueue === null
@@ -166,11 +207,39 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     const reconcileDurableQueue = () => {
       if (durableReplay === null) return;
       void durableReplay.reconcile().then((result) => {
-        if (sessionRef.current === session && result.stopReason !== null) {
+        if (sessionRef.current !== session) return;
+        recordJourneyNativeReplayDiagnostic('poll_drain', result, {
+          journeyStatus: journeyRef.current?.status,
+          sessionStopped: session.isStopped(),
+          providerStopped: session.isProviderStopped(),
+        });
+        if (result.stopReason !== null) {
+          /*
+           * `session_stopped` means this drain outlived its session, not that anything
+           * is wrong: the suffix is still durable and the live session will read it.
+           * Reporting it as stopped GPS is a lie the person cannot act on.
+           */
+          if (result.stopReason === 'session_stopped') return;
+          setStopReason(result.stopReason);
           setGpsState('runtime_error');
+          return;
         }
+        /*
+         * A drain that succeeded is the evidence that the recorder is reachable again.
+         * Without this, one transient read failure pinned "GPS stopped" on the screen
+         * for the rest of the Journey however well everything afterwards worked.
+         */
+        setStopReason(null);
+        setGpsState((currentState) => (
+          currentState === 'runtime_error'
+            ? (journeyRef.current?.status === 'paused' ? 'paused' : 'live')
+            : currentState
+        ));
       }).catch(() => {
-        if (sessionRef.current === session) setGpsState('runtime_error');
+        if (sessionRef.current !== session) return;
+        recordJourneyNativeDiagnostic({ event: 'runtime_error', failure: 'poll_drain_rejected' });
+        setStopReason('queue_unavailable');
+        setGpsState('runtime_error');
       });
     };
 
@@ -215,11 +284,22 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
       const durableReplay = durableReplayRef.current;
       if (durableReplay === null) return;
       void durableReplay.reconcile().then((result) => {
-        if (durableReplayRef.current === durableReplay && result.stopReason !== null) {
-          setGpsState('runtime_error');
+        if (durableReplayRef.current !== durableReplay) return;
+        recordJourneyNativeReplayDiagnostic('foreground_drain', result, {
+          journeyStatus: journeyRef.current?.status,
+        });
+        if (result.stopReason === null) {
+          setStopReason(null);
+          return;
         }
+        if (result.stopReason === 'session_stopped') return;
+        setStopReason(result.stopReason);
+        setGpsState('runtime_error');
       }).catch(() => {
-        if (durableReplayRef.current === durableReplay) setGpsState('runtime_error');
+        if (durableReplayRef.current !== durableReplay) return;
+        recordJourneyNativeDiagnostic({ event: 'runtime_error', failure: 'foreground_drain_rejected' });
+        setStopReason('queue_unavailable');
+        setGpsState('runtime_error');
       });
     });
   }, [journey?.status, autoPaused]);
@@ -265,6 +345,8 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     setJourney(next);
     setAutoPaused(false);
     setPauseFailure(false);
+    setStopReason(null);
+    setRecorderStopped(false);
     setGpsState(journeyUsesPhoneGps(next.activityType) ? 'paused' : 'not_applicable');
     setNow(next.pauses.at(-1)?.startedAt ?? nowIso());
   };
@@ -294,8 +376,26 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     }).then((result) => {
       setPausing(false);
       if (!result.paused) {
+        recordJourneyNativeDiagnostic({
+          event: 'pause_drain',
+          journeyStatus: journeyRef.current?.status,
+          failure: result.reason,
+          stopReason: result.replay?.stopReason ?? null,
+          stoppedAtSequence: result.replay?.stoppedAtSequence ?? null,
+          lastAcknowledgedSequence: result.replay?.lastAcknowledgedSequence ?? null,
+          processed: result.replay?.processed,
+          providerStopped: !result.recording,
+        });
         setPauseFailure(true);
-        setGpsState('runtime_error');
+        setStopReason(result.replay?.stopReason ?? 'queue_unavailable');
+        /*
+         * A refusal that could not get the recorder going again means this Journey is
+         * no longer collecting anything. Say so, and stop the clock: the alternative is
+         * a Recording state and a rising active time over a dead recorder, which is
+         * exactly the trap a physical Samsung run fell into.
+         */
+        setRecorderStopped(!result.recording);
+        setGpsState(result.recording ? 'runtime_error' : 'recorder_stopped');
         return;
       }
       sessionRef.current = null;
@@ -304,6 +404,7 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     }).catch(() => {
       setPausing(false);
       setPauseFailure(true);
+      setStopReason('queue_unavailable');
       setGpsState('runtime_error');
     });
   };
@@ -318,6 +419,8 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     setJourney(next);
     setAutoPaused(false);
     setPauseFailure(false);
+    setStopReason(null);
+    setRecorderStopped(false);
     setGpsState(journeyUsesPhoneGps(next.activityType) ? 'connecting' : 'not_applicable');
     setNow(changedAt);
   };
@@ -329,6 +432,8 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     setAutoPaused(false);
     setPauseFailure(false);
     setFinishFailure(null);
+    setStopReason(null);
+    setRecorderStopped(false);
     setGpsState('finished');
     setNow(next.endedAt ?? nowIso());
     onCompleted?.(next.id);
@@ -357,8 +462,20 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     }).then((result) => {
       setFinishing(false);
       if (!result.completed) {
+        recordJourneyNativeDiagnostic({
+          event: 'finish_drain',
+          journeyStatus: journeyRef.current?.status,
+          failure: result.reason,
+          stopReason: result.replay?.stopReason ?? null,
+          stoppedAtSequence: result.replay?.stoppedAtSequence ?? null,
+          lastAcknowledgedSequence: result.replay?.lastAcknowledgedSequence ?? null,
+          processed: result.replay?.processed,
+          providerStopped: !result.recording,
+        });
         setFinishFailure(result.reason);
-        setGpsState('runtime_error');
+        setStopReason(result.replay?.stopReason ?? 'queue_unavailable');
+        setRecorderStopped(!result.recording);
+        setGpsState(result.recording ? 'runtime_error' : 'recorder_stopped');
         return;
       }
       sessionRef.current = null;
@@ -367,6 +484,7 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     }).catch(() => {
       setFinishing(false);
       setFinishFailure('completion_failed');
+      setStopReason('queue_unavailable');
       setGpsState('runtime_error');
     });
   };
@@ -439,7 +557,9 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
 
       <div className="active-journey__metrics" aria-label="Live Journey metrics">
         <div className="active-journey__metric">
-          <span className="active-journey__metric-label">Active time</span>
+          <span className="active-journey__metric-label">
+            {recorderStopped ? 'Active time · held' : 'Active time'}
+          </span>
           <strong className="active-journey__metric-value">{formatJourneyDuration(activeSeconds)}</strong>
         </div>
         <div className="active-journey__metric">
@@ -451,9 +571,11 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
                 ? 'Auto-paused · stationary'
                 : isPaused
                   ? 'Paused'
-                  : controlsLocked
-                    ? 'Recording · controls locked'
-                    : 'Recording'}
+                  : recorderStopped
+                    ? 'Recording stopped · not collecting'
+                    : controlsLocked
+                      ? 'Recording · controls locked'
+                      : 'Recording'}
           </strong>
         </div>
       </div>
@@ -486,6 +608,24 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
         <p className="active-journey__finish-error" role="alert">
           {journeyFinishFailureNote(finishFailure)}
         </p>
+      )}
+
+      {stopReason === null ? null : (
+        <p
+          className="active-journey__note"
+          role="status"
+          aria-live="polite"
+          data-recorder-stop={stopReason}
+        >
+          {journeyRecorderStopNote(stopReason)}
+        </p>
+      )}
+
+      {stopReason === null ? null : (
+        <details className="active-journey__diagnostics">
+          <summary>Technical details (for support)</summary>
+          <pre>{formatJourneyNativeDiagnostics()}</pre>
+        </details>
       )}
 
       <div className="active-journey__dock" aria-label="Journey controls">

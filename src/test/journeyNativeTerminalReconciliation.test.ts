@@ -7,6 +7,9 @@ function session(calls: string[]): JourneyMotionSession {
   return {
     getJourney: vi.fn(),
     getMotionState: vi.fn(),
+    isStopped: () => false,
+    isProviderStopped: () => false,
+    resumeProvider: () => false,
     processSample(sample) {
       calls.push(`process:${sample.recordedAt}`);
     },

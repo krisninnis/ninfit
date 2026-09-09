@@ -109,20 +109,47 @@ public final class JourneyForegroundLocationService extends Service implements L
             throw new IllegalStateException("A different Journey is already recording");
         }
 
+        /*
+         * All or nothing. activeJourneyId used to be committed BEFORE startForeground()
+         * and requestLocationUpdates(), so a refusal from either - a foreground-service
+         * start restriction, a missing provider - left onStartCommand's catch looking at
+         * a non-null activeJourneyId, declining to stopSelf, and keeping a service alive
+         * that had no notification, no location updates and no way to ever produce a fix.
+         * From JavaScript that is indistinguishable from a healthy recorder that simply
+         * has not seen a satellite yet, which is exactly the state a Journey must never
+         * be able to sit in silently. The id is committed only once recording is really
+         * running, and a failure unwinds instead of half-starting.
+         */
         capture.begin(journeyId);
-        activeJourneyId = journeyId;
-        resetStatusSummary();
-        startForeground(NOTIFICATION_ID, buildNotification());
+        boolean foregrounded = false;
+        try {
+            resetStatusSummary();
+            activeJourneyId = journeyId;
+            startForeground(NOTIFICATION_ID, buildNotification());
+            foregrounded = true;
 
-        // GPS is the authoritative high-accuracy source for an outdoor Journey. Network
-        // fixes are deliberately not mixed in here; provider fallback remains a later,
-        // explicit acceptance decision rather than silently weakening route quality.
-        locationManager.requestLocationUpdates(
-            LocationManager.GPS_PROVIDER,
-            MIN_TIME_MS,
-            MIN_DISTANCE_M,
-            this
-        );
+            // GPS is the authoritative high-accuracy source for an outdoor Journey. Network
+            // fixes are deliberately not mixed in here; provider fallback remains a later,
+            // explicit acceptance decision rather than silently weakening route quality.
+            locationManager.requestLocationUpdates(
+                LocationManager.GPS_PROVIDER,
+                MIN_TIME_MS,
+                MIN_DISTANCE_M,
+                this
+            );
+        } catch (RuntimeException error) {
+            activeJourneyId = null;
+            resetStatusSummary();
+            try {
+                locationManager.removeUpdates(this);
+            } catch (RuntimeException ignored) {
+                // Nothing was registered; unwinding must not mask the original failure.
+            }
+            capture.end(journeyId);
+            if (foregrounded) stopForeground(STOP_FOREGROUND_REMOVE);
+            stopSelf();
+            throw error;
+        }
     }
 
     private boolean matchesActiveJourney(String journeyId) {

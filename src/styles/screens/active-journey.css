@@ -313,6 +313,45 @@
     font-size: var(--ft-text-sm);
   }
 
+  /*
+   * Why background recording stopped, in the same calm register as the Finish note and
+   * for the same reason: nothing was lost, so nothing here shouts.
+   */
+  .active-journey__note {
+    margin: 0;
+    padding: var(--ft-space-3) var(--ft-space-4);
+    border: 1px solid color-mix(in srgb, var(--ft-border-subtle) 74%, transparent);
+    border-radius: var(--ft-radius-lg);
+    color: var(--ft-text-secondary);
+    background: color-mix(in srgb, var(--ft-surface-raised) 78%, transparent);
+    backdrop-filter: blur(16px);
+    font-size: var(--ft-text-sm);
+  }
+
+  /*
+   * Collapsed by default and never opened for the person by NinFit. It exists so a
+   * real-device failure can be read out to support instead of guessed at; it holds
+   * transport counters only and never a coordinate.
+   */
+  .active-journey__diagnostics {
+    color: var(--ft-text-tertiary, var(--ft-text-secondary));
+    font-size: var(--ft-text-xs, var(--ft-text-sm));
+  }
+
+  .active-journey__diagnostics summary {
+    cursor: pointer;
+    padding: var(--ft-space-2) var(--ft-space-1);
+  }
+
+  .active-journey__diagnostics pre {
+    margin: 0;
+    padding: var(--ft-space-3);
+    overflow-x: auto;
+    border-radius: var(--ft-radius-lg);
+    background: color-mix(in srgb, var(--ft-surface-raised) 60%, transparent);
+    white-space: pre;
+  }
+
   .active-journey__dock {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

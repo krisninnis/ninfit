@@ -7,6 +7,13 @@ export type JourneyLiveGpsState =
   | 'searching'
   | 'permission_denied'
   | 'runtime_error'
+  /**
+   * The native recorder is quiesced and the Journey could not transition. The Journey is
+   * still on the device and still finishable, but NinFit must stop presenting it as
+   * healthy recording - and must stop its active time from climbing over a recorder that
+   * cannot produce another fix.
+   */
+  | 'recorder_stopped'
   | 'not_applicable'
   | 'paused'
   | 'finished';
@@ -97,6 +104,54 @@ export function journeyFinishFailureNote(reason: JourneyFinishFailure): string {
   }
 }
 
+/**
+ * Why native Journey recording stopped, in the vocabulary the durable replay boundary
+ * already uses.
+ *
+ * Declared here rather than imported, exactly like `JourneyFinishFailure`, so the
+ * presentation layer keeps its domain-only import boundary. The Active Journey screen
+ * assigns the application-layer union to this one, so a new stop reason fails typecheck
+ * here instead of reaching a user as a missing sentence.
+ */
+export type JourneyRecorderStopReason =
+  | 'invalid_position'
+  | 'invalid_sequence'
+  | 'sequence_gap'
+  | 'processor_error'
+  | 'acknowledgement_error'
+  | 'queue_read_error'
+  | 'session_stopped'
+  | 'queue_unavailable';
+
+/**
+ * What to say when background GPS could not be read back.
+ *
+ * Three rules hold for every sentence: nothing collected has been lost, the Journey is
+ * still on this device, and there is something the person can actually do. The reasons
+ * are separated because they are not the same situation - a queue that cannot be reached
+ * at all is a broken build, while a drain interrupted mid-way just needs another go -
+ * and because a single sentence for all of them is what made a real device failure
+ * impossible to diagnose. None of them names a class, a table or an exception.
+ */
+export function journeyRecorderStopNote(reason: JourneyRecorderStopReason): string {
+  switch (reason) {
+    case 'queue_unavailable':
+      return 'This build cannot reach its background GPS recorder. Nothing already recorded has been lost, and this Journey is still on your phone.';
+    case 'queue_read_error':
+      return 'Background GPS could not be read back just now. Nothing has been lost - try again in a moment.';
+    case 'session_stopped':
+      return 'Background GPS is still being tidied up. Nothing has been lost - try again in a moment.';
+    case 'acknowledgement_error':
+      return 'Background GPS was read but could not be filed away yet. Nothing has been lost - try again in a moment.';
+    case 'invalid_position':
+    case 'invalid_sequence':
+    case 'sequence_gap':
+      return 'Some background GPS did not arrive in a state NinFit trusts, so it has been kept rather than used. Everything already on your route is safe.';
+    case 'processor_error':
+      return 'NinFit could not take in the newest background GPS. Nothing has been lost - try again in a moment.';
+  }
+}
+
 export function journeyLiveGpsLabel(state: JourneyLiveGpsState): string {
   switch (state) {
     case 'connecting':
@@ -109,6 +164,8 @@ export function journeyLiveGpsLabel(state: JourneyLiveGpsState): string {
       return 'Location permission needed';
     case 'runtime_error':
       return 'GPS stopped';
+    case 'recorder_stopped':
+      return 'Recording stopped';
     case 'not_applicable':
       return 'GPS not used';
     case 'paused':
@@ -130,6 +187,8 @@ export function journeyLiveGpsNote(state: JourneyLiveGpsState): string {
       return 'Location permission is off. Pause and resume after allowing location to retry.';
     case 'runtime_error':
       return 'GPS recording stopped safely. Pause and resume to retry.';
+    case 'recorder_stopped':
+      return 'Background recording has stopped, so this Journey is no longer collecting time or distance. Finish it when you are ready.';
     case 'not_applicable':
       return 'Phone GPS is not used for swimming. Pool and wearable distance can be added later.';
     case 'paused':

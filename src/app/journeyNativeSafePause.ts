@@ -5,6 +5,7 @@ import { saveJourneyPauseOrigin } from '../storage/journeyPauseProvenance';
 import { createJourneyRecoveryController } from './journeyRecoveryController';
 import type { JourneyMotionSession } from './journeyMotionSession';
 import { reconcileNativeJourneyDurablePositions } from './journeyNativeDurableReconciliation';
+import { isRetryableNativeJourneyReplayStop } from './journeyNativeDurableQueue';
 import type { NativeJourneyDurableReplayCoordinator } from './journeyNativeDurableReplayCoordinator';
 import type {
   NativeJourneyDurablePositionQueue,
@@ -18,7 +19,20 @@ export type JourneyNativeSafePauseFailure =
 
 export type JourneyNativeSafePauseResult =
   | { paused: true; journey: Journey; replay: NativeJourneyDurableReplayResult | null }
-  | { paused: false; reason: JourneyNativeSafePauseFailure; replay: NativeJourneyDurableReplayResult | null };
+  | {
+      paused: false;
+      reason: JourneyNativeSafePauseFailure;
+      replay: NativeJourneyDurableReplayResult | null;
+      /**
+       * Whether the native recorder is collecting again after the refusal.
+       *
+       * A refused Pause leaves the Journey logically recording. If the provider stayed
+       * quiesced, that state would be a lie: a Recording Journey over a recorder that
+       * can never produce another fix, with active time still climbing. False here is
+       * the screen's signal to stop claiming healthy recording.
+       */
+      recording: boolean;
+    };
 
 /**
  * Manual Pause must not strand the native suffix collected immediately before the tap.
@@ -45,28 +59,67 @@ export async function pauseJourneyAfterNativeReconciliation(options: {
   replayCoordinator?: NativeJourneyDurableReplayCoordinator | null;
   now: () => ISODateTime;
 }): Promise<JourneyNativeSafePauseResult> {
+  /*
+   * A refusal must not silently end the recording it interrupted. The Journey is still
+   * logically recording, so the provider quiesced for the drain is re-armed on the way
+   * out. `resumeProvider` only restarts an existing provider; it never requests a
+   * permission, so this cannot prompt outside a user gesture, and a session that was
+   * permanently stopped stays stopped and reports it.
+   */
+  const failed = (
+    reason: JourneyNativeSafePauseFailure,
+    replay: NativeJourneyDurableReplayResult | null,
+  ): JourneyNativeSafePauseResult => ({
+    paused: false,
+    reason,
+    replay,
+    recording: options.session.resumeProvider(),
+  });
+
   options.session.stopProvider();
 
   let replay: NativeJourneyDurableReplayResult | null = null;
   const journeyId = options.session.getJourney().id;
 
   if (options.queue) {
+    const queue = options.queue;
+    const drain = () => reconcileNativeJourneyDurablePositions({
+      journeyId,
+      queue,
+      session: options.session,
+    });
+
+    /*
+     * Never adopt the polling drain's result. `runExclusive` waits for whatever drain is
+     * already holding the durable prefix, discards its outcome, and then reads again with
+     * the session THIS call was handed. A drain that stopped because its own session was
+     * replaced says nothing about ours, and treating it as our failure is what left a
+     * person unable to pause or finish a Journey at all.
+     */
     replay = options.replayCoordinator
-      ? await options.replayCoordinator.reconcile()
-      : await reconcileNativeJourneyDurablePositions({
-          journeyId,
-          queue: options.queue,
-          session: options.session,
-        });
+      ? await options.replayCoordinator.runExclusive(drain)
+      : await drain();
+
+    /*
+     * One bounded retry, and only for the lifecycle boundary. Our own session was live
+     * when this call started; if it was stopped underneath us mid-drain the durable
+     * suffix is untouched and a single re-read settles it. Every other stop reason is a
+     * real fault and still refuses - fail-closed is unchanged.
+     */
+    if (isRetryableNativeJourneyReplayStop(replay.stopReason) && !options.session.isStopped()) {
+      replay = options.replayCoordinator
+        ? await options.replayCoordinator.runExclusive(drain)
+        : await drain();
+    }
 
     if (replay.stopReason !== null) {
-      return { paused: false, reason: 'replay_failed', replay };
+      return failed('replay_failed', replay);
     }
 
     try {
       await options.queue.clear(journeyId);
     } catch {
-      return { paused: false, reason: 'queue_clear_failed', replay };
+      return failed('queue_clear_failed', replay);
     }
   }
 
@@ -78,7 +131,7 @@ export async function pauseJourneyAfterNativeReconciliation(options: {
       : createJourneyRecoveryController(options.storage).pause(current, options.now());
     saveJourneyPauseOrigin(options.storage, paused.id, 'manual');
   } catch {
-    return { paused: false, reason: 'pause_failed', replay };
+    return failed('pause_failed', replay);
   }
 
   options.session.stop();

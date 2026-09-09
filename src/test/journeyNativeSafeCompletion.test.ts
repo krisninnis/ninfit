@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { completeJourneyAfterNativeReconciliation } from '../app/journeyNativeSafeCompletion';
 import { startJourneyMotionSession } from '../app/journeyMotionSession';
 import type { JourneyLocationProvider } from '../app/journeyLocationProvider';
-import type { NativeJourneyDurablePositionQueue } from '../app/journeyNativeDurableQueue';
+import type {
+  NativeJourneyDurablePositionQueue,
+  NativeJourneyDurableReplayResult,
+} from '../app/journeyNativeDurableQueue';
 import type { Journey } from '../domain/journey';
 import { createMemoryStorageAdapter } from '../storage/StorageAdapter';
 import { loadActiveJourneySnapshot, saveActiveJourneySnapshot } from '../storage/activeJourneySnapshot';
@@ -94,7 +97,15 @@ describe('durable-safe native Journey completion', () => {
     expect(completed?.route?.acceptedPoints).toHaveLength(1);
   });
 
-  it('shares an existing replay coordinator instead of racing a second native queue drain', async () => {
+  it('serialises behind an in-flight coordinator drain but reads with its own session', async () => {
+    /*
+     * This used to assert the opposite - that Finish ADOPTED the coordinator's in-flight
+     * result and never read the queue itself. That is the defect a physical Samsung test
+     * found: the polling drain belongs to whichever session was live when it started, and
+     * when a session swap stops it early, Finish reported that as its own failure and the
+     * person could never leave the Journey. Finish must wait for the prefix to be free
+     * and then read it with the session it was handed.
+     */
     const storage = createMemoryStorageAdapter();
     const { session } = motionSession(storage);
     const readPending = vi.fn(async () => []);
@@ -104,24 +115,32 @@ describe('durable-safe native Journey completion', () => {
       acknowledgeThrough: vi.fn(async () => undefined),
       clear,
     };
-    const reconcile = vi.fn(async () => ({
-      processed: 2,
-      lastAcknowledgedSequence: 2,
-      stoppedAtSequence: null,
-      stopReason: null,
-    }));
 
-    const result = await completeJourneyAfterNativeReconciliation({
+    const order: string[] = [];
+    let releaseInFlight!: () => void;
+    const inFlight = new Promise<void>((resolve) => { releaseInFlight = resolve; });
+    const runExclusive = vi.fn(async (drain: () => Promise<NativeJourneyDurableReplayResult>) => {
+      order.push('waited');
+      await inFlight;
+      return drain();
+    });
+
+    const finish = completeJourneyAfterNativeReconciliation({
       storage,
       session,
       queue,
-      replayCoordinator: { reconcile },
+      replayCoordinator: { reconcile: vi.fn(), runExclusive },
       now: () => '2026-09-08T11:00:05.000Z',
     });
 
-    expect(result.completed).toBe(true);
-    expect(reconcile).toHaveBeenCalledTimes(1);
     expect(readPending).not.toHaveBeenCalled();
+    releaseInFlight();
+    const result = await finish;
+
+    expect(result.completed).toBe(true);
+    expect(runExclusive).toHaveBeenCalledTimes(1);
+    expect(order).toEqual(['waited']);
+    expect(readPending).toHaveBeenCalledWith('journey-safe-finish');
     expect(clear).toHaveBeenCalledWith('journey-safe-finish');
   });
 

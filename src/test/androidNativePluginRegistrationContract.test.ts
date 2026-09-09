@@ -51,10 +51,12 @@ for (const file of nativePluginFiles) {
   nativePlugins.set(className, id ?? '');
 }
 
-/** Capacitor plugin ids the shipped web app actually calls. */
+/** Capacitor plugin ids the shipped web app actually calls, and the sources that call them. */
 const jsPluginIds = new Set<string>();
+const appSources = new Map<string, string>();
 for (const file of readdirSync(join(ROOT, ...APP_DIR)).filter((name) => name.endsWith('.ts'))) {
   const source = stripTsComments(read(...APP_DIR, file));
+  appSources.set(file, source);
   for (const match of source.matchAll(/registerPlugin\s*(?:<[^>]*>)?\s*\(\s*'([^']+)'/g)) {
     if (match[1] !== undefined) jsPluginIds.add(match[1]);
   }
@@ -108,5 +110,94 @@ describe('installed Android custom plugin registration', () => {
         `registerPlugin('${id}') has no native class registered in MainActivity; Capacitor answers "unable to find plugin : ${id}" and every call rejects`,
       ).toBe(true);
     }
+  });
+});
+
+/*
+ * Registration alone is not enough. A plugin can be on the Bridge and still reject every
+ * call if JavaScript asks for a method the Java class does not declare - which produces
+ * the same permanent, unrecoverable rejection as a missing plugin, from the same generic
+ * "could not reconcile" sentence. These assertions pin the method names on both sides of
+ * the seam, and the one thing the durable transport depends on: that the plugin and the
+ * foreground service read and write the SAME store.
+ */
+
+const nativeSources = new Map<string, string>(
+  nativePluginFiles.map((file) => [file, stripJavaComments(read(...NATIVE_DIR, file))]),
+);
+
+function pluginMethods(className: string): Set<string> {
+  for (const source of nativeSources.values()) {
+    if (!new RegExp(`class\\s+${className}\\b`).test(source)) continue;
+    return new Set(
+      [...source.matchAll(/@PluginMethod[\s\S]{0,80}?public\s+void\s+(\w+)\s*\(/g)]
+        .map((match) => match[1])
+        .filter((name): name is string => name !== undefined),
+    );
+  }
+  return new Set();
+}
+
+/** Method names the web app calls on one plugin id, read from its TypeScript interface. */
+function jsMethodsFor(pluginId: string): Set<string> {
+  const names = new Set<string>();
+  for (const [, source] of appSources) {
+    const registration = new RegExp(`registerPlugin\\s*<\\s*(\\w+)\\s*>\\s*\\(\\s*'${pluginId}'`).exec(source);
+    if (registration === null) continue;
+    const interfaceName = registration[1];
+    const declaration = new RegExp(`interface\\s+${interfaceName}\\s*\\{([\\s\\S]*?)\\n\\}`).exec(source);
+    if (declaration === null) continue;
+    for (const method of (declaration[1] ?? '').matchAll(/^\s*(\w+)\s*\(/gm)) {
+      if (method[1] !== undefined) names.add(method[1]);
+    }
+  }
+  return names;
+}
+
+describe('installed Android custom plugin call surface', () => {
+  it('backs every method the web app calls with a @PluginMethod of the same name', () => {
+    const seams: Array<[string, string]> = [
+      ['NinFitJourneyLocation', 'NinFitJourneyLocationPlugin'],
+      ['NinFitJourneyQueue', 'NinFitJourneyQueuePlugin'],
+    ];
+
+    for (const [pluginId, className] of seams) {
+      const wanted = jsMethodsFor(pluginId);
+      expect(wanted.size, `no TypeScript interface found for ${pluginId}`).toBeGreaterThan(0);
+      const declared = pluginMethods(className);
+      for (const method of wanted) {
+        expect(
+          declared.has(method),
+          `${pluginId}.${method}() is called from src/app but ${className} declares no @PluginMethod ${method}; the call rejects on the phone and CI never sees it`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it('keeps the queue plugin and the foreground service on one durable store', () => {
+    const store = read(...NATIVE_DIR, 'JourneyDurableStore.java');
+    const databaseNames = [...store.matchAll(/DATABASE_NAME\s*=\s*"([^"]+)"/g)].map((match) => match[1]);
+    expect(databaseNames).toEqual(['ninfit_journey_native.db']);
+
+    // Both sides construct the same helper: the queue the WebView reads is the queue the
+    // service writes. A second store class here would silently strand every fix.
+    expect(nativeSources.get('NinFitJourneyQueuePlugin.java')).toContain('new JourneyDurableStore(');
+    expect(nativeSources.get('JourneyForegroundLocationService.java')).toContain('new JourneyDurableStore(');
+    expect(nativeSources.get('JourneyNativeCapture.java')).toContain('store.append(');
+  });
+
+  it('commits the active Journey id only once native recording is really running', () => {
+    /*
+     * A service that set activeJourneyId before startForeground() stayed alive after a
+     * refusal, with no notification and no location updates, and JavaScript could not
+     * tell it apart from a recorder waiting for a satellite. The id must be unwound on
+     * failure so the state cannot exist.
+     */
+    const service = nativeSources.get('JourneyForegroundLocationService.java') ?? '';
+    const startCapture = /private void startCapture\(String journeyId\)[\s\S]*?\n    \}/.exec(service)?.[0] ?? '';
+    expect(startCapture).not.toBe('');
+    expect(startCapture).toContain('activeJourneyId = null;');
+    expect(startCapture).toMatch(/catch \(RuntimeException error\)[\s\S]*?throw error;/);
+    expect(startCapture.indexOf('startForeground(')).toBeLessThan(startCapture.indexOf('throw error;'));
   });
 });

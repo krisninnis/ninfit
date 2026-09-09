@@ -9,6 +9,19 @@ import type {
 
 export interface NativeJourneyDurableReplayCoordinator {
   reconcile(): Promise<NativeJourneyDurableReplayResult>;
+  /**
+   * Run one drain that this caller owns, serialised behind any drain already running.
+   *
+   * Pause and Finish must never *adopt* the polling drain's result. That drain belongs
+   * to whichever session was live when it started, and a session swap mid-drain
+   * (an auto-pause, a screen teardown) makes it stop early - which Pause and Finish
+   * then reported as "could not reconcile", permanently, with no way for the person to
+   * leave the Journey. Waiting for it and then reading again with their own live
+   * session is both safe and terminating.
+   */
+  runExclusive(
+    drain: () => Promise<NativeJourneyDurableReplayResult>,
+  ): Promise<NativeJourneyDurableReplayResult>;
 }
 
 /**
@@ -23,15 +36,32 @@ export function createNativeJourneyDurableReplayCoordinator(options: {
 }): NativeJourneyDurableReplayCoordinator {
   let inFlight: Promise<NativeJourneyDurableReplayResult> | null = null;
 
+  function own(
+    drain: () => Promise<NativeJourneyDurableReplayResult>,
+  ): Promise<NativeJourneyDurableReplayResult> {
+    const wrapped: Promise<NativeJourneyDurableReplayResult> = drain().finally(() => {
+      if (inFlight === wrapped) inFlight = null;
+    });
+    inFlight = wrapped;
+    return wrapped;
+  }
+
   return {
     reconcile() {
       if (inFlight !== null) return inFlight;
-      const run = reconcileNativeJourneyDurablePositions(options);
-      const wrapped = run.finally(() => {
-        if (inFlight === wrapped) inFlight = null;
-      });
-      inFlight = wrapped;
-      return wrapped;
+      return own(() => reconcileNativeJourneyDurablePositions(options));
+    },
+    async runExclusive(drain) {
+      // Wait out whoever holds the durable prefix, ignoring their outcome: it belongs to
+      // their session, not ours. Then take the prefix ourselves.
+      while (inFlight !== null) {
+        try {
+          await inFlight;
+        } catch {
+          // A rejected drain releases the prefix just as a resolved one does.
+        }
+      }
+      return own(drain);
     },
   };
 }

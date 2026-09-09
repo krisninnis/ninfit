@@ -204,7 +204,7 @@ describe('Finish with a durable native queue', () => {
     expect(screen.getByRole('button', { name: 'Finish' })).toBeTruthy();
   });
 
-  it('joins an in-flight startup drain instead of racing a second one', async () => {
+  it('waits for an in-flight startup drain, then reads once more with its own session', async () => {
     const startupDrain = deferred<NativeJourneyBufferedPosition[]>();
     const readPending = vi.fn(() => startupDrain.promise);
     const cleared: string[] = [];
@@ -228,7 +228,7 @@ describe('Finish with a durable native queue', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Finish' }));
     await settle();
 
-    // Finish waited on the same drain rather than opening a competing read/ack sequence.
+    // Finish never opens a competing read while the startup drain owns the queue.
     expect(readPending).toHaveBeenCalledTimes(1);
     // And it says so, rather than looking unpressed while the queue is still draining.
     expect(screen.getByRole('button', { name: 'Finishing...' })).toBeTruthy();
@@ -238,7 +238,15 @@ describe('Finish with a durable native queue', () => {
     startupDrain.resolve([lockedScreenFix()]);
     await settle();
 
-    expect(readPending).toHaveBeenCalledTimes(1);
+    /*
+     * Once the prefix is free, Finish reads it again with the session IT was handed.
+     * It deliberately does NOT adopt the startup drain's result: that drain belongs to
+     * whichever session was live when it began, and adopting a drain stopped by a
+     * session swap is what made Pause and Finish permanently refuse on a real phone.
+     * The extra read is safe because replay is idempotent - the same fix offered twice
+     * is still one accepted point.
+     */
+    expect(readPending).toHaveBeenCalledTimes(2);
     expect(cleared).toEqual(['journey-finish-replay']);
     expect(onCompleted).toHaveBeenCalledWith('journey-finish-replay');
     expect(loadJourneyHistory(storage)[0]?.route?.acceptedPoints).toHaveLength(1);

@@ -26,6 +26,23 @@ import { createJourneyRecoveryController } from './journeyRecoveryController';
 
 export type JourneyMotionState = 'recording' | 'auto_paused';
 
+/**
+ * Thrown when a sample is offered to a session the UI has already torn down.
+ *
+ * This is deliberately its own type. Durable replay must be able to tell "this drain
+ * outlived its session" apart from "this sample broke the Journey runtime": the first
+ * is an ordinary lifecycle boundary that leaves every unread sample durable and is
+ * retryable against the live session, and the second is a real defect. Collapsing them
+ * into one generic Error is what turned a routine session swap into a Journey the user
+ * could neither pause nor finish.
+ */
+export class JourneyMotionSessionStoppedError extends Error {
+  constructor() {
+    super('Journey motion session is stopped');
+    this.name = 'JourneyMotionSessionStoppedError';
+  }
+}
+
 export interface JourneyMotionSessionOptions {
   storage: StorageAdapter;
   journey: Journey;
@@ -40,10 +57,25 @@ export interface JourneyMotionSessionOptions {
 export interface JourneyMotionSession {
   getJourney(): Journey;
   getMotionState(): JourneyMotionState;
+  /** True once `stop()` has run: no further sample can be processed by this session. */
+  isStopped(): boolean;
+  /** True while the provider is quiesced but replay is still allowed. */
+  isProviderStopped(): boolean;
   /** Process one sample through the exact same trusted motion path used by the live provider. */
   processSample(sample: JourneyGpsSample): void;
   /** Stop new provider callbacks while keeping durable replay processing available. */
   stopProvider(): void;
+  /**
+   * Re-arm a provider quiesced by `stopProvider()`.
+   *
+   * Used only when a Pause or Finish could not complete: the Journey is still logically
+   * recording, so leaving the native recorder stopped would keep a Recording state alive
+   * over a recorder that can never produce another fix. Starting a provider never
+   * requests a permission - the Android provider fails closed if one is missing - so
+   * this cannot prompt without a user gesture. A session already permanently stopped
+   * stays stopped.
+   */
+  resumeProvider(): boolean;
   /** Permanently stop both the provider and any further replay processing. */
   stop(): void;
 }
@@ -192,7 +224,7 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
   }
 
   function processSample(sample: JourneyGpsSample): void {
-    if (stopped) throw new Error('Journey motion session is stopped');
+    if (stopped) throw new JourneyMotionSessionStoppedError();
     if (motionState === 'auto_paused') handleAutoPausedSample(sample);
     else handleRecordingSample(sample);
   }
@@ -204,6 +236,57 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
     providerSession = null;
   }
 
+  /*
+   * The native provider adapter deliberately does not throw when the native side refuses
+   * to start: it reports through `onError` and hands back a session that does nothing.
+   * That is right for the initial start - the screen surfaces the provider error - but it
+   * means a caller cannot tell a working recorder from an inert one by return value
+   * alone. This flag makes the distinction, so `resumeProvider` can never claim a
+   * recorder is collecting again when the start it just made failed.
+   */
+  let providerStartFailed = false;
+
+  function startProviderSession(): void {
+    let starting = true;
+    try {
+      providerSession = provider.start({
+        onSample(sample) {
+          if (stopped || providerStopped) return;
+          try {
+            processSample(sample);
+          } catch (cause) {
+            options.onRuntimeError?.(cause);
+            stop();
+          }
+        },
+        onError(error) {
+          if (starting) providerStartFailed = true;
+          if (!stopped && !providerStopped) options.onProviderError?.(error);
+        },
+      });
+    } finally {
+      starting = false;
+    }
+  }
+
+  function resumeProvider(): boolean {
+    if (stopped || !providerStopped) return false;
+    providerStopped = false;
+    providerStartFailed = false;
+    try {
+      startProviderSession();
+    } catch (cause) {
+      options.onRuntimeError?.(cause);
+      providerStartFailed = true;
+    }
+    if (providerStartFailed) {
+      providerSession = null;
+      providerStopped = true;
+      return false;
+    }
+    return true;
+  }
+
   function stop(): void {
     if (stopped) return;
     stopProvider();
@@ -211,20 +294,7 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
   }
 
   try {
-    providerSession = provider.start({
-      onSample(sample) {
-        if (stopped || providerStopped) return;
-        try {
-          processSample(sample);
-        } catch (cause) {
-          options.onRuntimeError?.(cause);
-          stop();
-        }
-      },
-      onError(error) {
-        if (!stopped && !providerStopped) options.onProviderError?.(error);
-      },
-    });
+    startProviderSession();
   } catch (cause) {
     options.onRuntimeError?.(cause);
     throw cause;
@@ -237,8 +307,15 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
     getMotionState() {
       return motionState;
     },
+    isStopped() {
+      return stopped;
+    },
+    isProviderStopped() {
+      return providerStopped;
+    },
     processSample,
     stopProvider,
+    resumeProvider,
     stop,
   };
 }
