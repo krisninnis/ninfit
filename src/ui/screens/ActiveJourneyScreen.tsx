@@ -163,7 +163,8 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
         });
     durableReplayRef.current = durableReplay;
 
-    if (durableReplay !== null) {
+    const reconcileDurableQueue = () => {
+      if (durableReplay === null) return;
       void durableReplay.reconcile().then((result) => {
         if (sessionRef.current === session && result.stopReason !== null) {
           setGpsState('runtime_error');
@@ -171,9 +172,20 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
       }).catch(() => {
         if (sessionRef.current === session) setGpsState('runtime_error');
       });
-    }
+    };
+
+    reconcileDurableQueue();
+
+    // Installed Android records into SQLite independently of the WebView. While the UI
+    // is awake, drain that durable queue once per second so the visible route/distance
+    // follows the native recorder without starting a second browser geolocation watch.
+    // Browsers/PWAs have no injected queue and therefore create no polling timer.
+    const durablePollTimer = durableReplay === null
+      ? null
+      : window.setInterval(reconcileDurableQueue, 1_000);
 
     return () => {
+      if (durablePollTimer !== null) window.clearInterval(durablePollTimer);
       session.stop();
       if (sessionRef.current === session) sessionRef.current = null;
       if (durableReplayRef.current === durableReplay) durableReplayRef.current = null;
