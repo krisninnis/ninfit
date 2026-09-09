@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getAppContext } from '../../app/bootstrap';
 import {
   checkAndroidJourneyPermissionReadiness,
@@ -65,28 +65,44 @@ export function JourneyLaunchScreen({ family, onClose }: JourneyLaunchScreenProp
   const needsAndroidPermission = installedAndroid && chosenUsesLocation;
   const permissionBlocked = needsAndroidPermission && permissionReadiness?.ready === false;
 
-  const startAfterPermissionCheck = async (activityType: JourneyActivityType) => {
-    if (permissionBusy) return;
+  useEffect(() => {
+    let cancelled = false;
+    setPermissionFailure(false);
 
-    if (installedAndroid && journeyUsesPhoneGps(activityType)) {
-      setPermissionFailure(false);
-      try {
-        const readiness = await checkAndroidJourneyPermissionReadiness();
-        setPermissionReadiness(readiness);
-        if (readiness !== null && !readiness.ready) return;
-      } catch {
-        setPermissionFailure(true);
-        return;
-      }
+    if (!needsAndroidPermission) {
+      setPermissionReadiness(null);
+      return () => { cancelled = true; };
     }
 
-    launch.start(activityType, nowIso());
-    window.location.hash = JOURNEY_ACTIVE_HASH;
+    void checkAndroidJourneyPermissionReadiness()
+      .then((readiness) => {
+        if (!cancelled) setPermissionReadiness(readiness);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPermissionReadiness(null);
+          setPermissionFailure(true);
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, [needsAndroidPermission, chosen]);
+
+  const refreshPermissionReadiness = () => {
+    setPermissionFailure(false);
+    void checkAndroidJourneyPermissionReadiness()
+      .then((readiness) => setPermissionReadiness(readiness))
+      .catch(() => setPermissionFailure(true));
   };
 
   const start = () => {
     if (chosen === undefined) return;
-    void startAfterPermissionCheck(chosen);
+    if (needsAndroidPermission && permissionReadiness?.ready !== true) {
+      refreshPermissionReadiness();
+      return;
+    }
+    launch.start(chosen, nowIso());
+    window.location.hash = JOURNEY_ACTIVE_HASH;
   };
 
   const allowJourneyPermissions = async () => {
@@ -144,11 +160,7 @@ export function JourneyLaunchScreen({ family, onClose }: JourneyLaunchScreenProp
                 name="journey-activity"
                 value={activityType}
                 checked={selected === activityType}
-                onChange={() => {
-                  setSelected(activityType);
-                  setPermissionReadiness(null);
-                  setPermissionFailure(false);
-                }}
+                onChange={() => setSelected(activityType)}
               />
               <span>{journeyActivityLabel(activityType)}</span>
             </label>
@@ -188,7 +200,7 @@ export function JourneyLaunchScreen({ family, onClose }: JourneyLaunchScreenProp
         {chosen === undefined
           ? `Choose ${choices.map(journeyActivityLabel).join(' or ').toLowerCase()}`
           : permissionBusy
-            ? 'Checking Android…'
+            ? 'Waiting for Android…'
             : `Start ${journeyActivityLabel(chosen)}`}
       </button>
 
