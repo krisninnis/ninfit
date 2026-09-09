@@ -70,6 +70,9 @@ jobs:
       - name: Production build
         run: npm run build
 
+      - name: Sync Capacitor Android project
+        run: npx cap sync android
+
       - name: Compile Android debug app
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
