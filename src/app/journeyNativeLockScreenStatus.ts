@@ -4,6 +4,8 @@ import type { ISODateTime } from '../domain/types';
 export type JourneyNativeLockScreenState = 'recording' | 'auto_paused' | 'manual_paused';
 
 export interface JourneyNativeLockScreenStatus {
+  /** Transport identity only. Native uses it to reject stale cross-Journey updates. */
+  journeyId: string;
   brandMark: 'NF';
   title: 'NinFit Journey';
   activityLabel: string;
@@ -35,9 +37,10 @@ function distanceM(journey: Journey): number {
  * Privacy-safe summary data for Android's ongoing Journey notification / lock-screen
  * surface and the future iOS Live Activity equivalent.
  *
- * Exact coordinates and route geometry are deliberately absent. Pause/Finish actions
- * also stay inside the unlocked NinFit UI so waking a phone cannot accidentally end or
- * alter a Journey from the system lock screen.
+ * The Journey id is transport identity, not display content. Exact coordinates and
+ * route geometry are deliberately absent. Pause/Finish actions also stay inside the
+ * unlocked NinFit UI so waking a phone cannot accidentally end or alter a Journey from
+ * the system lock screen.
  */
 export function createJourneyNativeLockScreenStatus(options: {
   journey: Journey;
@@ -49,6 +52,7 @@ export function createJourneyNativeLockScreenStatus(options: {
     : 'recording';
 
   return {
+    journeyId: options.journey.id,
     brandMark: 'NF',
     title: 'NinFit Journey',
     activityLabel: activityLabel(options.journey),
