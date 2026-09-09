@@ -84,9 +84,21 @@ describe('Android Journey acknowledgement contract', () => {
     // Fail-closed guards: fractional, non-finite, out-of-range and non-numeric all throw.
     expect(requireSequence).toContain('Math.floor(numeric)');
     expect(requireSequence).toContain('Double.isNaN(numeric)');
+    expect(requireSequence).toContain('Double.isInfinite(numeric)');
     expect(requireSequence).toContain('throw new IllegalArgumentException');
-    expect(requireSequence).toContain('MAX_SEQUENCE');
     expect(plugin).toContain('MAX_SEQUENCE = 9007199254740991L');
+
+    /*
+     * The bounds, pinned exactly. Sequences are 1-based: the native store's own cursor
+     * starts at 1 and `append` never issues 0, so a 0 arriving here means a caller that
+     * has lost track of the prefix, not an empty acknowledgement. Both the boxed-integer
+     * path and the double path must refuse it. `journeyNativeAcknowledgementBoundary`
+     * exercises these same bounds through the transcribed reader; this is what keeps the
+     * transcription honest about the Java it stands in for.
+     */
+    expect(requireSequence).toContain('sequence < 1L || sequence > MAX_SEQUENCE');
+    expect(requireSequence).toContain('numeric < 1d || numeric > (double) MAX_SEQUENCE');
+    expect(store).toContain('if (sequence < 1L) throw new IllegalArgumentException');
   });
 
   it('pins the JS method names to the Java @PluginMethod names', () => {
