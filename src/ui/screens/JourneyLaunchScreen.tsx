@@ -65,10 +65,10 @@ export function JourneyLaunchScreen({ family, onClose }: JourneyLaunchScreenProp
   const needsAndroidPermission = installedAndroid && chosenUsesLocation;
   const permissionBlocked = needsAndroidPermission && permissionReadiness?.ready === false;
 
-  const start = async () => {
-    if (chosen === undefined) return;
+  const startAfterPermissionCheck = async (activityType: JourneyActivityType) => {
+    if (permissionBusy) return;
 
-    if (installedAndroid && journeyUsesPhoneGps(chosen)) {
+    if (installedAndroid && journeyUsesPhoneGps(activityType)) {
       setPermissionFailure(false);
       try {
         const readiness = await checkAndroidJourneyPermissionReadiness();
@@ -80,8 +80,13 @@ export function JourneyLaunchScreen({ family, onClose }: JourneyLaunchScreenProp
       }
     }
 
-    launch.start(chosen, nowIso());
+    launch.start(activityType, nowIso());
     window.location.hash = JOURNEY_ACTIVE_HASH;
+  };
+
+  const start = () => {
+    if (chosen === undefined) return;
+    void startAfterPermissionCheck(chosen);
   };
 
   const allowJourneyPermissions = async () => {
@@ -176,12 +181,15 @@ export function JourneyLaunchScreen({ family, onClose }: JourneyLaunchScreenProp
       <button
         type="button"
         className="btn btn--primary btn--block journey-launch__start"
-        onClick={() => void start()}
-        disabled={chosen === undefined || permissionBusy}
+        onClick={start}
+        disabled={chosen === undefined}
+        aria-busy={permissionBusy ? 'true' : undefined}
       >
         {chosen === undefined
           ? `Choose ${choices.map(journeyActivityLabel).join(' or ').toLowerCase()}`
-          : `Start ${journeyActivityLabel(chosen)}`}
+          : permissionBusy
+            ? 'Checking Android…'
+            : `Start ${journeyActivityLabel(chosen)}`}
       </button>
 
       <p className="journey-launch__note">
