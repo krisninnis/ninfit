@@ -25,6 +25,8 @@ export const XP_REWARDS: Readonly<Record<RewardKind, number>> = {
   consistency_milestone: 0,
   /** Overridden per tier by TROPHY_XP. */
   trophy_unlocked: 0,
+  /** The permanent runners are the reward; this cosmetic milestone grants no XP. */
+  first_journey_runners: 0,
 };
 
 export const TROPHY_XP = {

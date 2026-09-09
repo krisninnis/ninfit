@@ -39,61 +39,37 @@ describe('Journey product ownership', () => {
     expect(app).toContain('<JourneyScreen />');
     expect(app).toContain('<ActiveJourneyScreen');
     expect(app).toContain('onClose={() => navigate(JOURNEY_HASH)}');
-    /*
-     * RE-POINTED, NOT WEAKENED. Finish now lands on the completion moment rather than
-     * straight on the durable record. Both are read-only views of the same completed
-     * Journey, and the id is still the only thing that crosses - so what this guards
-     * is unchanged: completion navigates by stable id and never by carrying a Journey
-     * object through the router. The completion screen's own onward route back to the
-     * detail record is pinned in `journeyCompletionDetailWiring.test.ts`.
-     */
     expect(app).toContain('onCompleted={(journeyId) => navigate(journeyCompleteHash(journeyId))}');
     expect(app).not.toContain('JourneyLauncher');
   });
 
   it('starts activities through the launch controller, never by building a Journey', () => {
-    /*
-     * RE-POINTED, NOT WEAKENED. The four activity tiles became three activity-family
-     * doors, and Walk/Run now chooses its type on the companion launch screen - so the
-     * property is asserted across BOTH screens instead of one. What it protects is
-     * unchanged and is the important part: all four activity types are still offered,
-     * and neither screen ever constructs a Journey, a recording status or a GPS source
-     * for itself.
-     */
     for (const [name, source] of [['Journey Home', home], ['launch screen', launch]] as const) {
       expect(source, name).toContain('createJourneyLaunchController');
       expect(source, name).not.toContain("status: 'recording'");
       expect(source, name).not.toContain("kind: 'ninfit_phone_gps'");
     }
 
-    // Journey Home still starts a direct-launch family in one tap, exactly as it has
-    // since before families existed. Swim is the one that still uses this path.
     expect(home).toContain('launch.start(activityType, nowIso())');
-    /*
-     * The launch screen starts the chosen type, and only that. `chosen` is the user's
-     * selection on a two-activity door and the door's own single type on a one-
-     * activity door - never an inference, and never a seeded default.
-     */
     expect(launch).toContain('launch.start(chosen, nowIso())');
     expect(launch).toContain('const chosen = sole ?? selected');
 
-    // All four activity types remain reachable, and remain four.
     for (const activityType of ["'walk'", "'run'", "'cycle'", "'swim'"]) {
       expect(families, activityType).toContain(activityType);
     }
   });
 });
 
-describe('foreground GPS ownership', () => {
-  it('binds the screen to the hardened foreground session', () => {
-    expect(screen).toContain('startForegroundJourneyGpsSession');
+describe('Journey GPS ownership', () => {
+  it('binds the screen to the motion-aware provider session', () => {
+    expect(screen).toContain('startJourneyMotionSession');
     expect(screen).toContain('sessionRef');
     expect(screen).not.toContain('navigator.geolocation');
     expect(screen).not.toContain('watchPosition(');
   });
 
-  it('keys watcher lifetime to recorder status and activity type, not the changing Journey object', () => {
-    const dependencies = effectDependenciesAfter(screen, 'startForegroundJourneyGpsSession({');
+  it('keys provider lifetime to recorder status and activity type, not the changing Journey object', () => {
+    const dependencies = effectDependenciesAfter(screen, 'startJourneyMotionSession({');
     expect(dependencies).toEqual(['journey?.activityType', 'journey?.status', 'store']);
     expect(dependencies).not.toContain('journey');
   });
@@ -103,29 +79,52 @@ describe('foreground GPS ownership', () => {
     expect(screen).toContain("setGpsState('not_applicable')");
   });
 
-  it('stops GPS before persisting a pause transition', () => {
+  it('uses durable-safe manual pause when a native queue exists and preserves the synchronous fallback', () => {
     const pause = between(screen, 'const pause = () => {', 'const resume = () => {');
+    expect(pause).toContain('if (session === null || durableQueue === null) {');
     expect(pause).toContain('stopGps();');
     expect(pause).toContain('recovery.pause');
-    expect(pause.indexOf('stopGps();')).toBeLessThan(pause.indexOf('recovery.pause'));
+    expect(pause).toContain("saveJourneyPauseOrigin(store, next.id, 'manual')");
+    expect(pause).toContain('pauseJourneyAfterNativeReconciliation({');
+
+    const nativePath = pause.slice(pause.indexOf('setPausing(true);'));
+    expect(nativePath).not.toContain('recovery.pause');
+    expect(nativePath).not.toContain("saveJourneyPauseOrigin(store, next.id, 'manual')");
   });
 
   it('stops GPS before completion can persist history and clear recovery', () => {
-    const finish = between(screen, 'const finish = () => {', 'const leave = () => {');
+    const finish = between(screen, 'const finish = () => {', '  const leave = () => {');
     expect(finish).toContain('stopGps();');
     expect(finish).toContain('recovery.complete');
     expect(finish.indexOf('stopGps();')).toBeLessThan(finish.indexOf('recovery.complete'));
+    expect(finish).toContain('if (session === null || durableQueue === null) {');
+    const nativePath = between(finish, 'setFinishing(true);', '});');
+    expect(nativePath).toContain('completeJourneyAfterNativeReconciliation({');
+    expect(nativePath).not.toContain('recovery.complete');
   });
 
-  it('stops foreground GPS when leaving without discarding recovery', () => {
+  it('stops the Journey location session when leaving without discarding recovery', () => {
     const leave = between(screen, 'const leave = () => {', 'return (');
     expect(leave).toContain('stopGps();');
     expect(leave).toContain('onClose();');
     expect(leave).not.toContain('recovery.discard');
   });
 
-  it('contains synchronous watcher startup failures instead of crashing the Journey screen', () => {
+  it('contains synchronous provider/session startup failures instead of crashing the Journey screen', () => {
     expect(screen).toContain('try {');
     expect(screen).toContain("setGpsState('runtime_error')");
+  });
+
+  it('protects Journey controls on native background and uses foreground only to reconcile durable fixes', () => {
+    expect(screen).toContain('subscribeInjectedJourneyAppLifecycle');
+    const lifecycleEffect = between(
+      screen,
+      'return subscribeInjectedJourneyAppLifecycle((state) => {',
+      'useEffect(() => {\n    if (journey?.status !==',
+    );
+    expect(lifecycleEffect).toContain("if (state === 'backgrounded') {");
+    expect(lifecycleEffect).toContain('setControlsLocked(true);');
+    expect(lifecycleEffect).toContain('durableReplay.reconcile()');
+    expect(lifecycleEffect).not.toContain('setControlsLocked(false)');
   });
 });

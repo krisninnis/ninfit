@@ -57,17 +57,22 @@ export function journeyDetailFacts(
   };
 }
 
+/**
+ * Label the Journey's disclosure policy without implying that the owner loses access
+ * to their own saved route. Owner detail/completion views always use the private
+ * trusted route; these settings only govern what may leave that private view later.
+ */
 export function journeyPrivacyLabel(journey: Pick<Journey, 'privacy'>): string {
   switch (journey.privacy.visibility) {
     case 'private':
-      return 'Private on this device';
+      return 'Private · visible only to you on this device';
     case 'summary_only':
-      return 'Summary only outside your private record';
+      return 'Full private view for you · summary only if disclosed';
     case 'masked_route':
-      return 'Route masking enabled for disclosure';
+      return 'Full private view for you · route masked if disclosed';
     case 'full_route':
       return journey.privacy.maskSensitiveStartEnd
-        ? 'Sensitive route ends masked for disclosure'
-        : 'Full route allowed by privacy settings';
+        ? 'Full private view for you · route ends masked if disclosed'
+        : 'Full private view for you · full route permitted if disclosed';
   }
 }

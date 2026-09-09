@@ -60,7 +60,7 @@ import type { RewardEvent, RewardKind } from '../../domain/game/types';
 export type RewardTier = 'standard' | 'reward';
 
 /**
- * Exhaustive by construction. An eighth `RewardKind` will not compile until someone
+ * Exhaustive by construction. A new `RewardKind` will not compile until someone
  * decides how loudly it should be said - which is the decision that matters, and the
  * one a `default` branch would quietly make on their behalf.
  *
@@ -75,6 +75,7 @@ const REWARD_TIER: Readonly<Record<RewardKind, RewardTier>> = {
   first_programme_day: 'reward',
   consistency_milestone: 'reward',
   trophy_unlocked: 'reward',
+  first_journey_runners: 'reward',
 };
 
 export function rewardTier(kind: RewardKind): RewardTier {
@@ -141,6 +142,21 @@ export interface RewardAcknowledgementProps {
   onAcknowledged: (ids: readonly string[]) => void;
 }
 
+function FirstJourneyRunnersMoment() {
+  return (
+    <div className="reward__first-journey">
+      <p className="reward__first-journey-title">Your first NinFit walk is in the books.</p>
+      <p className="reward__first-journey-copy">
+        A first recorded Journey unlocks a brand-new pair of runners for your tortoise.
+      </p>
+      <div className="reward__runners-plinth" role="img" aria-label="Brand-new runners reward">
+        <span className="reward__runners-display" aria-hidden="true">👟</span>
+      </div>
+      <p className="reward__first-journey-state">Unlocked · equipped · saved to your collection</p>
+    </div>
+  );
+}
+
 export function RewardAcknowledgement({
   granted,
   onAcknowledged,
@@ -178,15 +194,17 @@ export function RewardAcknowledgement({
 
   const ordered = orderedForAcknowledgement(batch);
   const isReward = acknowledgementTier(batch) === 'reward';
+  const hasFirstJourneyRunners = ordered.some((event) => event.kind === 'first_journey_runners');
   const surface = isReward ? 'card card--reward' : 'reward__surface';
 
   return (
     <section className={`reward reward--${isReward ? 'reward' : 'standard'} ${surface}`} role="status">
+      {hasFirstJourneyRunners ? <FirstJourneyRunnersMoment /> : null}
       <ul className="reward__list">
         {ordered.map((event) => (
           <li className="reward__item" key={event.id}>
             <span className="reward__label">{event.label}</span>
-            <span className="reward__xp">+{event.xp} XP</span>
+            {event.xp > 0 ? <span className="reward__xp">+{event.xp} XP</span> : null}
           </li>
         ))}
       </ul>
