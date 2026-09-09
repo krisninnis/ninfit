@@ -24,8 +24,15 @@ function status(): JourneyNativeLockScreenStatus {
 
 function plugin() {
   return {
-    updateStatus: vi.fn(async () => undefined),
-    clearStatus: vi.fn(async () => undefined),
+    updateStatus: vi.fn(async (_options: {
+      journeyId: string;
+      activityLabel: string;
+      state: string;
+      stateLabel: string;
+      activeSeconds: number;
+      distanceM: number;
+    }) => undefined),
+    clearStatus: vi.fn(async (_options: { journeyId: string }) => undefined),
   };
 }
 
