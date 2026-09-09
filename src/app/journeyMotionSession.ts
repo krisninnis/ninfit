@@ -107,11 +107,11 @@ function initialDetectorState(journey: Journey, pauseOrigin: JourneyPauseOrigin)
  * `processSample`, and only then permanently stop the motion session. Late callbacks
  * from a provider that races its own stop are ignored.
  *
- * When the installed Android queue exists, provider selection deliberately chooses the
- * Android foreground Journey service rather than browser geolocation. That service emits
- * no direct samples: GPS observations enter SQLite first and the durable replay path is
- * the sole route into `processSample`. Web/PWA continues to use the normal runtime/browser
- * provider. An explicitly injected provider still wins for tests and controlled callers.
+ * Installed Android chooses the foreground Journey service only when a durable native
+ * queue exists and no already-installed native provider bridge is present. That preserves
+ * explicit/test/native-provider overrides while preventing the installed shell from also
+ * starting browser geolocation. The Android service emits no direct samples: SQLite replay
+ * remains its sole route into `processSample`. Web/PWA stays browser-based.
  */
 export function startJourneyMotionSession(options: JourneyMotionSessionOptions): JourneyMotionSession {
   const pauseOrigin = options.journey.status === 'paused'
@@ -135,10 +135,11 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
   });
   const recovery = createJourneyRecoveryController(options.storage);
   const nativeQueue = resolveInjectedNativeJourneyDurableQueue();
+  const runtimeProvider = createRuntimeJourneyLocationProvider();
   const provider = options.provider
-    ?? (nativeQueue === null
-      ? createRuntimeJourneyLocationProvider()
-      : createAndroidJourneyServiceLocationProvider(options.journey.id));
+    ?? (nativeQueue !== null && runtimeProvider.kind === 'browser'
+      ? createAndroidJourneyServiceLocationProvider({ journeyId: options.journey.id })
+      : runtimeProvider);
 
   let currentJourney = options.journey;
   let detector = initialDetectorState(currentJourney, pauseOrigin);
