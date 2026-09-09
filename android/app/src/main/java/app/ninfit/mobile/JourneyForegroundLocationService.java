@@ -19,6 +19,8 @@ import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 
+import java.util.Locale;
+
 /**
  * Android-owned foreground Journey location service.
  *
@@ -30,7 +32,14 @@ import androidx.core.app.NotificationCompat;
 public final class JourneyForegroundLocationService extends Service implements LocationListener {
     static final String ACTION_START = "app.ninfit.mobile.journey.START";
     static final String ACTION_STOP = "app.ninfit.mobile.journey.STOP";
+    static final String ACTION_STATUS = "app.ninfit.mobile.journey.STATUS";
+    static final String ACTION_STATUS_CLEAR = "app.ninfit.mobile.journey.STATUS_CLEAR";
     static final String EXTRA_JOURNEY_ID = "journeyId";
+    static final String EXTRA_ACTIVITY_LABEL = "activityLabel";
+    static final String EXTRA_STATE = "state";
+    static final String EXTRA_STATE_LABEL = "stateLabel";
+    static final String EXTRA_ACTIVE_SECONDS = "activeSeconds";
+    static final String EXTRA_DISTANCE_M = "distanceM";
 
     private static final String CHANNEL_ID = "ninfit_journey_recording";
     private static final int NOTIFICATION_ID = 4101;
@@ -41,6 +50,10 @@ public final class JourneyForegroundLocationService extends Service implements L
     private JourneyDurableStore store;
     private JourneyNativeCapture capture;
     private String activeJourneyId;
+    private String activityLabel = "Journey";
+    private String stateLabel = "Recording";
+    private long activeSeconds = 0L;
+    private double distanceM = 0d;
 
     @Override
     public void onCreate() {
@@ -55,20 +68,27 @@ public final class JourneyForegroundLocationService extends Service implements L
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent == null || intent.getAction() == null) return START_NOT_STICKY;
 
-        if (ACTION_STOP.equals(intent.getAction())) {
-            stopCapture(intent.getStringExtra(EXTRA_JOURNEY_ID));
-            return START_NOT_STICKY;
-        }
-
-        if (!ACTION_START.equals(intent.getAction())) return START_NOT_STICKY;
-
-        String journeyId = intent.getStringExtra(EXTRA_JOURNEY_ID);
         try {
-            startCapture(journeyId);
+            String action = intent.getAction();
+            if (ACTION_STOP.equals(action)) {
+                stopCapture(intent.getStringExtra(EXTRA_JOURNEY_ID));
+                return START_NOT_STICKY;
+            }
+            if (ACTION_STATUS.equals(action)) {
+                updateStatus(intent);
+                return activeJourneyId == null ? START_NOT_STICKY : START_REDELIVER_INTENT;
+            }
+            if (ACTION_STATUS_CLEAR.equals(action)) {
+                clearStatus(intent.getStringExtra(EXTRA_JOURNEY_ID));
+                return activeJourneyId == null ? START_NOT_STICKY : START_REDELIVER_INTENT;
+            }
+            if (!ACTION_START.equals(action)) return START_NOT_STICKY;
+
+            startCapture(intent.getStringExtra(EXTRA_JOURNEY_ID));
             return START_REDELIVER_INTENT;
         } catch (Exception error) {
-            stopSelf();
-            return START_NOT_STICKY;
+            if (activeJourneyId == null) stopSelf();
+            return activeJourneyId == null ? START_NOT_STICKY : START_REDELIVER_INTENT;
         }
     }
 
@@ -91,6 +111,7 @@ public final class JourneyForegroundLocationService extends Service implements L
 
         capture.begin(journeyId);
         activeJourneyId = journeyId;
+        resetStatusSummary();
         startForeground(NOTIFICATION_ID, buildNotification());
 
         // GPS is the authoritative high-accuracy source for an outdoor Journey. Network
@@ -102,6 +123,55 @@ public final class JourneyForegroundLocationService extends Service implements L
             MIN_DISTANCE_M,
             this
         );
+    }
+
+    private boolean matchesActiveJourney(String journeyId) {
+        return activeJourneyId != null && activeJourneyId.equals(journeyId);
+    }
+
+    private void updateStatus(Intent intent) {
+        if (!matchesActiveJourney(intent.getStringExtra(EXTRA_JOURNEY_ID))) return;
+
+        String nextActivity = intent.getStringExtra(EXTRA_ACTIVITY_LABEL);
+        String nextState = intent.getStringExtra(EXTRA_STATE);
+        String nextStateLabel = intent.getStringExtra(EXTRA_STATE_LABEL);
+        long nextActiveSeconds = intent.getLongExtra(EXTRA_ACTIVE_SECONDS, -1L);
+        double nextDistanceM = intent.getDoubleExtra(EXTRA_DISTANCE_M, -1d);
+
+        if (nextActivity == null || nextActivity.trim().isEmpty() || nextActivity.length() > 32) return;
+        if (nextStateLabel == null || nextStateLabel.trim().isEmpty() || nextStateLabel.length() > 64) return;
+        if (
+            !"recording".equals(nextState)
+            && !"auto_paused".equals(nextState)
+            && !"manual_paused".equals(nextState)
+        ) return;
+        if (nextActiveSeconds < 0L || nextActiveSeconds > 31_536_000L) return;
+        if (!Double.isFinite(nextDistanceM) || nextDistanceM < 0d || nextDistanceM > 100_000_000d) return;
+
+        activityLabel = nextActivity;
+        stateLabel = nextStateLabel;
+        activeSeconds = nextActiveSeconds;
+        distanceM = nextDistanceM;
+        publishNotification();
+    }
+
+    private void clearStatus(String journeyId) {
+        if (!matchesActiveJourney(journeyId)) return;
+        resetStatusSummary();
+        publishNotification();
+    }
+
+    private void resetStatusSummary() {
+        activityLabel = "Journey";
+        stateLabel = "Recording";
+        activeSeconds = 0L;
+        distanceM = 0d;
+    }
+
+    private void publishNotification() {
+        if (activeJourneyId == null) return;
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        manager.notify(NOTIFICATION_ID, buildNotification());
     }
 
     @Override
@@ -149,6 +219,7 @@ public final class JourneyForegroundLocationService extends Service implements L
         locationManager.removeUpdates(this);
         capture.end(expectedJourneyId);
         activeJourneyId = null;
+        resetStatusSummary();
         stopForeground(STOP_FOREGROUND_REMOVE);
         stopSelf();
     }
@@ -165,6 +236,20 @@ public final class JourneyForegroundLocationService extends Service implements L
         manager.createNotificationChannel(channel);
     }
 
+    private static String formatDuration(long seconds) {
+        long hours = seconds / 3_600L;
+        long minutes = (seconds % 3_600L) / 60L;
+        long remainingSeconds = seconds % 60L;
+        return hours > 0L
+            ? String.format(Locale.UK, "%d:%02d:%02d", hours, minutes, remainingSeconds)
+            : String.format(Locale.UK, "%02d:%02d", minutes, remainingSeconds);
+    }
+
+    private static String formatDistance(double metres) {
+        if (metres < 1_000d) return String.format(Locale.UK, "%.0f m", metres);
+        return String.format(Locale.UK, "%.2f km", metres / 1_000d);
+    }
+
     private Notification buildNotification() {
         Intent openApp = getPackageManager().getLaunchIntentForPackage(getPackageName());
         PendingIntent contentIntent = openApp == null ? null : PendingIntent.getActivity(
@@ -174,10 +259,13 @@ public final class JourneyForegroundLocationService extends Service implements L
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
+        String summary = "NF · " + activityLabel + " · " + stateLabel;
+        String metrics = formatDuration(activeSeconds) + " · " + formatDistance(distanceM);
         return new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(getApplicationInfo().icon)
+            .setSmallIcon(R.drawable.ic_ninfit_journey)
             .setContentTitle("NinFit Journey")
-            .setContentText("NF · Recording your Journey")
+            .setContentText(summary)
+            .setSubText(metrics)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
@@ -190,6 +278,7 @@ public final class JourneyForegroundLocationService extends Service implements L
         if (locationManager != null) locationManager.removeUpdates(this);
         if (store != null) store.close();
         activeJourneyId = null;
+        resetStatusSummary();
         super.onDestroy();
     }
 
