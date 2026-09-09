@@ -14,6 +14,11 @@ const activity = readFileSync(
   'android/app/src/main/java/app/ninfit/mobile/MainActivity.java',
   'utf8',
 );
+const plugin = readFileSync(
+  'android/app/src/main/java/app/ninfit/mobile/NinFitJourneyLocationPlugin.java',
+  'utf8',
+);
+const icon = readFileSync('android/app/src/main/res/drawable/ic_ninfit_journey.xml', 'utf8');
 
 describe('Android native Journey foreground location service', () => {
   it('declares a non-exported foreground location service and required permissions', () => {
@@ -42,5 +47,24 @@ describe('Android native Journey foreground location service', () => {
     expect(activity).toContain('registerPlugin(NinFitJourneyLocationPlugin.class)');
     expect(service).toContain('LocationManager.GPS_PROVIDER');
     expect(service).toContain('START_REDELIVER_INTENT');
+  });
+
+  it('updates only the matching active Journey notification with privacy-safe summary data', () => {
+    expect(service).toContain('ACTION_STATUS');
+    expect(service).toContain('matchesActiveJourney');
+    expect(service).toContain('EXTRA_ACTIVITY_LABEL');
+    expect(service).toContain('EXTRA_STATE_LABEL');
+    expect(service).toContain('EXTRA_ACTIVE_SECONDS');
+    expect(service).toContain('EXTRA_DISTANCE_M');
+    expect(service).toContain('R.drawable.ic_ninfit_journey');
+    expect(service).toContain('.setOngoing(true)');
+    expect(service).not.toContain('EXTRA_LATITUDE');
+    expect(service).not.toContain('EXTRA_LONGITUDE');
+    expect(service).not.toContain('ACTION_PAUSE');
+    expect(service).not.toContain('ACTION_FINISH');
+    expect(plugin).toContain('public void updateStatus(PluginCall call)');
+    expect(plugin).not.toContain('latitude');
+    expect(plugin).not.toContain('longitude');
+    expect(icon).toContain('<vector');
   });
 });
