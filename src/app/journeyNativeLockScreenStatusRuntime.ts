@@ -5,7 +5,7 @@ import { journeyUsesPhoneGps } from './journeyLaunchController';
 import {
   clearNativeJourneyLockScreenStatus,
   resolveInjectedNativeJourneyLockScreenBridge,
-  type JourneyNativeLockScreenBridge,
+  type NativeJourneyLockScreenBridge,
 } from './journeyNativeLockScreenBridge';
 import { createJourneyNativeLockScreenStatus } from './journeyNativeLockScreenStatus';
 
@@ -30,7 +30,7 @@ const browserTimerHost: TimerHost = {
 export function startNativeJourneyLockScreenStatusRuntime(
   storage: StorageAdapter,
   options?: {
-    bridge?: JourneyNativeLockScreenBridge | null;
+    bridge?: NativeJourneyLockScreenBridge | null;
     now?: () => string;
     timerHost?: TimerHost;
   },
