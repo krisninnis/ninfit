@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      android:allowBackup="false" is a NinFit privacy decision, not a default.
+
+      Every Journey, including its precise route, lives in this WebView's local storage.
+      Android Auto Backup would copy that to the user's Google Drive silently, with no
+      NinFit consent step and no way for the product to say what left the device - which
+      contradicts the local-first contract and the "no route upload" rule.
+
+      This does not weaken NinFit's own backup: Settings still exports and restores a
+      file the user chooses to create. What it removes is the automatic, invisible copy,
+      and the cost is that a device-to-device transfer will not carry Journey history.
+      That trade is deliberate; reversing it is a product/privacy decision, not a tweak.
+    -->
+    <application
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <activity
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
+            android:name=".MainActivity"
+            android:label="@string/title_activity_main"
+            android:theme="@style/AppTheme.NoActionBarLaunch"
+            android:launchMode="singleTask"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+        </activity>
+
+        <service
+            android:name=".JourneyForegroundLocationService"
+            android:exported="false"
+            android:foregroundServiceType="location"
+            android:stopWithTask="false" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths"></meta-data>
+        </provider>
+    </application>
+
+    <!--
+      Journey location permissions.
+
+      NinFit starts tracking only from an explicit user-started Journey. The native
+      foreground location service then keeps that same Journey alive while the screen is
+      locked. ACCESS_BACKGROUND_LOCATION is deliberately NOT declared here: NinFit uses
+      a user-started foreground location service with a persistent notification, and is
+      not opting into background geofencing. Adding Always/background access later would
+      require a separate product, privacy and Play-policy decision.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- Android 13+: required so the foreground Journey notification can be visible. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.INTERNET" />
+</manifest>

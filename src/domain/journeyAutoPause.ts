@@ -24,6 +24,8 @@ export interface JourneyAutoPauseState {
   anchor: JourneyGpsSample | null;
   stationarySinceMs: number | null;
   resumeConfirmations: number;
+  /** Last reliable sample time consumed as motion evidence. Optional for recovered legacy state. */
+  lastEvaluatedMs?: number | null;
 }
 
 export const INITIAL_JOURNEY_AUTO_PAUSE_STATE: JourneyAutoPauseState = {
@@ -31,6 +33,7 @@ export const INITIAL_JOURNEY_AUTO_PAUSE_STATE: JourneyAutoPauseState = {
   anchor: null,
   stationarySinceMs: null,
   resumeConfirmations: 0,
+  lastEvaluatedMs: null,
 };
 
 export interface JourneyAutoPauseEvaluation {
@@ -59,6 +62,11 @@ function reliableForMotion(sample: JourneyGpsSample, policy: JourneyAutoPausePol
  * A single fix can never resume a Journey. Auto-resume requires repeated reliable fixes
  * that have moved beyond the stationary anchor, which prevents ordinary GPS drift from
  * flicking the recorder between paused and recording states.
+ *
+ * Native background replay is at-least-once. A successfully processed fix can therefore
+ * be offered again if transport acknowledgement was interrupted. Reliable motion
+ * evidence must be strictly forward in time so a duplicate replay cannot count as a
+ * second resume confirmation or manufacture an auto-pause transition.
  */
 export function evaluateJourneyAutoPause(
   previous: JourneyAutoPauseState,
@@ -70,6 +78,14 @@ export function evaluateJourneyAutoPause(
     return { state: previous, signal: 'none' };
   }
 
+  if (
+    previous.lastEvaluatedMs !== null
+    && previous.lastEvaluatedMs !== undefined
+    && timeMs <= previous.lastEvaluatedMs
+  ) {
+    return { state: previous, signal: 'none' };
+  }
+
   if (previous.anchor === null) {
     return {
       state: {
@@ -77,6 +93,7 @@ export function evaluateJourneyAutoPause(
         anchor: sample,
         stationarySinceMs: previous.mode === 'moving' ? timeMs : previous.stationarySinceMs,
         resumeConfirmations: 0,
+        lastEvaluatedMs: timeMs,
       },
       signal: 'none',
     };
@@ -87,7 +104,7 @@ export function evaluateJourneyAutoPause(
   if (previous.mode === 'auto_paused') {
     if (distanceFromAnchorM < policy.resumeDistanceM) {
       return {
-        state: { ...previous, resumeConfirmations: 0 },
+        state: { ...previous, resumeConfirmations: 0, lastEvaluatedMs: timeMs },
         signal: 'none',
       };
     }
@@ -95,7 +112,7 @@ export function evaluateJourneyAutoPause(
     const confirmations = previous.resumeConfirmations + 1;
     if (confirmations < policy.resumeConfirmations) {
       return {
-        state: { ...previous, resumeConfirmations: confirmations },
+        state: { ...previous, resumeConfirmations: confirmations, lastEvaluatedMs: timeMs },
         signal: 'none',
       };
     }
@@ -106,6 +123,7 @@ export function evaluateJourneyAutoPause(
         anchor: sample,
         stationarySinceMs: timeMs,
         resumeConfirmations: 0,
+        lastEvaluatedMs: timeMs,
       },
       signal: 'auto_resume',
     };
@@ -118,6 +136,7 @@ export function evaluateJourneyAutoPause(
         anchor: sample,
         stationarySinceMs: timeMs,
         resumeConfirmations: 0,
+        lastEvaluatedMs: timeMs,
       },
       signal: 'none',
     };
@@ -126,7 +145,7 @@ export function evaluateJourneyAutoPause(
   const stationarySinceMs = previous.stationarySinceMs ?? sampleTimeMs(previous.anchor) ?? timeMs;
   if (timeMs - stationarySinceMs < policy.stationaryAfterMs) {
     return {
-      state: { ...previous, stationarySinceMs },
+      state: { ...previous, stationarySinceMs, lastEvaluatedMs: timeMs },
       signal: 'none',
     };
   }
@@ -137,6 +156,7 @@ export function evaluateJourneyAutoPause(
       anchor: previous.anchor,
       stationarySinceMs,
       resumeConfirmations: 0,
+      lastEvaluatedMs: timeMs,
     },
     signal: 'auto_pause',
   };

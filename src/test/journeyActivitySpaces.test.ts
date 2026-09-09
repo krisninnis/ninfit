@@ -205,7 +205,17 @@ describe('the launch layer builds no recorder of its own', () => {
 
   it('touches no route privacy of its own', () => {
     const code = strip(launchScreen);
-    expect(code).not.toMatch(/privacy|visibility|maskSensitiveStartEnd|preciseRouteCloudSync/);
+    /*
+     * Route visibility is always reached through `journey.privacy`, so `privacy` catches
+     * it on its own; the named settings are pinned beside it, and a bare `visibility:` or
+     * `visibility =` catches one being written here directly. What is deliberately NOT
+     * forbidden is `document.visibilityState` / `visibilitychange` - app lifecycle, which
+     * this screen needs to notice an Android permission granted in Settings while NinFit
+     * was backgrounded, and which `journeyScreenWakeLock` already uses for the same reason.
+     */
+    expect(code).not.toMatch(
+      /privacy|maskSensitiveStartEnd|preciseRouteCloudSync|\bvisibility\s*[:=]|routeVisibility/,
+    );
   });
 
   it('hands off to the existing active Journey experience', () => {

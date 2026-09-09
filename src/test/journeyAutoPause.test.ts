@@ -82,4 +82,31 @@ describe('Journey auto-pause detector', () => {
     expect(result.state.mode).toBe('auto_paused');
     expect(result.state.resumeConfirmations).toBe(0);
   });
+
+  it('does not count an at-least-once replay duplicate as a second resume confirmation', () => {
+    let result = feed(INITIAL_JOURNEY_AUTO_PAUSE_STATE, sample('2026-09-06T14:00:00.000Z'));
+    result = feed(result.state, sample('2026-09-06T14:00:05.000Z'));
+    expect(result.state.mode).toBe('auto_paused');
+
+    const movement = sample('2026-09-06T14:00:06.000Z', 51.50747, -3.5792);
+    result = feed(result.state, movement);
+    expect(result.signal).toBe('none');
+    expect(result.state.resumeConfirmations).toBe(1);
+
+    const replayed = feed(result.state, movement);
+    expect(replayed.signal).toBe('none');
+    expect(replayed.state.mode).toBe('auto_paused');
+    expect(replayed.state.resumeConfirmations).toBe(1);
+  });
+
+  it('ignores out-of-order replay evidence instead of rewinding the stationary window', () => {
+    let result = feed(INITIAL_JOURNEY_AUTO_PAUSE_STATE, sample('2026-09-06T14:00:00.000Z'));
+    result = feed(result.state, sample('2026-09-06T14:00:04.000Z'));
+    const beforeReplay = result.state;
+
+    result = feed(result.state, sample('2026-09-06T14:00:03.000Z', 51.50745, -3.5792));
+
+    expect(result.signal).toBe('none');
+    expect(result.state).toEqual(beforeReplay);
+  });
 });

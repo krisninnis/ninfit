@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ replacement for the legacy fullBackupContent rules.
+
+  Both transports are refused outright. `cloud-backup` is the Google Drive copy that
+  android:allowBackup="false" already disables; `device-transfer` is the newer
+  phone-to-phone path, which allowBackup does not cover on its own. NinFit route history
+  is local, and it leaves this device only through an export the user asked for.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+    </device-transfer>
+</data-extraction-rules>

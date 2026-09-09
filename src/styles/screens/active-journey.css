@@ -297,6 +297,22 @@
     }
   }
 
+  /*
+   * A Finish that stopped safely. It sits directly above the dock because the recovery
+   * action is the Finish button the user has just pressed, and it is deliberately not
+   * an alarm colour: nothing was lost and the Journey is still recording.
+   */
+  .active-journey__finish-error {
+    margin: 0;
+    padding: var(--ft-space-3) var(--ft-space-4);
+    border: 1px solid color-mix(in srgb, var(--ft-border-subtle) 74%, transparent);
+    border-radius: var(--ft-radius-lg);
+    color: var(--ft-text-secondary);
+    background: color-mix(in srgb, var(--ft-surface-raised) 78%, transparent);
+    backdrop-filter: blur(16px);
+    font-size: var(--ft-text-sm);
+  }
+
   .active-journey__dock {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

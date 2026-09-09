@@ -13,13 +13,15 @@ import {
   saveJourneyPauseOrigin,
   type JourneyPauseOrigin,
 } from '../storage/journeyPauseProvenance';
+import { createAndroidJourneyServiceLocationProvider } from './journeyAndroidServiceLocationProvider';
+import { resolveInjectedNativeJourneyDurableQueue } from './journeyNativeDurableQueueBootstrap';
 import { createJourneyGpsRuntimeController } from './journeyGpsRuntimeController';
-import {
-  createBrowserJourneyLocationProvider,
-  type JourneyLocationProvider,
-  type JourneyLocationProviderError,
-  type JourneyLocationProviderSession,
+import type {
+  JourneyLocationProvider,
+  JourneyLocationProviderError,
+  JourneyLocationProviderSession,
 } from './journeyLocationProvider';
+import { createRuntimeJourneyLocationProvider } from './journeyLocationProviderRuntime';
 import { createJourneyRecoveryController } from './journeyRecoveryController';
 
 export type JourneyMotionState = 'recording' | 'auto_paused';
@@ -38,6 +40,11 @@ export interface JourneyMotionSessionOptions {
 export interface JourneyMotionSession {
   getJourney(): Journey;
   getMotionState(): JourneyMotionState;
+  /** Process one sample through the exact same trusted motion path used by the live provider. */
+  processSample(sample: JourneyGpsSample): void;
+  /** Stop new provider callbacks while keeping durable replay processing available. */
+  stopProvider(): void;
+  /** Permanently stop both the provider and any further replay processing. */
   stop(): void;
 }
 
@@ -91,6 +98,20 @@ function initialDetectorState(journey: Journey, pauseOrigin: JourneyPauseOrigin)
  * conservative movement evidence; samples are not added to distance/route until the
  * recorder has been resumed. A manual pause is never auto-resumed because this session
  * refuses to start for a paused Journey without explicit `auto_stationary` provenance.
+ *
+ * `processSample` is deliberately exposed so durable native replay can enter this exact
+ * same path. Replay therefore cannot bypass GPS trust, route, distance or auto-pause rules.
+ *
+ * `stopProvider` is deliberately weaker than `stop`: completion/pause coordination can
+ * first quiesce new native callbacks, drain the already-durable native suffix through
+ * `processSample`, and only then permanently stop the motion session. Late callbacks
+ * from a provider that races its own stop are ignored.
+ *
+ * Installed Android chooses the foreground Journey service only when a durable native
+ * queue exists and no already-installed native provider bridge is present. That preserves
+ * explicit/test/native-provider overrides while preventing the installed shell from also
+ * starting browser geolocation. The Android service emits no direct samples: SQLite replay
+ * remains its sole route into `processSample`. Web/PWA stays browser-based.
  */
 export function startJourneyMotionSession(options: JourneyMotionSessionOptions): JourneyMotionSession {
   const pauseOrigin = options.journey.status === 'paused'
@@ -113,13 +134,19 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
     distanceMetricId,
   });
   const recovery = createJourneyRecoveryController(options.storage);
-  const provider = options.provider ?? createBrowserJourneyLocationProvider();
+  const nativeQueue = resolveInjectedNativeJourneyDurableQueue();
+  const runtimeProvider = createRuntimeJourneyLocationProvider();
+  const provider = options.provider
+    ?? (nativeQueue !== null && runtimeProvider.kind === 'browser'
+      ? createAndroidJourneyServiceLocationProvider({ journeyId: options.journey.id })
+      : runtimeProvider);
 
   let currentJourney = options.journey;
   let detector = initialDetectorState(currentJourney, pauseOrigin);
   let motionState: JourneyMotionState =
     currentJourney.status === 'paused' ? 'auto_paused' : 'recording';
   let stopped = false;
+  let providerStopped = false;
   let providerSession: JourneyLocationProviderSession | null = null;
   let startsNewSegment = true;
 
@@ -160,38 +187,47 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
     publishJourney(resumed);
     publishMotion('recording');
 
-    // The movement-confirming sample belongs to the resumed Journey. It is still
-    // subjected to the normal GPS acceptance/speed/distance gates before persistence.
     const result = runtime.ingest(resumed, sample, { startsNewSegment: false });
     if (result.accepted) publishJourney(result.journey);
+  }
+
+  function processSample(sample: JourneyGpsSample): void {
+    if (stopped) throw new Error('Journey motion session is stopped');
+    if (motionState === 'auto_paused') handleAutoPausedSample(sample);
+    else handleRecordingSample(sample);
+  }
+
+  function stopProvider(): void {
+    if (providerStopped) return;
+    providerStopped = true;
+    providerSession?.stop();
+    providerSession = null;
+  }
+
+  function stop(): void {
+    if (stopped) return;
+    stopProvider();
+    stopped = true;
   }
 
   try {
     providerSession = provider.start({
       onSample(sample) {
-        if (stopped) return;
+        if (stopped || providerStopped) return;
         try {
-          if (motionState === 'auto_paused') handleAutoPausedSample(sample);
-          else handleRecordingSample(sample);
+          processSample(sample);
         } catch (cause) {
           options.onRuntimeError?.(cause);
           stop();
         }
       },
       onError(error) {
-        if (!stopped) options.onProviderError?.(error);
+        if (!stopped && !providerStopped) options.onProviderError?.(error);
       },
     });
   } catch (cause) {
     options.onRuntimeError?.(cause);
     throw cause;
-  }
-
-  function stop(): void {
-    if (stopped) return;
-    stopped = true;
-    providerSession?.stop();
-    providerSession = null;
   }
 
   return {
@@ -201,6 +237,8 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
     getMotionState() {
       return motionState;
     },
+    processSample,
+    stopProvider,
     stop,
   };
 }

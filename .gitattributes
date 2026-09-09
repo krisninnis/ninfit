@@ -47,3 +47,17 @@
 *.png  binary
 *.mp4  binary
 *.mp3  binary
+
+# Windows batch files, and the Android/Gradle binaries that arrived with the installed
+# shell. This is the explicit exception the default rule above reserves for itself.
+#
+# `gradlew.bat` is executed by cmd.exe, which is the one consumer on Windows that still
+# has a real stake in CRLF, so it gets the rule the comment above promised rather than a
+# weakened default. The Gradle wrapper JAR and any future signing keystore are binary:
+# a single mistaken text conversion would corrupt them beyond recovery, which is exactly
+# the class of error the binary declarations below exist to make impossible.
+*.bat      text eol=crlf
+*.cmd      text eol=crlf
+*.jar      binary
+*.keystore binary
+*.jks      binary
