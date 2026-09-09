@@ -47,7 +47,6 @@ describe('installed Android shell identity', () => {
 
   it('keeps the WebView on a secure origin and refuses mixed content', () => {
     const config = stripTsComments(capacitorConfig);
-    // Geolocation, Screen Wake Lock and service workers all require a secure context.
     expect(config).toContain("androidScheme: 'https'");
     expect(config).toContain('allowMixedContent: false');
     expect(config).not.toContain("androidScheme: 'http'");
@@ -63,18 +62,25 @@ describe('installed Android shell privacy posture', () => {
     expect(declared).toContain('android:fullBackupContent="false"');
     expect(declared).toContain('android:dataExtractionRules="@xml/data_extraction_rules"');
 
-    // allowBackup alone does not cover Android 12+ device-to-device transfer.
     const rules = stripXmlComments(extractionRules);
     expect(rules).toMatch(/<cloud-backup>\s*<exclude domain="root"\s*\/>\s*<\/cloud-backup>/);
     expect(rules).toMatch(/<device-transfer>\s*<exclude domain="root"\s*\/>\s*<\/device-transfer>/);
   });
 
-  it('asks for no permission the shell does not yet need', () => {
+  it('requests only the permissions justified by the foreground Journey recorder', () => {
     const permissions = [...stripXmlComments(manifest).matchAll(/<uses-permission android:name="([^"]+)"/g)]
       .map((match) => match[1]);
-    // Background location, the foreground service and its notification arrive with the
-    // provider slice, together with the code that justifies asking for them.
-    expect(permissions).toEqual(['android.permission.INTERNET']);
+
+    expect(permissions).toEqual([
+      'android.permission.ACCESS_COARSE_LOCATION',
+      'android.permission.ACCESS_FINE_LOCATION',
+      'android.permission.FOREGROUND_SERVICE',
+      'android.permission.FOREGROUND_SERVICE_LOCATION',
+      'android.permission.POST_NOTIFICATIONS',
+      'android.permission.INTERNET',
+    ]);
+    // NinFit uses a user-started foreground location service, not background geofencing.
+    expect(permissions).not.toContain('android.permission.ACCESS_BACKGROUND_LOCATION');
   });
 });
 
