@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { getAppContext } from '../../app/bootstrap';
 import {
   checkAndroidJourneyPermissionReadiness,
+  classifyAndroidJourneyPermissionFailure,
   isInstalledAndroidJourneyRuntime,
   requestAndroidJourneyPermissions,
+  type AndroidJourneyPermissionFailureReason,
   type AndroidJourneyPermissionReadiness,
 } from '../../app/journeyAndroidPermissionController';
 import {
@@ -42,6 +44,19 @@ function permissionMessage(readiness: AndroidJourneyPermissionReadiness | null):
   return 'Allow notifications before starting so Android can keep the active Journey recording visible.';
 }
 
+/*
+ * A readiness check that cannot answer fails closed whatever the cause, but the causes are
+ * not the same thing to say. A missing native plugin cannot be fixed by granting anything
+ * in Android Settings, and saying so is what turns an unexplainable phone report into a
+ * build report.
+ */
+function permissionFailureMessage(reason: AndroidJourneyPermissionFailureReason): string {
+  if (reason === 'bridge_unavailable') {
+    return 'This build of NinFit is missing the Android Journey component, so permissions cannot be confirmed. Nothing was started. Changing Android Settings will not help \u2014 this build needs replacing.';
+  }
+  return 'NinFit could not confirm the Android permissions. Nothing was started. Try again when you are ready.';
+}
+
 export function JourneyLaunchScreen({ family, onClose }: JourneyLaunchScreenProps) {
   const storage = useMemo(() => getAppContext().adapter, []);
   const repository = useMemo(() => getAppContext().repository, []);
@@ -51,7 +66,7 @@ export function JourneyLaunchScreen({ family, onClose }: JourneyLaunchScreenProp
   const [selected, setSelected] = useState<JourneyActivityType | undefined>(undefined);
   const [permissionReadiness, setPermissionReadiness] = useState<AndroidJourneyPermissionReadiness | null>(null);
   const [permissionBusy, setPermissionBusy] = useState(false);
-  const [permissionFailure, setPermissionFailure] = useState(false);
+  const [permissionFailure, setPermissionFailure] = useState<AndroidJourneyPermissionFailureReason | null>(null);
 
   const definition = journeyActivityFamily(family);
   const choices = activityTypesForFamily(family);
@@ -67,32 +82,54 @@ export function JourneyLaunchScreen({ family, onClose }: JourneyLaunchScreenProp
 
   useEffect(() => {
     let cancelled = false;
-    setPermissionFailure(false);
+    setPermissionFailure(null);
 
     if (!needsAndroidPermission) {
       setPermissionReadiness(null);
       return () => { cancelled = true; };
     }
 
-    void checkAndroidJourneyPermissionReadiness()
-      .then((readiness) => {
-        if (!cancelled) setPermissionReadiness(readiness);
-      })
-      .catch(() => {
-        if (!cancelled) {
+    const read = () => {
+      void checkAndroidJourneyPermissionReadiness()
+        .then((readiness) => {
+          if (cancelled) return;
+          setPermissionReadiness(readiness);
+          setPermissionFailure(null);
+        })
+        .catch((error: unknown) => {
+          if (cancelled) return;
           setPermissionReadiness(null);
-          setPermissionFailure(true);
-        }
-      });
+          setPermissionFailure(classifyAndroidJourneyPermissionFailure(error));
+        });
+    };
 
-    return () => { cancelled = true; };
+    read();
+
+    /*
+     * Granting location happens in Android Settings, with NinFit in the background, and
+     * nothing tells the WebView about it. Re-reading on the way back makes the screen
+     * correct the moment the person returns instead of on a second tap of Start. It only
+     * ever reads: permission prompting stays tied to the explicit Allow button.
+     */
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') read();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, [needsAndroidPermission, chosen]);
 
   const refreshPermissionReadiness = () => {
-    setPermissionFailure(false);
+    setPermissionFailure(null);
     void checkAndroidJourneyPermissionReadiness()
-      .then((readiness) => setPermissionReadiness(readiness))
-      .catch(() => setPermissionFailure(true));
+      .then((readiness) => {
+        setPermissionReadiness(readiness);
+        setPermissionFailure(null);
+      })
+      .catch((error: unknown) => setPermissionFailure(classifyAndroidJourneyPermissionFailure(error)));
   };
 
   const start = () => {
@@ -108,12 +145,12 @@ export function JourneyLaunchScreen({ family, onClose }: JourneyLaunchScreenProp
   const allowJourneyPermissions = async () => {
     if (!needsAndroidPermission || permissionBusy) return;
     setPermissionBusy(true);
-    setPermissionFailure(false);
+    setPermissionFailure(null);
     try {
       const readiness = await requestAndroidJourneyPermissions();
       setPermissionReadiness(readiness);
-    } catch {
-      setPermissionFailure(true);
+    } catch (error: unknown) {
+      setPermissionFailure(classifyAndroidJourneyPermissionFailure(error));
     } finally {
       setPermissionBusy(false);
     }
@@ -184,9 +221,9 @@ export function JourneyLaunchScreen({ family, onClose }: JourneyLaunchScreenProp
         </div>
       ) : null}
 
-      {permissionFailure ? (
-        <p className="journey-launch__note" role="alert">
-          NinFit could not confirm the Android permissions. Nothing was started. Try again when you are ready.
+      {permissionFailure !== null ? (
+        <p className="journey-launch__note" role="alert" data-permission-failure={permissionFailure}>
+          {permissionFailureMessage(permissionFailure)}
         </p>
       ) : null}
 
