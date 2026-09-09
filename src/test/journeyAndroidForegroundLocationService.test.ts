@@ -1,0 +1,46 @@
+import { readFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
+
+const manifest = readFileSync('android/app/src/main/AndroidManifest.xml', 'utf8');
+const service = readFileSync(
+  'android/app/src/main/java/app/ninfit/mobile/JourneyForegroundLocationService.java',
+  'utf8',
+);
+const capture = readFileSync(
+  'android/app/src/main/java/app/ninfit/mobile/JourneyNativeCapture.java',
+  'utf8',
+);
+const activity = readFileSync(
+  'android/app/src/main/java/app/ninfit/mobile/MainActivity.java',
+  'utf8',
+);
+
+describe('Android native Journey foreground location service', () => {
+  it('declares a non-exported foreground location service and required permissions', () => {
+    expect(manifest).toContain('android:name=".JourneyForegroundLocationService"');
+    expect(manifest).toContain('android:exported="false"');
+    expect(manifest).toContain('android:foregroundServiceType="location"');
+    expect(manifest).toContain('android.permission.ACCESS_FINE_LOCATION');
+    expect(manifest).toContain('android.permission.FOREGROUND_SERVICE_LOCATION');
+    expect(manifest).toContain('android.permission.POST_NOTIFICATIONS');
+    expect(manifest).not.toContain('android.permission.ACCESS_BACKGROUND_LOCATION');
+  });
+
+  it('persists every native GPS fix before any later delivery path', () => {
+    const appendIndex = capture.indexOf('long sequence = store.append(');
+    const deliveryIndex = capture.indexOf('delivery.onDurablyCaptured(sequence, location);');
+
+    expect(appendIndex).toBeGreaterThan(-1);
+    expect(deliveryIndex).toBeGreaterThan(appendIndex);
+    expect(service).toContain('capture.capture(location');
+    expect(service).toContain('The WebView consumes');
+    expect(service).not.toContain('notifyListeners(');
+  });
+
+  it('keeps JS unable to append arbitrary native positions', () => {
+    expect(activity).toContain('registerPlugin(NinFitJourneyQueuePlugin.class)');
+    expect(activity).toContain('registerPlugin(NinFitJourneyLocationPlugin.class)');
+    expect(service).toContain('LocationManager.GPS_PROVIDER');
+    expect(service).toContain('START_REDELIVER_INTENT');
+  });
+});
