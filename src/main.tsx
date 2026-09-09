@@ -4,6 +4,7 @@ import App from './App';
 import { registerServiceWorker } from './pwa/registerServiceWorker';
 import { getAppContext } from './app/bootstrap';
 import { installCapacitorJourneyDurableQueueBridge } from './app/journeyCapacitorDurableQueueBridge';
+import { installCapacitorJourneyLockScreenBridge } from './app/journeyCapacitorLockScreenBridge';
 import { installInjectedNativeJourneyBridge } from './app/journeyNativeBootstrap';
 import { installInjectedNativeJourneyDurableQueue } from './app/journeyNativeDurableQueueRuntime';
 import { applyThemePreference } from './ui/theme';
@@ -15,14 +16,15 @@ if (!rootElement) {
 }
 
 /*
- * The installed Android shell exposes its concrete durable queue through Capacitor.
- * Install that adapter onto the same global boundary used by the vendor-independent
- * Journey runtime before the generic bootstrap inspects it. Web/PWA is a no-op here.
+ * The installed Android shell exposes its concrete durable queue and lock-screen status
+ * surface through Capacitor. Install those adapters before React so the vendor-independent
+ * Journey runtime can discover them immediately. Web/PWA is a no-op here.
  *
- * The location provider remains independently injectable because the selected native
- * background-location plugin is still behind the provider boundary.
+ * The location provider remains independently injectable because native GPS transport and
+ * system status presentation are deliberately separate boundaries.
  */
 installCapacitorJourneyDurableQueueBridge();
+installCapacitorJourneyLockScreenBridge();
 installInjectedNativeJourneyBridge();
 installInjectedNativeJourneyDurableQueue();
 
