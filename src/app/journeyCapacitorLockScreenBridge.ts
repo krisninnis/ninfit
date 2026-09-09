@@ -1,7 +1,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import {
   NINFIT_NATIVE_JOURNEY_LOCK_SCREEN_KEY,
-  type JourneyNativeLockScreenBridge,
+  type NativeJourneyLockScreenBridge,
 } from './journeyNativeLockScreenBridge';
 import type { JourneyNativeLockScreenStatus } from './journeyNativeLockScreenStatus';
 
@@ -36,7 +36,7 @@ const nativePlugin = registerPlugin<NinFitJourneyStatusPlugin>('NinFitJourneyLoc
 /** Adapt the privacy-safe status contract to the narrow Android plugin surface. */
 export function createCapacitorJourneyLockScreenBridge(
   plugin: NinFitJourneyStatusPlugin,
-): JourneyNativeLockScreenBridge {
+): NativeJourneyLockScreenBridge {
   let lastJourneyId: string | null = null;
   return {
     async update(status: JourneyNativeLockScreenStatus) {
