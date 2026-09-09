@@ -8,6 +8,7 @@ import {
 import type { JourneyNativeLockScreenStatus } from '../app/journeyNativeLockScreenStatus';
 
 const status: JourneyNativeLockScreenStatus = {
+  journeyId: 'journey-lock-screen',
   brandMark: 'NF',
   title: 'NinFit Journey',
   activityLabel: 'Walk',
