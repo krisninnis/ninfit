@@ -13,7 +13,7 @@ jobs:
   verify:
     name: Test, typecheck and build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Check out repository
@@ -26,6 +26,13 @@ jobs:
         with:
           node-version: 24
           cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
 
       - name: Install dependencies
         run: npm ci
@@ -62,3 +69,7 @@ jobs:
 
       - name: Production build
         run: npm run build
+
+      - name: Compile Android debug app
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
