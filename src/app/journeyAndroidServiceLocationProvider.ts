@@ -33,8 +33,9 @@ const nativePlugin = registerPlugin<NinFitJourneyLocationPlugin>('NinFitJourneyL
  */
 export function createAndroidJourneyServiceLocationProvider(options: {
   journeyId: string;
-  plugin: NinFitJourneyLocationPlugin;
+  plugin?: NinFitJourneyLocationPlugin;
 }): JourneyLocationProvider {
+  const plugin = options.plugin ?? nativePlugin;
   return {
     kind: 'android_native',
     supportsBackground: true,
@@ -48,7 +49,7 @@ export function createAndroidJourneyServiceLocationProvider(options: {
           stopRequested = true;
           return;
         }
-        void options.plugin.stop({ journeyId: options.journeyId }).catch((cause) => {
+        void plugin.stop({ journeyId: options.journeyId }).catch((cause) => {
           if (!stopped) {
             callbacks.onError?.({
               kind: 'provider_error',
@@ -59,10 +60,10 @@ export function createAndroidJourneyServiceLocationProvider(options: {
         });
       };
 
-      void options.plugin.start({ journeyId: options.journeyId }).then(() => {
+      void plugin.start({ journeyId: options.journeyId }).then(() => {
         started = true;
         if (stopRequested) {
-          void options.plugin.stop({ journeyId: options.journeyId });
+          void plugin.stop({ journeyId: options.journeyId });
         }
       }).catch((cause) => {
         if (stopped) return;
@@ -97,6 +98,6 @@ export function createRuntimeAndroidJourneyServiceLocationProvider(
   if (!activeRuntime.isNativePlatform() || activeRuntime.getPlatform() !== 'android') return null;
   return createAndroidJourneyServiceLocationProvider({
     journeyId,
-    plugin: options?.plugin ?? nativePlugin,
+    plugin: options?.plugin,
   });
 }
