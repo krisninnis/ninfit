@@ -1,3 +1,4 @@
+import type { JourneyAutoResumeDiagnosticSnapshot } from './journeyAutoResumeDiagnostics';
 import type { NativeJourneyDurableReplayResult } from './journeyNativeDurableQueue';
 
 /**
@@ -115,4 +116,31 @@ export function formatJourneyNativeDiagnostics(
       return parts.join(' ');
     })
     .join('\n');
+}
+
+/**
+ * Compact detector evidence for the Samsung field trial. The displacement is explicitly
+ * labelled raw because it is observational only: an inaccurate or duplicate fix may have
+ * a large displacement without being accepted as resume evidence by the detector.
+ */
+export function formatJourneyAutoResumeDiagnostics(
+  snapshot: JourneyAutoResumeDiagnosticSnapshot,
+): string {
+  const accuracy = snapshot.latestAccuracyM === null ? '-' : `${snapshot.latestAccuracyM.toFixed(1)}m`;
+  const rawDisplacement = snapshot.latestDistanceFromAnchorM === null
+    ? '-'
+    : `${snapshot.latestDistanceFromAnchorM.toFixed(1)}m`;
+
+  return [
+    `autoResume samples=${snapshot.samplesProcessedWhileAutoPaused}`,
+    `accuracyOk=${snapshot.samplesWithinMotionAccuracy}`,
+    `accuracyRejected=${snapshot.samplesOutsideMotionAccuracy}`,
+    `duplicateOrOld=${snapshot.duplicateOrOutOfOrderSamples}`,
+    `latestAccuracy=${accuracy}`,
+    `rawDisplacement=${rawDisplacement}`,
+    `confirmations=${snapshot.resumeConfirmations}/${snapshot.requiredResumeConfirmations}`,
+    `policyAccuracy<=${snapshot.maxAccuracyM}m`,
+    `policyResume>=${snapshot.resumeDistanceM}m`,
+    `reason=${snapshot.lastReason ?? '-'}`,
+  ].join(' ');
 }
