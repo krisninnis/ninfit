@@ -14,6 +14,10 @@ import {
   type JourneyPauseOrigin,
 } from '../storage/journeyPauseProvenance';
 import { createAndroidJourneyServiceLocationProvider } from './journeyAndroidServiceLocationProvider';
+import {
+  createJourneyAutoResumeDiagnostics,
+  type JourneyAutoResumeDiagnosticSnapshot,
+} from './journeyAutoResumeDiagnostics';
 import { resolveInjectedNativeJourneyDurableQueue } from './journeyNativeDurableQueueBootstrap';
 import { createJourneyGpsRuntimeController } from './journeyGpsRuntimeController';
 import type {
@@ -26,16 +30,6 @@ import { createJourneyRecoveryController } from './journeyRecoveryController';
 
 export type JourneyMotionState = 'recording' | 'auto_paused';
 
-/**
- * Thrown when a sample is offered to a session the UI has already torn down.
- *
- * This is deliberately its own type. Durable replay must be able to tell "this drain
- * outlived its session" apart from "this sample broke the Journey runtime": the first
- * is an ordinary lifecycle boundary that leaves every unread sample durable and is
- * retryable against the live session, and the second is a real defect. Collapsing them
- * into one generic Error is what turned a routine session swap into a Journey the user
- * could neither pause nor finish.
- */
 export class JourneyMotionSessionStoppedError extends Error {
   constructor() {
     super('Journey motion session is stopped');
@@ -57,27 +51,22 @@ export interface JourneyMotionSessionOptions {
 export interface JourneyMotionSession {
   getJourney(): Journey;
   getMotionState(): JourneyMotionState;
-  /** True once `stop()` has run: no further sample can be processed by this session. */
   isStopped(): boolean;
-  /** True while the provider is quiesced but replay is still allowed. */
   isProviderStopped(): boolean;
-  /** Process one sample through the exact same trusted motion path used by the live provider. */
   processSample(sample: JourneyGpsSample): void;
-  /** Stop new provider callbacks while keeping durable replay processing available. */
   stopProvider(): void;
-  /**
-   * Re-arm a provider quiesced by `stopProvider()`.
-   *
-   * Used only when a Pause or Finish could not complete: the Journey is still logically
-   * recording, so leaving the native recorder stopped would keep a Recording state alive
-   * over a recorder that can never produce another fix. Starting a provider never
-   * requests a permission - the Android provider fails closed if one is missing - so
-   * this cannot prompt without a user gesture. A session already permanently stopped
-   * stays stopped.
-   */
   resumeProvider(): boolean;
-  /** Permanently stop both the provider and any further replay processing. */
   stop(): void;
+}
+
+/**
+ * Optional diagnostic capability carried by real field-trial sessions.
+ *
+ * Deliberately separate from JourneyMotionSession so production consumers and
+ * existing test doubles are not required to implement temporary diagnostics.
+ */
+export interface JourneyAutoResumeDiagnosticSession extends JourneyMotionSession {
+  getAutoResumeDiagnostics(): JourneyAutoResumeDiagnosticSnapshot;
 }
 
 function directPhoneGpsSourceId(journey: Journey): string {
@@ -124,28 +113,11 @@ function initialDetectorState(journey: Journey, pauseOrigin: JourneyPauseOrigin)
 /**
  * Owns the trusted-GPS motion lifecycle for an active Walk/Run/Hike/Cycle Journey.
  *
- * Recording samples still pass through the existing hardened GPS runtime before they
- * can affect route or distance. Auto-pause is evaluated only from samples the runtime
- * accepted. While automatically paused, the provider stays alive solely to look for
- * conservative movement evidence; samples are not added to distance/route until the
- * recorder has been resumed. A manual pause is never auto-resumed because this session
- * refuses to start for a paused Journey without explicit `auto_stationary` provenance.
- *
- * `processSample` is deliberately exposed so durable native replay can enter this exact
- * same path. Replay therefore cannot bypass GPS trust, route, distance or auto-pause rules.
- *
- * `stopProvider` is deliberately weaker than `stop`: completion/pause coordination can
- * first quiesce new native callbacks, drain the already-durable native suffix through
- * `processSample`, and only then permanently stop the motion session. Late callbacks
- * from a provider that races its own stop are ignored.
- *
- * Installed Android chooses the foreground Journey service only when a durable native
- * queue exists and no already-installed native provider bridge is present. That preserves
- * explicit/test/native-provider overrides while preventing the installed shell from also
- * starting browser geolocation. The Android service emits no direct samples: SQLite replay
- * remains its sole route into `processSample`. Web/PWA stays browser-based.
+ * The field-trial diagnostics observe only the already-computed auto-pause evaluation.
+ * They have no authority over detector state, Journey state, provider lifecycle, route,
+ * distance, persistence, or pause/resume decisions.
  */
-export function startJourneyMotionSession(options: JourneyMotionSessionOptions): JourneyMotionSession {
+export function startJourneyMotionSession(options: JourneyMotionSessionOptions): JourneyAutoResumeDiagnosticSession {
   const pauseOrigin = options.journey.status === 'paused'
     ? loadJourneyPauseOrigin(options.storage, options.journey.id)
     : 'manual';
@@ -166,6 +138,7 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
     distanceMetricId,
   });
   const recovery = createJourneyRecoveryController(options.storage);
+  const diagnostics = createJourneyAutoResumeDiagnostics();
   const nativeQueue = resolveInjectedNativeJourneyDurableQueue();
   const runtimeProvider = createRuntimeJourneyLocationProvider();
   const provider = options.provider
@@ -210,7 +183,9 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
   }
 
   function handleAutoPausedSample(sample: JourneyGpsSample): void {
-    const evaluation = evaluateJourneyAutoPause(detector, sample);
+    const previousDetector = detector;
+    const evaluation = evaluateJourneyAutoPause(previousDetector, sample);
+    diagnostics.observe(previousDetector, sample, evaluation);
     detector = evaluation.state;
     if (evaluation.signal !== 'auto_resume') return;
 
@@ -236,14 +211,6 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
     providerSession = null;
   }
 
-  /*
-   * The native provider adapter deliberately does not throw when the native side refuses
-   * to start: it reports through `onError` and hands back a session that does nothing.
-   * That is right for the initial start - the screen surfaces the provider error - but it
-   * means a caller cannot tell a working recorder from an inert one by return value
-   * alone. This flag makes the distinction, so `resumeProvider` can never claim a
-   * recorder is collecting again when the start it just made failed.
-   */
   let providerStartFailed = false;
 
   function startProviderSession(): void {
@@ -306,6 +273,9 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
     },
     getMotionState() {
       return motionState;
+    },
+    getAutoResumeDiagnostics() {
+      return diagnostics.snapshot();
     },
     isStopped() {
       return stopped;
