@@ -107,6 +107,12 @@ describe('Verification Gate fail-closed signing contract', () => {
 });
 
 describe('Verification Gate certificate proof', () => {
+  const verifyStep = () =>
+    workflow.slice(
+      stepIndex('Verify the APK carries the NinFit review signing identity'),
+      stepIndex('Remove the review keystore from the runner'),
+    );
+
   it('pins the review certificate fingerprint in the workflow', () => {
     expect(workflow).toContain(`NINFIT_REVIEW_CERT_SHA256: '${REVIEW_CERT_SHA256}'`);
   });
@@ -119,19 +125,103 @@ describe('Verification Gate certificate proof', () => {
     expect(publish).toBeGreaterThan(verify);
   });
 
-  it('fails closed on a mismatch, an unreadable certificate, or the generic debug identity', () => {
-    const verify = workflow.slice(
-      stepIndex('Verify the APK carries the NinFit review signing identity'),
-      stepIndex('Remove the review keystore from the runner'),
-    );
-    expect(verify).toContain('apksigner');
+  /*
+   * Run #239 (run id 34462019970) built and signed the APK correctly and then failed
+   * here, reporting an empty subject and an empty digest. Three things made a silent
+   * read indistinguishable from a healthy one: the tool was run without `2>&1`, so
+   * anything it wrote to stderr was discarded; the parser matched one exact label; and
+   * nothing was echoed, so the log could not say which had happened. A local harness
+   * that ran this step's own script against jarsigner-signed fixtures then found a
+   * fourth: `tr -d '[:space:]'` folded keytool's whole report onto a single line, so the
+   * anchored `^SHA256:` match could never fire. The assertions below pin the shape of
+   * the fix rather than any one tool's wording.
+   */
+  it('reads the certificate by hashing DER bytes, not by parsing a printed fingerprint', () => {
+    const verify = verifyStep();
+    expect(verify).toContain('openssl pkcs7 -inform DER');
+    expect(verify).toContain('-outform DER');
+    expect(verify).toContain('sha256sum "$work/signer.der"');
+  });
+
+  it('cross-checks that reading against independent tools and requires agreement', () => {
+    const verify = verifyStep();
     expect(verify).toContain('keytool -printcert -jarfile');
+    expect(verify).toContain('apksigner');
+    expect(verify).toContain('readings disagree');
+    // One tool agreeing with itself is what the previous revision effectively relied on.
+    expect(verify).toContain('[ "$readings" -lt 2 ]');
+  });
+
+  it('captures stderr from every tool reading', () => {
+    const verify = verifyStep();
+    for (const invocation of ['keytool -printcert -jarfile "$apk"', 'verify --print-certs -v "$apk"']) {
+      const at = verify.indexOf(invocation);
+      expect(at, `missing invocation: ${invocation}`).toBeGreaterThan(-1);
+      expect(verify.slice(at, at + invocation.length + 12)).toContain('2>&1');
+    }
+  });
+
+  it('echoes the raw tool output, so a failed read says what it saw', () => {
+    const verify = verifyStep();
+    expect(verify).toContain('--- keytool -printcert -jarfile ---');
+    expect(verify).toContain('--- apksigner verify --print-certs -v ---');
+    expect(verify).toContain('printf \'%s\\n\' "$keytool_out"');
+    expect(verify).toContain('printf \'%s\\n\' "$apksigner_out"');
+  });
+
+  it('does not depend on one exact printed label', () => {
+    const verify = verifyStep();
+    // The literal that run #239 failed on. Matching must stay case- and spacing-tolerant.
+    expect(verify).not.toContain('Signer #1 certificate SHA-256 digest:');
+    expect(verify).not.toContain('Signer #1 certificate DN:');
+    expect(verify).toContain("grep -iE 'signer.*sha-?256.*digest'");
+    expect(verify).toContain("sed -n 's/^SHA256://Ip'");
+  });
+
+  it('never strips newlines before an anchored line match', () => {
+    const verify = verifyStep();
+    // `tr -d '[:space:]'` deletes newlines too, folding a multi-line report into one
+    // line where `^SHA256:` can never match. Blanks must be removed line by line.
+    const keytoolParse = verify.slice(verify.indexOf('keytool_sha='), verify.indexOf('# ---- Reading 3'));
+    expect(keytoolParse).not.toContain("tr -d '[:space:]'");
+    expect(keytoolParse).toContain("sed 's/[[:blank:]]//g'");
+  });
+
+  it('compares fingerprints on normalised hex, so colons and case cannot cause a mismatch', () => {
+    const verify = verifyStep();
+    expect(verify).toContain("tr -cd '0-9A-Fa-f'");
+    expect(verify).toContain("tr 'A-Z' 'a-z'");
     expect(verify).toContain('[ "$observed" != "$expected" ]');
-    expect(verify).toContain('Could not read a signing certificate');
-    expect(verify).toContain("*'CN=Android Debug'*");
-    // One signer: a second, unexpected signer must not pass because signer #1 matched.
-    expect(verify).toContain('[ "$signer_count" != "1" ]');
-    expect(verify.match(/exit 1/g) ?? []).toHaveLength(5);
+  });
+
+  it('rejects a fingerprint that is not a full SHA-256, rather than comparing a fragment', () => {
+    expect(verifyStep()).toContain('[ "${#value}" -ne 64 ]');
+  });
+
+  it('detects the generic debug identity however a tool renders the subject', () => {
+    const verify = verifyStep();
+    // openssl 3 prints "CN = Android Debug"; keytool prints "CN=Android Debug".
+    expect(verify).toContain('*cn=androiddebug*');
+    expect(verify).toMatch(/subjects=.*tr -d '\[:space:\]'/s);
+  });
+
+  it('fails closed on every unreadable or unexpected outcome', () => {
+    const verify = verifyStep();
+    for (const failure of [
+      'No APK at',
+      'Expected exactly one v1 signature block',
+      'Expected exactly one signing certificate',
+      'malformed SHA-256 fingerprint',
+      'readings disagree',
+      'at least 2 independent readings are required',
+      'generic Android debug identity',
+      'Expected exactly one signer',
+      'does not match the pinned NinFit review identity',
+    ]) {
+      expect(verify, `no fail-closed path for: ${failure}`).toContain(failure);
+    }
+    // Every one of those paths must actually stop the job.
+    expect((verify.match(/exit 1/g) ?? []).length).toBeGreaterThanOrEqual(9);
   });
 });
 

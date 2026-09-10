@@ -161,9 +161,15 @@ Rules that must not be relaxed:
   `$RUNNER_TEMP` only, and removed at the end of the job.
 - Signing is **fail-closed**: a trusted, artifact-producing build whose signing secrets are
   unavailable fails. It never falls back to the runner's debug key.
-- After `assembleDebug`, the workflow reads the APK's certificate back with `apksigner`
-  (`keytool -printcert -jarfile` as fallback) and fails unless the SHA-256 equals the
-  fingerprint above, exactly one signer is present, and the subject is not `CN=Android Debug`.
+- After `assembleDebug`, the workflow reads the APK's signing certificate back **three
+  independent ways** and requires at least two of them to agree with each other and with
+  the fingerprint above: the DER certificate bytes hashed directly out of the v1 signature
+  block (no printed fingerprint is parsed at all), `keytool -printcert -jarfile`, and
+  `apksigner verify --print-certs` where the runner has build-tools. It also fails unless
+  exactly one signer is present and the subject is not the generic `CN=Android Debug`.
+  Every tool's raw output is echoed - a signing certificate is public - so a failed read
+  says what it saw. Gate run #239 (run id 34462019970) failed at this step on a parsing
+  assumption while the APK itself was built and signed correctly.
 - `src/test/androidReviewSigningContract.test.ts` pins all of the above so a later workflow
   or Gradle edit cannot silently return the published APK to ephemeral signing.
 - Release signing is untouched. Browser/PWA behaviour is unchanged.

@@ -225,8 +225,10 @@ Handling rules:
    `*.pepk`, `keystore.properties` and `signing.properties`.
 4. Signing is fail-closed: a trusted build that cannot read the secrets fails rather than
    publishing an APK signed with the runner's transient key.
-5. The workflow reads the certificate back out of the built APK and fails unless it equals
-   the fingerprint above.
+5. The workflow reads the certificate back out of the built APK three independent ways -
+   hashing the DER bytes from the v1 signature block, `keytool`, and `apksigner` - and
+   fails unless at least two agree with each other and with the fingerprint above. The
+   readings deliberately avoid depending on any one tool's printed label.
 6. Rotation is a human step. Rotating the review key changes the signer, so every existing
    review install must be migrated deliberately; update the fingerprint in
    `.github/workflows/verification.yml`, `docs/CURRENT_STATE.md` and
