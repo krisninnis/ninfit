@@ -144,46 +144,132 @@ jobs:
           apk='android/app/build/outputs/apk/debug/app-debug.apk'
           [ -f "$apk" ] || { echo "::error::No APK at $apk"; exit 1; }
 
-          expected="$(printf '%s' "$NINFIT_REVIEW_CERT_SHA256" | tr -d ':' | tr 'A-Z' 'a-z')"
+          # Compare on hex only, so a tool that prints BD:3F:.. and one that prints
+          # bd3f.. are the same reading rather than a mismatch.
+          expected="$(printf '%s' "$NINFIT_REVIEW_CERT_SHA256" | tr -cd '0-9A-Fa-f' | tr 'A-Z' 'a-z')"
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
 
-          # apksigner is the tool Android itself uses; prefer it, fall back to the
-          # JDK's keytool (readable because the review config enables v1 signing).
-          apksigner="$(find "${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}/build-tools" \
-            -maxdepth 2 -name apksigner -type f 2>/dev/null | sort -V | tail -n 1 || true)"
+          # A signing certificate is public by construction, so every tool's raw output
+          # is echoed in full below. The first revision of this step captured stdout
+          # only, parsed one exact label, and printed nothing it had read - so a run
+          # that read nothing could not say which of those three things went wrong.
+          # Three independent readings are taken; they must agree with each other and
+          # with the pinned fingerprint.
 
-          if [ -n "$apksigner" ]; then
-            certs="$("$apksigner" verify --print-certs --verbose "$apk")"
-            observed="$(printf '%s\n' "$certs" \
-              | sed -n 's/^Signer #1 certificate SHA-256 digest: *//p' | tr 'A-Z' 'a-z')"
-            signer_count="$(printf '%s\n' "$certs" | grep -c '^Signer #[0-9]* certificate SHA-256 digest:' || true)"
-            subject="$(printf '%s\n' "$certs" | sed -n 's/^Signer #1 certificate DN: *//p')"
-            echo "Verification tool: apksigner"
-          else
-            certs="$(keytool -printcert -jarfile "$apk")"
-            observed="$(printf '%s\n' "$certs" | sed -n 's/^[[:space:]]*SHA256: *//p' \
-              | head -n 1 | tr -d ':' | tr 'A-Z' 'a-z')"
-            signer_count="$(printf '%s\n' "$certs" | grep -c '^Signer #' || true)"
-            subject="$(printf '%s\n' "$certs" | sed -n 's/^Owner: *//p' | head -n 1)"
-            echo "Verification tool: keytool"
+          # ---- Reading 1: hash the DER certificate bytes directly.
+          # No fingerprint text is parsed at all. The v1/JAR signature block carries the
+          # signer's PKCS#7; ninfit-review-signing.gradle keeps v1 signing enabled and
+          # androidReviewSigningContract pins it precisely so this path always exists.
+          openssl_sha=''
+          openssl_subject=''
+          blocks="$(unzip -Z1 "$apk" 'META-INF/*' 2>&1 | grep -Ei '\.(rsa|dsa|ec)$' || true)"
+          echo "v1 signature blocks: ${blocks:-<none found>}"
+          if [ -n "$blocks" ]; then
+            block_count="$(printf '%s\n' "$blocks" | wc -l | tr -d ' ')"
+            if [ "$block_count" != "1" ]; then
+              echo "::error::Expected exactly one v1 signature block on the acceptance APK, found $block_count."
+              exit 1
+            fi
+            unzip -p "$apk" "$blocks" > "$work/signer.p7"
+            openssl pkcs7 -inform DER -in "$work/signer.p7" -print_certs -out "$work/certs.pem" 2>&1
+            cert_count="$(grep -c 'BEGIN CERTIFICATE' "$work/certs.pem" || true)"
+            if [ "$cert_count" != "1" ]; then
+              echo "::error::Expected exactly one signing certificate, found $cert_count. A changed chain is a changed identity."
+              exit 1
+            fi
+            openssl x509 -in "$work/certs.pem" -outform DER -out "$work/signer.der" 2>&1
+            openssl_sha="$(sha256sum "$work/signer.der" | cut -d' ' -f1 | tr 'A-Z' 'a-z')"
+            openssl_subject="$(openssl x509 -in "$work/certs.pem" -noout -subject 2>&1)"
+            echo "openssl subject: $openssl_subject"
+            echo "openssl certificate SHA-256: $openssl_sha"
           fi
 
-          echo "Observed signer subject: $subject"
+          # ---- Reading 2: keytool, which ships with the JDK this job already set up.
+          keytool_out="$(keytool -printcert -jarfile "$apk" 2>&1 || true)"
+          echo '--- keytool -printcert -jarfile ---'
+          printf '%s\n' "$keytool_out"
+          echo '--- end keytool ---'
+          # sed edits line by line, so blanks go and the line structure survives.
+          # `tr -d '[:space:]'` here would fold the whole report onto one line and the
+          # anchored match would never fire.
+          keytool_sha="$(printf '%s\n' "$keytool_out" | sed 's/[[:blank:]]//g' \
+            | sed -n 's/^SHA256://Ip' | head -n 1 | tr -cd '0-9A-Fa-f' | tr 'A-Z' 'a-z')"
+
+          # ---- Reading 3: apksigner, when the runner image has build-tools.
+          apksigner_sha=''
+          apksigner_out=''
+          apksigner_bin="$(find "${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}/build-tools" \
+            -maxdepth 2 -name 'apksigner' -type f 2>/dev/null | sort -V | tail -n 1 || true)"
+          if [ -n "$apksigner_bin" ]; then
+            echo "apksigner: $apksigner_bin"
+            # Signature integrity. This must pass whatever its report happens to look
+            # like, and set -e stops the job if it does not.
+            "$apksigner_bin" verify "$apk"
+            apksigner_out="$("$apksigner_bin" verify --print-certs -v "$apk" 2>&1 || true)"
+            echo '--- apksigner verify --print-certs -v ---'
+            printf '%s\n' "$apksigner_out"
+            echo '--- end apksigner ---'
+            # Tolerant of label wording, spacing, case and colon-separated hex.
+            apksigner_sha="$(printf '%s\n' "$apksigner_out" \
+              | grep -iE 'signer.*sha-?256.*digest' | head -n 1 \
+              | sed 's/.*[Dd][Ii][Gg][Ee][Ss][Tt][[:space:]]*:[[:space:]]*//' \
+              | tr -cd '0-9A-Fa-f' | tr 'A-Z' 'a-z')"
+          else
+            echo 'apksigner: not present on this runner image'
+          fi
+
+          # ---- Reconcile the readings.
+          observed=''
+          readings=0
+          for pair in "openssl:$openssl_sha" "keytool:$keytool_sha" "apksigner:$apksigner_sha"; do
+            tool="${pair%%:*}"
+            value="${pair#*:}"
+            if [ -z "$value" ]; then
+              echo "note: $tool produced no fingerprint"
+              continue
+            fi
+            if [ "${#value}" -ne 64 ]; then
+              echo "::error::$tool produced a malformed SHA-256 fingerprint of ${#value} hex characters, expected 64."
+              exit 1
+            fi
+            readings=$((readings + 1))
+            if [ -z "$observed" ]; then
+              observed="$value"
+            elif [ "$observed" != "$value" ]; then
+              echo "::error::Signing certificate readings disagree: $tool reported $value, an earlier tool reported $observed."
+              exit 1
+            fi
+          done
+          # Two readings minimum. One tool agreeing with itself is what the previous
+          # revision effectively relied on, and a silent parse failure looked identical
+          # to a healthy read. openssl and keytool both work from the v1 block, so this
+          # holds even on a runner image with no build-tools.
+          if [ "$readings" -lt 2 ]; then
+            echo "::error::Only $readings tool(s) could read a signing certificate from the APK; at least 2 independent readings are required. Failing closed."
+            exit 1
+          fi
+          echo "Independent readings that agree: $readings"
           echo "Observed certificate SHA-256: $observed"
 
-          if [ -z "$observed" ]; then
-            echo "::error::Could not read a signing certificate from the APK. Failing closed."
-            exit 1
-          fi
-          if [ "$signer_count" != "1" ]; then
-            echo "::error::Expected exactly one signer on the acceptance APK, found $signer_count."
-            exit 1
-          fi
-          case "$subject" in
-            *'CN=Android Debug'*)
+          # ---- The identity must not be the generic Android debug key, whichever way
+          # a tool renders the subject ("CN=Android Debug" or "CN = Android Debug").
+          subjects="$(printf '%s\n%s\n%s\n' "$openssl_subject" "$keytool_out" "$apksigner_out" \
+            | tr -d '[:space:]' | tr 'A-Z' 'a-z')"
+          case "$subjects" in
+            *cn=androiddebug*)
               echo "::error::APK is signed with the generic Android debug identity. This is the update-incompatibility defect this gate exists to prevent."
               exit 1
               ;;
           esac
+
+          # ---- Exactly one signer.
+          signer_count="$(printf '%s\n' "$keytool_out" | grep -c '^Signer #' || true)"
+          if [ "$signer_count" != "1" ]; then
+            echo "::error::Expected exactly one signer on the acceptance APK, keytool reported $signer_count."
+            exit 1
+          fi
+
           if [ "$observed" != "$expected" ]; then
             echo "::error::APK signing certificate SHA-256 does not match the pinned NinFit review identity. Expected $expected, observed $observed."
             exit 1
@@ -197,6 +283,7 @@ jobs:
             echo "- Commit: \`$GITHUB_SHA\`"
             echo "- Signing certificate SHA-256: \`$NINFIT_REVIEW_CERT_SHA256\`"
             echo "- Signing identity: **NinFit review/test** (matches the pinned fingerprint)"
+            echo "- Independent readings in agreement: $readings"
             echo "- APK file SHA-256: \`$apk_sha256\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
