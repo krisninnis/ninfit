@@ -44,6 +44,14 @@ dependencies {
 
 apply from: 'capacitor.build.gradle'
 
+/*
+ * Dedicated REVIEW/TEST signing for the debug artifact Verification Gate publishes.
+ * Applied after the Capacitor-generated script so a `cap sync` regeneration of that
+ * file cannot quietly drop it. Release signing is untouched.
+ * See android/app/ninfit-review-signing.gradle and src/test/androidReviewSigningContract.test.ts.
+ */
+apply from: 'ninfit-review-signing.gradle'
+
 try {
     def servicesJSON = file('google-services.json')
     if (servicesJSON.text) {

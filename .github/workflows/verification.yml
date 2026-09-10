@@ -4,10 +4,25 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main]
+    # `main` is the merged trunk. `review/**` and `ci/**` are the branches that
+    # produce an acceptance APK before anything is merged, and a push event runs
+    # the workflow against that branch's exact head SHA rather than a synthetic
+    # merge commit - which is the run we cite when handing an APK to a phone.
+    branches: [main, 'review/**', 'ci/**']
 
 permissions:
   contents: read
+
+env:
+  # A build is trusted when it can see repository secrets: any push to this
+  # repository, or a pull request whose head lives in this repository. Forked
+  # pull requests are deliberately excluded - they get the full test/typecheck
+  # /build gate but never produce a published APK.
+  NINFIT_TRUSTED_BUILD: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+  # The dedicated NinFit REVIEW/TEST signing certificate. Not the production key.
+  # Pinned here so that a change to the signing identity is a reviewable diff and
+  # never a silent property of whichever runner happened to pick the job up.
+  NINFIT_REVIEW_CERT_SHA256: 'BD:3F:0C:72:A4:A3:92:CD:FE:24:C3:E6:40:46:F3:40:6B:BC:1F:3C:32:7C:73:CE:C7:B8:D9:F9:84:78:B4:D2'
 
 jobs:
   verify:
@@ -49,8 +64,13 @@ jobs:
         run: |
           if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
             git diff --check "$BASE_SHA...$HEAD_SHA"
-          else
+          elif [ "$GITHUB_REF" = "refs/heads/main" ]; then
             git diff --check "$GITHUB_SHA^" "$GITHUB_SHA"
+          else
+            # A branch push has no base in the event payload, so measure the branch
+            # against trunk rather than against its own last commit.
+            git fetch --no-tags --quiet origin main
+            git diff --check "$(git merge-base FETCH_HEAD "$GITHUB_SHA")" "$GITHUB_SHA"
           fi
 
       - name: Run full test suite
@@ -73,14 +93,127 @@ jobs:
       - name: Sync Capacitor Android project
         run: npx cap sync android
 
+      - name: Materialise the NinFit review signing keystore
+        if: env.NINFIT_TRUSTED_BUILD == 'true'
+        env:
+          NINFIT_REVIEW_KEYSTORE_BASE64: ${{ secrets.NINFIT_REVIEW_KEYSTORE_BASE64 }}
+          NINFIT_REVIEW_KEY_ALIAS: ${{ secrets.NINFIT_REVIEW_KEY_ALIAS }}
+          NINFIT_REVIEW_STORE_PASSWORD: ${{ secrets.NINFIT_REVIEW_STORE_PASSWORD }}
+          NINFIT_REVIEW_KEY_PASSWORD: ${{ secrets.NINFIT_REVIEW_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          # Fail closed. This build will publish an APK for physical-device
+          # acceptance, so a missing signing input is a stop, never a fallback.
+          missing=''
+          [ -n "${NINFIT_REVIEW_KEYSTORE_BASE64:-}" ] || missing="$missing NINFIT_REVIEW_KEYSTORE_BASE64"
+          [ -n "${NINFIT_REVIEW_KEY_ALIAS:-}" ] || missing="$missing NINFIT_REVIEW_KEY_ALIAS"
+          [ -n "${NINFIT_REVIEW_STORE_PASSWORD:-}" ] || missing="$missing NINFIT_REVIEW_STORE_PASSWORD"
+          [ -n "${NINFIT_REVIEW_KEY_PASSWORD:-}" ] || missing="$missing NINFIT_REVIEW_KEY_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "::error::Review signing secrets unavailable for a trusted, artifact-producing build:$missing. Refusing to publish an APK signed with the runner's transient debug key."
+            exit 1
+          fi
+          # Runner-local, outside the workspace, removed with the runner. Never in the repo.
+          keystore_dir="$RUNNER_TEMP/ninfit-review-signing"
+          install -d -m 700 "$keystore_dir"
+          printf '%s' "$NINFIT_REVIEW_KEYSTORE_BASE64" | base64 -d > "$keystore_dir/review.jks"
+          chmod 600 "$keystore_dir/review.jks"
+          if [ ! -s "$keystore_dir/review.jks" ]; then
+            echo "::error::Decoded review keystore is empty. Not falling back to debug signing."
+            exit 1
+          fi
+          # Only the path is exported. Alias and passwords stay per-step secrets so
+          # they are never written to the shared environment file.
+          echo "NINFIT_REVIEW_STORE_FILE=$keystore_dir/review.jks" >> "$GITHUB_ENV"
+
       - name: Compile Android debug app
         working-directory: android
+        env:
+          # Required only for trusted builds - the ones whose APK is published.
+          # A forked-PR build still compiles, it just does not produce an artifact.
+          NINFIT_REVIEW_SIGNING_REQUIRED: ${{ env.NINFIT_TRUSTED_BUILD }}
+          NINFIT_REVIEW_KEY_ALIAS: ${{ secrets.NINFIT_REVIEW_KEY_ALIAS }}
+          NINFIT_REVIEW_STORE_PASSWORD: ${{ secrets.NINFIT_REVIEW_STORE_PASSWORD }}
+          NINFIT_REVIEW_KEY_PASSWORD: ${{ secrets.NINFIT_REVIEW_KEY_PASSWORD }}
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
+      - name: Verify the APK carries the NinFit review signing identity
+        if: env.NINFIT_TRUSTED_BUILD == 'true'
+        run: |
+          set -euo pipefail
+          apk='android/app/build/outputs/apk/debug/app-debug.apk'
+          [ -f "$apk" ] || { echo "::error::No APK at $apk"; exit 1; }
+
+          expected="$(printf '%s' "$NINFIT_REVIEW_CERT_SHA256" | tr -d ':' | tr 'A-Z' 'a-z')"
+
+          # apksigner is the tool Android itself uses; prefer it, fall back to the
+          # JDK's keytool (readable because the review config enables v1 signing).
+          apksigner="$(find "${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}/build-tools" \
+            -maxdepth 2 -name apksigner -type f 2>/dev/null | sort -V | tail -n 1 || true)"
+
+          if [ -n "$apksigner" ]; then
+            certs="$("$apksigner" verify --print-certs --verbose "$apk")"
+            observed="$(printf '%s\n' "$certs" \
+              | sed -n 's/^Signer #1 certificate SHA-256 digest: *//p' | tr 'A-Z' 'a-z')"
+            signer_count="$(printf '%s\n' "$certs" | grep -c '^Signer #[0-9]* certificate SHA-256 digest:' || true)"
+            subject="$(printf '%s\n' "$certs" | sed -n 's/^Signer #1 certificate DN: *//p')"
+            echo "Verification tool: apksigner"
+          else
+            certs="$(keytool -printcert -jarfile "$apk")"
+            observed="$(printf '%s\n' "$certs" | sed -n 's/^[[:space:]]*SHA256: *//p' \
+              | head -n 1 | tr -d ':' | tr 'A-Z' 'a-z')"
+            signer_count="$(printf '%s\n' "$certs" | grep -c '^Signer #' || true)"
+            subject="$(printf '%s\n' "$certs" | sed -n 's/^Owner: *//p' | head -n 1)"
+            echo "Verification tool: keytool"
+          fi
+
+          echo "Observed signer subject: $subject"
+          echo "Observed certificate SHA-256: $observed"
+
+          if [ -z "$observed" ]; then
+            echo "::error::Could not read a signing certificate from the APK. Failing closed."
+            exit 1
+          fi
+          if [ "$signer_count" != "1" ]; then
+            echo "::error::Expected exactly one signer on the acceptance APK, found $signer_count."
+            exit 1
+          fi
+          case "$subject" in
+            *'CN=Android Debug'*)
+              echo "::error::APK is signed with the generic Android debug identity. This is the update-incompatibility defect this gate exists to prevent."
+              exit 1
+              ;;
+          esac
+          if [ "$observed" != "$expected" ]; then
+            echo "::error::APK signing certificate SHA-256 does not match the pinned NinFit review identity. Expected $expected, observed $observed."
+            exit 1
+          fi
+
+          apk_sha256="$(sha256sum "$apk" | cut -d' ' -f1)"
+          echo "APK file SHA-256: $apk_sha256"
+          {
+            echo '### NinFit acceptance APK'
+            echo
+            echo "- Commit: \`$GITHUB_SHA\`"
+            echo "- Signing certificate SHA-256: \`$NINFIT_REVIEW_CERT_SHA256\`"
+            echo "- Signing identity: **NinFit review/test** (matches the pinned fingerprint)"
+            echo "- APK file SHA-256: \`$apk_sha256\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove the review keystore from the runner
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/ninfit-review-signing"
+
       - name: Publish NinFit Android debug APK
+        if: env.NINFIT_TRUSTED_BUILD == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ninfit-android-debug-${{ github.sha }}
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7
+
+      - name: Explain why no APK was published
+        if: env.NINFIT_TRUSTED_BUILD != 'true'
+        run: |
+          echo "::notice::This build cannot read the review signing secrets, so no acceptance APK was published. Only review-signed APKs are published for physical-device acceptance."

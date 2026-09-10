@@ -1,0 +1,92 @@
+/*
+ * NinFit REVIEW/TEST signing identity.
+ *
+ * Why this file exists at all: GitHub-hosted runners generate a throwaway
+ * `~/.android/debug.keystore` per job, so two Verification Gate runs of the same
+ * source produced APKs signed by two different identities. Android refuses to
+ * update an installed package whose signer changed, which is what the physical
+ * Samsung reported as "App not installed as package conflicts with an existing
+ * package". A dedicated, stable review key removes that class of failure.
+ *
+ * This is NOT the production/release identity. It signs the debug artifact that
+ * Verification Gate publishes for on-device acceptance, and nothing else. The
+ * `release` build type is deliberately untouched by this script.
+ *
+ * Every input arrives through the environment. Nothing here reads a committed
+ * keystore, a committed properties file, or a Gradle property, so there is no
+ * path by which signing material can enter the repository. No value read here is
+ * ever logged - the messages below name variables, never their contents.
+ *
+ * Fail-closed contract: when NINFIT_REVIEW_SIGNING_REQUIRED is true - which CI
+ * sets for any build whose APK will actually be published - a missing input is a
+ * hard build failure. It must never degrade into the local debug key, because an
+ * artifact signed with a transient identity looks fine in CI and then bricks the
+ * update path on the device it was built for.
+ */
+
+// Read straight through System.getenv rather than a helper closure: an applied Gradle
+// script resolves a bare `name(...)` call against the project before its own local
+// variables, and this file must behave identically whatever else is on the classpath.
+// Groovy treats the empty string as false, so `?: null` normalises "set but blank".
+def reviewRequired = 'true'.equalsIgnoreCase((System.getenv('NINFIT_REVIEW_SIGNING_REQUIRED')?.trim() ?: 'false'))
+def reviewStorePath = System.getenv('NINFIT_REVIEW_STORE_FILE')?.trim() ?: null
+def reviewKeyAlias = System.getenv('NINFIT_REVIEW_KEY_ALIAS')?.trim() ?: null
+def reviewStorePassword = System.getenv('NINFIT_REVIEW_STORE_PASSWORD')?.trim() ?: null
+def reviewKeyPassword = System.getenv('NINFIT_REVIEW_KEY_PASSWORD')?.trim() ?: null
+
+def reviewMissing = []
+if (reviewStorePath == null) reviewMissing << 'NINFIT_REVIEW_STORE_FILE'
+if (reviewKeyAlias == null) reviewMissing << 'NINFIT_REVIEW_KEY_ALIAS'
+if (reviewStorePassword == null) reviewMissing << 'NINFIT_REVIEW_STORE_PASSWORD'
+if (reviewKeyPassword == null) reviewMissing << 'NINFIT_REVIEW_KEY_PASSWORD'
+
+def reviewStore = reviewStorePath == null ? null : file(reviewStorePath)
+if (reviewStore != null && !reviewStore.isFile()) {
+    reviewMissing << 'NINFIT_REVIEW_STORE_FILE (no keystore file at the configured path)'
+}
+
+if (reviewRequired && !reviewMissing.isEmpty()) {
+    throw new GradleException(
+        'NinFit review signing is required for this build, but these inputs are unavailable: ' +
+        reviewMissing.join(', ') + '. Refusing to fall back to the Android default debug key: an APK signed ' +
+        'with a transient runner identity cannot update an existing review install on a physical device. ' +
+        'No secret values are read into this message.'
+    )
+}
+
+def reviewSigningAvailable = reviewMissing.isEmpty()
+
+android {
+    if (reviewSigningAvailable) {
+        signingConfigs {
+            ninfitReview {
+                storeFile reviewStore
+                storePassword reviewStorePassword
+                keyAlias reviewKeyAlias
+                keyPassword reviewKeyPassword
+                // v1 keeps `keytool -printcert -jarfile` able to read the certificate as a
+                // CI-independent cross-check; v2/v3 are what Android 7+ actually enforces.
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            if (reviewSigningAvailable) {
+                signingConfig signingConfigs.ninfitReview
+            }
+        }
+    }
+}
+
+if (reviewSigningAvailable) {
+    logger.lifecycle('NinFit: debug build type signed with the dedicated review identity (alias and passwords not logged).')
+} else {
+    logger.lifecycle(
+        'NinFit: review signing inputs absent - debug build uses the local Android debug key. ' +
+        'That artifact is for local development only and must not be published for device acceptance.'
+    )
+}

@@ -12,3 +12,13 @@ coverage/
 dump.tmp.ts
 
 .vercel
+
+# Android signing material. The review/test and release keystores and their
+# passwords live in CI secrets and on Kris's machine, never in Git.
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pepk
+keystore.properties
+signing.properties

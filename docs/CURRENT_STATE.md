@@ -137,6 +137,47 @@ The same approved motion may later support **tap Tortoise → one acknowledgemen
 
 Do not fake this with the rejected asset or ship a generated motion master before human approval and G9/G10/G11 pass.
 
+## Android acceptance APK signing identity
+
+Verification Gate previously built `app-debug.apk` with the GitHub runner's own
+generated debug keystore. That identity is regenerated per job, so two runs of the same
+commit produced APKs signed by two different certificates and the Samsung refused every
+update with *"App not installed as package conflicts with an existing package"*.
+
+A dedicated **NinFit REVIEW/TEST** signing identity now signs that artifact. It is **not**
+the production/release key and grants nothing on Play.
+
+| | |
+|---|---|
+| Alias | `ninfit-review` |
+| Certificate SHA-256 | `BD:3F:0C:72:A4:A3:92:CD:FE:24:C3:E6:40:46:F3:40:6B:BC:1F:3C:32:7C:73:CE:C7:B8:D9:F9:84:78:B4:D2` |
+| Key | RSA 3072-bit |
+| Validity | 10 Sep 2026 - 26 Jan 2054 |
+| Where it lives | GitHub Actions repository secrets and Kris's machine. Never in Git. |
+
+Rules that must not be relaxed:
+
+- The keystore is reconstructed on the runner from `NINFIT_REVIEW_KEYSTORE_BASE64` into
+  `$RUNNER_TEMP` only, and removed at the end of the job.
+- Signing is **fail-closed**: a trusted, artifact-producing build whose signing secrets are
+  unavailable fails. It never falls back to the runner's debug key.
+- After `assembleDebug`, the workflow reads the APK's certificate back with `apksigner`
+  (`keytool -printcert -jarfile` as fallback) and fails unless the SHA-256 equals the
+  fingerprint above, exactly one signer is present, and the subject is not `CN=Android Debug`.
+- `src/test/androidReviewSigningContract.test.ts` pins all of the above so a later workflow
+  or Gradle edit cannot silently return the published APK to ephemeral signing.
+- Release signing is untouched. Browser/PWA behaviour is unchanged.
+
+**The existing Samsung install must not be uninstalled yet.** It holds a deliberately
+stranded real-world Journey kept as a recovery/regression case, backed up as the installed
+APK, the native Journey SQLite database (recovery SHA-256
+`0627955449A83BF41C43DBB8ACD2D6C8085328F0EA895237315DE8B8C3C57E59`) and the WebView Local
+Storage LevelDB. Because the signer changes, the first review-signed build still requires a
+controlled migration/recovery, not an in-place update. That is a human step.
+
+CI proves the APK's signing identity. **CI does not prove Samsung background GPS
+acceptance**, and H-D/H-J remain open.
+
 ## Remaining human/pre-beta gates
 
 The authoritative ledger is `docs/pilot/device-accessibility-acceptance-matrix-v1.md`; the execution guide is `docs/pilot/prebeta-consolidated-device-runbook-v1.md`.

@@ -61,6 +61,10 @@ No values are stored here. Status is **In use / Planned / Candidate / Not requir
 | Fitbit | refresh token | user token | per user | Planned | approved secure backend/token store | treat as long-lived sensitive credential |
 | Health Connect | package identity/permissions | non-secret config | native dev/prod | Planned | native project config | permissions reviewed at implementation |
 | Android signing | upload/release signing material | signing secret | native production | Planned | Play App Signing/secure release storage | never commit keystore/passwords |
+| Android signing | `NINFIT_REVIEW_KEYSTORE_BASE64` review/test keystore | signing secret | CI (Verification Gate) | In use | GitHub Actions repository secret; decoded to `$RUNNER_TEMP` per job | never commit; review identity only, never release |
+| Android signing | `NINFIT_REVIEW_KEY_ALIAS` | signing secret | CI (Verification Gate) | In use | GitHub Actions repository secret | never printed by the workflow |
+| Android signing | `NINFIT_REVIEW_STORE_PASSWORD` | signing secret | CI (Verification Gate) | In use | GitHub Actions repository secret | never printed by the workflow |
+| Android signing | `NINFIT_REVIEW_KEY_PASSWORD` | signing secret | CI (Verification Gate) | In use | GitHub Actions repository secret | never printed by the workflow |
 | HealthKit | bundle ID/entitlements | non-secret config | native dev/prod | Planned | native/Apple config | capabilities are not secrets |
 | Apple developer | certificates/private keys/API keys | signing secret | native production | Planned | Apple/CI secure storage | document expiry/revocation |
 | Map provider | map token/key if selected | provider-dependent | preview/prod | Candidate | restricted env config | restrict origins/apps/scopes |
@@ -190,6 +194,46 @@ If a credential may be exposed:
 8. Assess whether user data could have been accessed and follow the incident process if needed.
 9. Record the incident without recording the credential value.
 
+## Android REVIEW/TEST signing identity
+
+Verification Gate publishes an `app-debug.apk` for physical-device acceptance. It used to be
+signed with whatever debug keystore the GitHub runner generated for that job, so the signer
+changed between runs and Android refused every update on the test device. A dedicated,
+stable review identity now signs it.
+
+**This is not the production/release key.** It is a review/test identity with no Play
+privileges, and it must never be used to sign a release artifact.
+
+| Property | Value |
+| --- | --- |
+| Alias | `ninfit-review` |
+| Certificate SHA-256 | `BD:3F:0C:72:A4:A3:92:CD:FE:24:C3:E6:40:46:F3:40:6B:BC:1F:3C:32:7C:73:CE:C7:B8:D9:F9:84:78:B4:D2` |
+| Key | RSA 3072-bit |
+| Validity | 10 Sep 2026 - 26 Jan 2054 |
+
+Only the certificate fingerprint - a public value, by design - is recorded here. The
+keystore bytes, alias and passwords are values and are never written to this repository.
+
+Handling rules:
+
+1. The four secrets live as GitHub Actions **repository secrets** and are passed to steps as
+   environment variables, never interpolated into a `run:` script body.
+2. The keystore is decoded into `$RUNNER_TEMP/ninfit-review-signing/` (mode 700/600),
+   outside the checkout, and deleted in an `always()` step.
+3. Gradle reads every input from the environment. There is no committed keystore, no
+   `keystore.properties`, and `.gitignore` refuses `*.jks`, `*.keystore`, `*.p12`, `*.pfx`,
+   `*.pepk`, `keystore.properties` and `signing.properties`.
+4. Signing is fail-closed: a trusted build that cannot read the secrets fails rather than
+   publishing an APK signed with the runner's transient key.
+5. The workflow reads the certificate back out of the built APK and fails unless it equals
+   the fingerprint above.
+6. Rotation is a human step. Rotating the review key changes the signer, so every existing
+   review install must be migrated deliberately; update the fingerprint in
+   `.github/workflows/verification.yml`, `docs/CURRENT_STATE.md` and
+   `src/test/androidReviewSigningContract.test.ts` in the same change.
+
+Rotation/revocation owner: Kris (sole holder of the keystore).
+
 ## Retiring a provider
 
 - revoke app credentials;
@@ -203,7 +247,7 @@ If a credential may be exposed:
 ## Repository guardrails
 
 - [ ] GitHub secret-scanning/settings reviewed.
-- [ ] `.gitignore` continues to exclude local secret files.
+- [x] `.gitignore` continues to exclude local secret files, including Android keystore shapes.
 - [ ] Examples/tests contain fake values only.
 - [ ] Build output checked for accidental server-secret inclusion when providers are added.
 - [ ] `VITE_*` variables explicitly treated as public.
