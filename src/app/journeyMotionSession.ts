@@ -51,14 +51,22 @@ export interface JourneyMotionSessionOptions {
 export interface JourneyMotionSession {
   getJourney(): Journey;
   getMotionState(): JourneyMotionState;
-  /** Read-only, privacy-safe evidence for the auto-resume field trial. */
-  getAutoResumeDiagnostics(): JourneyAutoResumeDiagnosticSnapshot;
   isStopped(): boolean;
   isProviderStopped(): boolean;
   processSample(sample: JourneyGpsSample): void;
   stopProvider(): void;
   resumeProvider(): boolean;
   stop(): void;
+}
+
+/**
+ * Optional diagnostic capability carried by real field-trial sessions.
+ *
+ * Deliberately separate from JourneyMotionSession so production consumers and
+ * existing test doubles are not required to implement temporary diagnostics.
+ */
+export interface JourneyAutoResumeDiagnosticSession extends JourneyMotionSession {
+  getAutoResumeDiagnostics(): JourneyAutoResumeDiagnosticSnapshot;
 }
 
 function directPhoneGpsSourceId(journey: Journey): string {
@@ -109,7 +117,7 @@ function initialDetectorState(journey: Journey, pauseOrigin: JourneyPauseOrigin)
  * They have no authority over detector state, Journey state, provider lifecycle, route,
  * distance, persistence, or pause/resume decisions.
  */
-export function startJourneyMotionSession(options: JourneyMotionSessionOptions): JourneyMotionSession {
+export function startJourneyMotionSession(options: JourneyMotionSessionOptions): JourneyAutoResumeDiagnosticSession {
   const pauseOrigin = options.journey.status === 'paused'
     ? loadJourneyPauseOrigin(options.storage, options.journey.id)
     : 'manual';
