@@ -134,20 +134,20 @@ describe('Verification Gate certificate proof', () => {
     expect(verify.match(/exit 1/g) ?? []).toHaveLength(5);
   });
 
-  it('tolerates harmless apksigner whitespace while keeping certificate extraction specific', () => {
+  it('parses the versioned apksigner certificate output observed on the Android CI runner', () => {
     const verify = workflow.slice(
       stepIndex('Verify the APK carries the NinFit review signing identity'),
       stepIndex('Remove the review keystore from the runner'),
     );
 
     expect(verify).toContain(
-      '^[[:space:]]*Signer #1 certificate SHA-256 digest:[[:space:]]*',
+      '^[[:space:]]*V[0-9][0-9.]* Signer: certificate SHA-256 digest:[[:space:]]*',
     );
     expect(verify).toContain(
-      '^[[:space:]]*Signer #[0-9]+ certificate SHA-256 digest:[[:space:]]*',
+      '^[[:space:]]*Number of signers:[[:space:]]*',
     );
     expect(verify).toContain(
-      '^[[:space:]]*Signer #1 certificate DN:[[:space:]]*',
+      '^[[:space:]]*V[0-9][0-9.]* Signer: certificate DN:[[:space:]]*',
     );
     expect(verify).toContain("head -n 1 | tr -d ':' | tr 'A-Z' 'a-z'");
   });
