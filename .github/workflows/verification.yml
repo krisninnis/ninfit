@@ -154,9 +154,13 @@ jobs:
           if [ -n "$apksigner" ]; then
             certs="$("$apksigner" verify --print-certs --verbose "$apk")"
             observed="$(printf '%s\n' "$certs" \
-              | sed -n 's/^Signer #1 certificate SHA-256 digest: *//p' | tr 'A-Z' 'a-z')"
-            signer_count="$(printf '%s\n' "$certs" | grep -c '^Signer #[0-9]* certificate SHA-256 digest:' || true)"
-            subject="$(printf '%s\n' "$certs" | sed -n 's/^Signer #1 certificate DN: *//p')"
+              | sed -n 's/^[[:space:]]*Signer #1 certificate SHA-256 digest:[[:space:]]*//p' \
+              | head -n 1 | tr -d ':' | tr 'A-Z' 'a-z')"
+            signer_count="$(printf '%s\n' "$certs" \
+              | grep -Ec '^[[:space:]]*Signer #[0-9]+ certificate SHA-256 digest:[[:space:]]*' || true)"
+            subject="$(printf '%s\n' "$certs" \
+              | sed -n 's/^[[:space:]]*Signer #1 certificate DN:[[:space:]]*//p' \
+              | head -n 1)"
             echo "Verification tool: apksigner"
           else
             certs="$(keytool -printcert -jarfile "$apk")"
