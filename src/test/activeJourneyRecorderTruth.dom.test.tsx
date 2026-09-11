@@ -248,6 +248,95 @@ describe('the Active Journey screen over a native recorder', () => {
   });
 });
 
+describe('Journey Flight Recorder support evidence', () => {
+  it('shows privacy-safe motion evidence when the real detector auto-pauses', async () => {
+    const storage = createMemoryStorageAdapter();
+    mocks.adapter = storage;
+    const journey = recordingWalk();
+    saveActiveJourneySnapshot(storage, journey, journey.startedAt);
+
+    const baseLatitude = 51.5074;
+    const baseLongitude = -3.5792;
+
+    const pending: NativeJourneyBufferedPosition[] = [
+      {
+        sequence: 1,
+        latitude: baseLatitude,
+        longitude: baseLongitude,
+        accuracyM: 5,
+        timestampMs: Date.parse(STARTED_AT) + 10_000,
+      },
+      {
+        sequence: 2,
+        latitude: baseLatitude,
+        longitude: baseLongitude,
+        accuracyM: 5,
+        timestampMs: Date.parse(STARTED_AT) + 20_000,
+      },
+    ];
+
+    const queue: NativeJourneyDurablePositionQueue = {
+      async readPending() { return pending.slice(); },
+      async acknowledgeThrough(_journeyId, sequence) {
+        while (pending[0]?.sequence !== undefined && pending[0].sequence <= sequence) {
+          pending.shift();
+        }
+      },
+      clear: vi.fn(async () => undefined),
+    };
+
+    (globalThis as QueueHost)[NINFIT_NATIVE_JOURNEY_DURABLE_QUEUE_KEY] = queue;
+    installSilentNativeBridge();
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    render(<ActiveJourneyScreen onClose={() => {}} />);
+    await settle();
+
+    expect(metricValue('State')).toBe('Auto-paused · stationary');
+
+    const details = document.querySelector('.active-journey__diagnostics');
+    expect(
+      details,
+      'an auto-paused Journey must expose its privacy-safe motion evidence for a device test',
+    ).toBeTruthy();
+
+    expect(details?.textContent).toContain('auto_pause');
+
+    // PRIVACY: support evidence describes the decision without exposing the route.
+    expect(details?.textContent).not.toMatch(
+      /51\.5074|-3\.5792|latitude|longitude|accuracyM/i,
+    );
+
+    /*
+     * One qualifying movement fix is deliberately not enough to auto-resume.
+     * It must remain auto-paused while the real detector records confirmation 1.
+     * The next native poll must make that new evidence visible without relying
+     * on a Journey status or motion-state transition to force the render.
+     */
+    pending.push({
+      sequence: 3,
+      latitude: baseLatitude + 0.0001,
+      longitude: baseLongitude,
+      accuracyM: 5,
+      timestampMs: Date.parse(STARTED_AT) + 30_000,
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_100);
+    });
+
+    expect(metricValue('State')).toBe('Auto-paused · stationary');
+
+    const refreshedDetails = document.querySelector('.active-journey__diagnostics');
+    expect(refreshedDetails?.textContent).toContain('resume_confirmation');
+    expect(refreshedDetails?.textContent).toContain('confirmations=0->1');
+
+    // PRIVACY remains true after the movement evidence is refreshed.
+    expect(refreshedDetails?.textContent).not.toMatch(
+      /51\.5074|-3\.5792|latitude|longitude|accuracyM/i,
+    );
+  });
+});
 describe('the browser build of the same screen', () => {
   beforeEach(() => {
     const storage = createMemoryStorageAdapter();

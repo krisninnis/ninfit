@@ -1,4 +1,4 @@
-﻿import { newId, type IdFactory } from '../domain/ids';
+import { newId, type IdFactory } from '../domain/ids';
 import type { Journey } from '../domain/journey';
 import type { JourneyGpsSample } from '../domain/journeyGps';
 import {
@@ -16,6 +16,7 @@ import {
 import { createAndroidJourneyServiceLocationProvider } from './journeyAndroidServiceLocationProvider';
 import {
   createJourneyFlightRecorder,
+  type JourneyFlightRecorder,
   type JourneyFlightRecorderEntry,
 } from './journeyFlightRecorder';
 import { resolveInjectedNativeJourneyDurableQueue } from './journeyNativeDurableQueueBootstrap';
@@ -52,6 +53,7 @@ export interface JourneyMotionSessionOptions {
   journey: Journey;
   provider?: JourneyLocationProvider;
   idFactory?: IdFactory;
+  flightRecorder?: JourneyFlightRecorder;
   onJourneyChanged?(journey: Journey): void;
   onMotionStateChanged?(state: JourneyMotionState): void;
   onProviderError?(error: JourneyLocationProviderError): void;
@@ -175,7 +177,7 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
     distanceMetricId,
   });
   const recovery = createJourneyRecoveryController(options.storage);
-  const flightRecorder = createJourneyFlightRecorder();
+  const flightRecorder = options.flightRecorder ?? createJourneyFlightRecorder();
   const nativeQueue = resolveInjectedNativeJourneyDurableQueue();
   const runtimeProvider = createRuntimeJourneyLocationProvider();
   const provider = options.provider

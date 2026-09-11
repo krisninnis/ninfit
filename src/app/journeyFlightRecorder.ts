@@ -1,4 +1,4 @@
-﻿import type { JourneyAutoPauseEvidence } from '../domain/journeyAutoPause';
+import type { JourneyAutoPauseEvidence } from '../domain/journeyAutoPause';
 
 export type JourneyFlightRecorderEntry = JourneyAutoPauseEvidence;
 
@@ -49,4 +49,23 @@ export function createJourneyFlightRecorder(
       return entries.map((entry) => ({ ...entry }));
     },
   };
+}
+/**
+ * Privacy-safe support view of motion decisions.
+ *
+ * This formats detector-owned categories only. It never receives a GPS sample,
+ * coordinate, exact displacement, bearing, speed, or fix timestamp.
+ */
+export function formatJourneyFlightRecorder(
+  source: readonly JourneyFlightRecorderEntry[],
+): string {
+  return source
+    .map((entry) => [
+      entry.reason,
+      `${entry.modeBefore}->${entry.modeAfter}`,
+      `signal=${entry.signal}`,
+      `confirmations=${entry.resumeConfirmationsBefore}->${entry.resumeConfirmationsAfter}`,
+      `movement=${entry.displacementBand}`,
+    ].join(' '))
+    .join('\n');
 }

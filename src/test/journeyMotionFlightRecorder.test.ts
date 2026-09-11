@@ -1,8 +1,9 @@
-﻿import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   startJourneyMotionSession,
   type JourneyFlightRecorderSession,
 } from '../app/journeyMotionSession';
+import { createJourneyFlightRecorder } from '../app/journeyFlightRecorder';
 import type {
   JourneyLocationProvider,
   JourneyLocationProviderCallbacks,
@@ -162,6 +163,61 @@ describe('Journey motion Flight Recorder integration', () => {
     });
   });
 
+  it('can share one bounded recorder across a motion-session lifecycle boundary', () => {
+    const storage = createMemoryStorageAdapter();
+    const initial = journey();
+    saveActiveJourneySnapshot(storage, initial, initial.startedAt);
+    const recorder = createJourneyFlightRecorder();
+
+    const firstSource = fakeProvider();
+    const firstSession: JourneyFlightRecorderSession = startJourneyMotionSession({
+      storage,
+      journey: initial,
+      provider: firstSource.provider,
+      idFactory: () => 'distance-1',
+      flightRecorder: recorder,
+    });
+
+    firstSource.sample({
+      latitude: 51.5,
+      longitude: -3.5,
+      accuracyM: 5,
+      recordedAt: '2026-09-11T10:00:01.000Z',
+    });
+
+    firstSource.sample({
+      latitude: 51.5,
+      longitude: -3.5,
+      accuracyM: 5,
+      recordedAt: '2026-09-11T10:00:06.000Z',
+    });
+
+    expect(firstSession.getMotionState()).toBe('auto_paused');
+    expect(recorder.snapshot().map((entry) => entry.reason)).toEqual([
+      'anchor_initialized',
+      'auto_pause',
+    ]);
+
+    const paused = firstSession.getJourney();
+    firstSession.stop();
+
+    const secondSource = fakeProvider();
+    const secondSession: JourneyFlightRecorderSession = startJourneyMotionSession({
+      storage,
+      journey: paused,
+      provider: secondSource.provider,
+      flightRecorder: recorder,
+    });
+
+    expect(secondSession.getMotionState()).toBe('auto_paused');
+
+    expect(secondSession.getFlightRecorderSnapshot().map((entry) => entry.reason)).toEqual([
+      'anchor_initialized',
+      'auto_pause',
+    ]);
+
+    secondSession.stop();
+  });
   it('exposes only privacy-safe detector evidence', () => {
     const storage = createMemoryStorageAdapter();
     const initial = journey();

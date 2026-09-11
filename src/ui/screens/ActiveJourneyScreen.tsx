@@ -2,9 +2,13 @@ import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
 import { getAppContext } from '../../app/bootstrap';
 import {
   startJourneyMotionSession,
-  type JourneyMotionSession,
+  type JourneyFlightRecorderSession,
   type JourneyMotionState,
 } from '../../app/journeyMotionSession';
+import {
+  createJourneyFlightRecorder,
+  formatJourneyFlightRecorder,
+} from '../../app/journeyFlightRecorder';
 import { subscribeInjectedJourneyAppLifecycle } from '../../app/journeyNativeAppLifecycle';
 import { resolveInjectedNativeJourneyDurableQueue } from '../../app/journeyNativeDurableQueueBootstrap';
 import type { NativeJourneyDurableReplayStopReason } from '../../app/journeyNativeDurableQueue';
@@ -102,6 +106,7 @@ function initialGpsState(journey: Journey | null): JourneyLiveGpsState {
 export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScreenProps) {
   const store = useMemo(() => getAppContext().adapter, []);
   const recovery = useMemo(() => createJourneyRecoveryController(store), [store]);
+  const flightRecorder = useMemo(() => createJourneyFlightRecorder(), []);
   const [journey, setJourney] = useState<Journey | null>(() => recovery.load());
   const [now, setNow] = useState<ISODateTime>(() => nowIso());
   const [gpsState, setGpsState] = useState<JourneyLiveGpsState>(() => initialGpsState(journey));
@@ -131,7 +136,7 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     && journey.status === 'paused'
     && loadJourneyPauseOrigin(store, journey.id) === 'auto_stationary');
   const journeyRef = useRef<Journey | null>(journey);
-  const sessionRef = useRef<JourneyMotionSession | null>(null);
+  const sessionRef = useRef<JourneyFlightRecorderSession | null>(null);
   const durableReplayRef = useRef<NativeJourneyDurableReplayCoordinator | null>(null);
   const collectionRef = useRef<JourneyCollectionHealthState>(initialJourneyCollectionHealth());
   /** Set while a durable poll loop is live, so a person can retry without waiting out a backoff. */
@@ -203,11 +208,12 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     setAutoPaused(current.status === 'paused' && pauseOrigin === 'auto_stationary');
     setGpsState(current.status === 'paused' ? 'paused' : 'connecting');
 
-    let session: JourneyMotionSession;
+    let session: JourneyFlightRecorderSession;
     try {
       session = startJourneyMotionSession({
         storage: store,
         journey: current,
+        flightRecorder,
         onJourneyChanged(next) {
           journeyRef.current = next;
           setJourney(next);
@@ -729,10 +735,15 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
         </div>
       ) : null}
 
-      {stopReason === null && !collectionHoldsClock ? null : (
+      {stopReason === null && !collectionHoldsClock && !autoPaused ? null : (
         <details className="active-journey__diagnostics">
           <summary>Technical details (for support)</summary>
-          <pre>{formatJourneyNativeDiagnostics()}</pre>
+          <pre>{[
+            formatJourneyNativeDiagnostics(),
+            autoPaused
+              ? formatJourneyFlightRecorder(flightRecorder.snapshot())
+              : '',
+          ].filter(Boolean).join('\n')}</pre>
         </details>
       )}
 
