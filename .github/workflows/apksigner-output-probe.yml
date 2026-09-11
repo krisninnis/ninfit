@@ -1,0 +1,107 @@
+name: APK signer output probe
+
+on:
+  push:
+    branches: ['ci/journey-apksigner-output-probe-s001']
+
+permissions:
+  contents: read
+
+env:
+  NINFIT_REVIEW_CERT_SHA256: 'BD:3F:0C:72:A4:A3:92:CD:FE:24:C3:E6:40:46:F3:40:6B:BC:1F:3C:32:7C:73:CE:C7:B8:D9:F9:84:78:B4:D2'
+
+jobs:
+  probe:
+    name: Observe apksigner certificate output
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact probe head
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Provide build-only Supabase placeholders
+        run: |
+          printf 'VITE_SUPABASE_URL=https://placeholder.supabase.co\n' > .env.local
+          printf 'VITE_SUPABASE_PUBLISHABLE_KEY=placeholder\n' >> .env.local
+
+      - name: Build web app and sync Android
+        run: |
+          npm run build
+          npx cap sync android
+
+      - name: Materialise review signing keystore
+        env:
+          NINFIT_REVIEW_KEYSTORE_BASE64: ${{ secrets.NINFIT_REVIEW_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          [ -n "${NINFIT_REVIEW_KEYSTORE_BASE64:-}" ] || { echo '::error::Review keystore secret unavailable'; exit 1; }
+          keystore_dir="$RUNNER_TEMP/ninfit-review-signing"
+          install -d -m 700 "$keystore_dir"
+          printf '%s' "$NINFIT_REVIEW_KEYSTORE_BASE64" | base64 -d > "$keystore_dir/review.jks"
+          chmod 600 "$keystore_dir/review.jks"
+          [ -s "$keystore_dir/review.jks" ] || { echo '::error::Decoded review keystore is empty'; exit 1; }
+          echo "NINFIT_REVIEW_STORE_FILE=$keystore_dir/review.jks" >> "$GITHUB_ENV"
+
+      - name: Compile review-signed debug APK
+        working-directory: android
+        env:
+          NINFIT_REVIEW_SIGNING_REQUIRED: 'true'
+          NINFIT_REVIEW_KEY_ALIAS: ${{ secrets.NINFIT_REVIEW_KEY_ALIAS }}
+          NINFIT_REVIEW_STORE_PASSWORD: ${{ secrets.NINFIT_REVIEW_STORE_PASSWORD }}
+          NINFIT_REVIEW_KEY_PASSWORD: ${{ secrets.NINFIT_REVIEW_KEY_PASSWORD }}
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Observe apksigner output without changing acceptance logic
+        run: |
+          set -euo pipefail
+          apk='android/app/build/outputs/apk/debug/app-debug.apk'
+          [ -f "$apk" ] || { echo "::error::No APK at $apk"; exit 1; }
+
+          apksigner="$(find "${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}/build-tools" \
+            -maxdepth 2 -name apksigner -type f 2>/dev/null | sort -V | tail -n 1 || true)"
+          [ -n "$apksigner" ] || { echo '::error::apksigner not found'; exit 1; }
+
+          echo "apksigner path: $apksigner"
+          "$apksigner" version || true
+          certs="$("$apksigner" verify --print-certs --verbose "$apk")"
+
+          echo '=== BEGIN RAW APKSIGNER OUTPUT ==='
+          printf '%s\n' "$certs"
+          echo '=== END RAW APKSIGNER OUTPUT ==='
+
+          echo '=== CERTIFICATE-RELATED LINES ==='
+          printf '%s\n' "$certs" | grep -Ei 'signer|certificate|digest|sha-?256|dn:' || true
+
+          echo '=== CURRENT PARSER RESULT ==='
+          observed="$(printf '%s\n' "$certs" | sed -n 's/^Signer #1 certificate SHA-256 digest: *//p' | tr 'A-Z' 'a-z')"
+          subject="$(printf '%s\n' "$certs" | sed -n 's/^Signer #1 certificate DN: *//p')"
+          signer_count="$(printf '%s\n' "$certs" | grep -c '^Signer #[0-9]* certificate SHA-256 digest:' || true)"
+          printf 'subject=<%s>\n' "$subject"
+          printf 'observed=<%s>\n' "$observed"
+          printf 'signer_count=<%s>\n' "$signer_count"
+
+          echo '=== KEYTOOL CROSS-CHECK ==='
+          keytool -printcert -jarfile "$apk" | grep -E 'Owner:|SHA256:' || true
+
+          expected="$(printf '%s' "$NINFIT_REVIEW_CERT_SHA256" | tr -d ':' | tr 'A-Z' 'a-z')"
+          printf 'expected=<%s>\n' "$expected"
+
+      - name: Remove review keystore
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/ninfit-review-signing"
