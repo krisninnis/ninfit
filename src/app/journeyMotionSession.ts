@@ -1,4 +1,4 @@
-import { newId, type IdFactory } from '../domain/ids';
+﻿import { newId, type IdFactory } from '../domain/ids';
 import type { Journey } from '../domain/journey';
 import type { JourneyGpsSample } from '../domain/journeyGps';
 import {
@@ -14,6 +14,10 @@ import {
   type JourneyPauseOrigin,
 } from '../storage/journeyPauseProvenance';
 import { createAndroidJourneyServiceLocationProvider } from './journeyAndroidServiceLocationProvider';
+import {
+  createJourneyFlightRecorder,
+  type JourneyFlightRecorderEntry,
+} from './journeyFlightRecorder';
 import { resolveInjectedNativeJourneyDurableQueue } from './journeyNativeDurableQueueBootstrap';
 import { createJourneyGpsRuntimeController } from './journeyGpsRuntimeController';
 import type {
@@ -78,6 +82,11 @@ export interface JourneyMotionSession {
   resumeProvider(): boolean;
   /** Permanently stop both the provider and any further replay processing. */
   stop(): void;
+}
+
+export interface JourneyFlightRecorderSession extends JourneyMotionSession {
+  /** Read-only, bounded, privacy-safe evidence from motion decisions observed by this session. */
+  getFlightRecorderSnapshot(): JourneyFlightRecorderEntry[];
 }
 
 function directPhoneGpsSourceId(journey: Journey): string {
@@ -145,7 +154,7 @@ function initialDetectorState(journey: Journey, pauseOrigin: JourneyPauseOrigin)
  * starting browser geolocation. The Android service emits no direct samples: SQLite replay
  * remains its sole route into `processSample`. Web/PWA stays browser-based.
  */
-export function startJourneyMotionSession(options: JourneyMotionSessionOptions): JourneyMotionSession {
+export function startJourneyMotionSession(options: JourneyMotionSessionOptions): JourneyFlightRecorderSession {
   const pauseOrigin = options.journey.status === 'paused'
     ? loadJourneyPauseOrigin(options.storage, options.journey.id)
     : 'manual';
@@ -166,6 +175,7 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
     distanceMetricId,
   });
   const recovery = createJourneyRecoveryController(options.storage);
+  const flightRecorder = createJourneyFlightRecorder();
   const nativeQueue = resolveInjectedNativeJourneyDurableQueue();
   const runtimeProvider = createRuntimeJourneyLocationProvider();
   const provider = options.provider
@@ -200,6 +210,7 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
     publishJourney(result.journey);
 
     const evaluation = evaluateJourneyAutoPause(detector, sample);
+    flightRecorder.record(evaluation.evidence);
     detector = evaluation.state;
     if (evaluation.signal !== 'auto_pause') return;
 
@@ -211,6 +222,7 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
 
   function handleAutoPausedSample(sample: JourneyGpsSample): void {
     const evaluation = evaluateJourneyAutoPause(detector, sample);
+    flightRecorder.record(evaluation.evidence);
     detector = evaluation.state;
     if (evaluation.signal !== 'auto_resume') return;
 
@@ -312,6 +324,9 @@ export function startJourneyMotionSession(options: JourneyMotionSessionOptions):
     },
     isProviderStopped() {
       return providerStopped;
+    },
+    getFlightRecorderSnapshot() {
+      return flightRecorder.snapshot();
     },
     processSample,
     stopProvider,
