@@ -347,7 +347,7 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
       if (sessionRef.current === session) sessionRef.current = null;
       if (durableReplayRef.current === durableReplay) durableReplayRef.current = null;
     };
-  }, [journey?.status, journey?.activityType, store]);
+  }, [journey?.activityType, store]);
 
   useEffect(() => {
     if (journey?.status !== 'recording') return undefined;

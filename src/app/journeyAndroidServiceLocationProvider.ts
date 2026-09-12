@@ -22,6 +22,18 @@ const runtime: CapacitorRuntimeFacade = {
 
 const nativePlugin = registerPlugin<NinFitJourneyLocationPlugin>('NinFitJourneyLocation');
 
+const latestSessionGenerationByJourney = new Map<string, number>();
+
+function claimJourneySession(journeyId: string): number {
+  const generation = (latestSessionGenerationByJourney.get(journeyId) ?? 0) + 1;
+  latestSessionGenerationByJourney.set(journeyId, generation);
+  return generation;
+}
+
+function ownsJourneySession(journeyId: string, generation: number): boolean {
+  return latestSessionGenerationByJourney.get(journeyId) === generation;
+}
+
 /**
  * Android Journey provider whose only job is to own the foreground native recorder.
  *
@@ -40,6 +52,7 @@ export function createAndroidJourneyServiceLocationProvider(options: {
     kind: 'android_native',
     supportsBackground: true,
     start(callbacks: JourneyLocationProviderCallbacks): JourneyLocationProviderSession {
+      const sessionGeneration = claimJourneySession(options.journeyId);
       let stopped = false;
       let started = false;
       let stopRequested = false;
@@ -62,7 +75,7 @@ export function createAndroidJourneyServiceLocationProvider(options: {
 
       void plugin.start({ journeyId: options.journeyId }).then(() => {
         started = true;
-        if (stopRequested) {
+        if (stopRequested && ownsJourneySession(options.journeyId, sessionGeneration)) {
           void plugin.stop({ journeyId: options.journeyId });
         }
       }).catch((cause) => {

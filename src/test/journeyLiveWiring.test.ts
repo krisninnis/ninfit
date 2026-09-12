@@ -68,9 +68,10 @@ describe('Journey GPS ownership', () => {
     expect(screen).not.toContain('watchPosition(');
   });
 
-  it('keys provider lifetime to recorder status and activity type, not the changing Journey object', () => {
+  it('keeps the motion provider alive across automatic Journey status transitions', () => {
     const dependencies = effectDependenciesAfter(screen, 'startJourneyMotionSession({');
-    expect(dependencies).toEqual(['journey?.activityType', 'journey?.status', 'store']);
+    expect(dependencies).toEqual(['journey?.activityType', 'store']);
+    expect(dependencies).not.toContain('journey?.status');
     expect(dependencies).not.toContain('journey');
   });
 
