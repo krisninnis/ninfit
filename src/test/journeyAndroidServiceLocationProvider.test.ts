@@ -125,4 +125,44 @@ describe('Android Journey foreground-service provider session ownership', () => 
     expect(plugin.start).toHaveBeenCalledTimes(2);
     expect(plugin.stop).not.toHaveBeenCalled();
   });
+
+  it('reports when a stale delayed STOP is suppressed for a newer same-Journey session', async () => {
+    let resolveFirstStart!: () => void;
+    const firstStart = new Promise<void>((resolve) => {
+      resolveFirstStart = resolve;
+    });
+
+    let startCount = 0;
+    const plugin = {
+      start: vi.fn(() => {
+        startCount += 1;
+        return startCount === 1 ? firstStart : Promise.resolve();
+      }),
+      stop: vi.fn(async () => undefined),
+    };
+    const diagnostics: string[] = [];
+
+    const staleProvider = createAndroidJourneyServiceLocationProvider({
+      journeyId: 'journey-diagnostic',
+      plugin,
+      onDiagnostic: (event) => diagnostics.push(event),
+    });
+    const newerProvider = createAndroidJourneyServiceLocationProvider({
+      journeyId: 'journey-diagnostic',
+      plugin,
+      onDiagnostic: (event) => diagnostics.push(event),
+    });
+
+    const staleSession = staleProvider.start({ onSample: vi.fn() });
+    staleSession.stop();
+    newerProvider.start({ onSample: vi.fn() });
+
+    await Promise.resolve();
+    resolveFirstStart();
+    await firstStart;
+    await Promise.resolve();
+
+    expect(plugin.stop).not.toHaveBeenCalled();
+    expect(diagnostics).toContain('stale_stop_suppressed');
+  });
 });

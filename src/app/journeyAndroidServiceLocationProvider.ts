@@ -46,6 +46,7 @@ function ownsJourneySession(journeyId: string, generation: number): boolean {
 export function createAndroidJourneyServiceLocationProvider(options: {
   journeyId: string;
   plugin?: NinFitJourneyLocationPlugin;
+  onDiagnostic?: (event: string) => void;
 }): JourneyLocationProvider {
   const plugin = options.plugin ?? nativePlugin;
   return {
@@ -77,6 +78,8 @@ export function createAndroidJourneyServiceLocationProvider(options: {
         started = true;
         if (stopRequested && ownsJourneySession(options.journeyId, sessionGeneration)) {
           void plugin.stop({ journeyId: options.journeyId });
+        } else if (stopRequested) {
+          options.onDiagnostic?.('stale_stop_suppressed');
         }
       }).catch((cause) => {
         if (stopped) return;
