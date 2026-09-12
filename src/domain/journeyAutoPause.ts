@@ -24,6 +24,8 @@ export interface JourneyAutoPauseState {
   anchor: JourneyGpsSample | null;
   stationarySinceMs: number | null;
   resumeConfirmations: number;
+  /** One reliable excursion outside the stationary radius awaiting confirmation. */
+  pendingMovement?: boolean;
   /** Last reliable sample time consumed as motion evidence. Optional for recovered legacy state. */
   lastEvaluatedMs?: number | null;
 }
@@ -33,6 +35,7 @@ export const INITIAL_JOURNEY_AUTO_PAUSE_STATE: JourneyAutoPauseState = {
   anchor: null,
   stationarySinceMs: null,
   resumeConfirmations: 0,
+  pendingMovement: false,
   lastEvaluatedMs: null,
 };
 
@@ -44,6 +47,7 @@ export type JourneyAutoPauseEvidenceReason =
   | 'inside_resume_threshold'
   | 'resume_confirmation'
   | 'auto_resume'
+  | 'movement_confirmation_pending'
   | 'movement_reset'
   | 'stationary_waiting'
   | 'auto_pause';
@@ -220,11 +224,28 @@ export function evaluateJourneyAutoPause(
   }
 
   if (distanceFromAnchorM > policy.stationaryRadiusM) {
+    if (!previous.pendingMovement) {
+      const state: JourneyAutoPauseState = {
+        ...previous,
+        pendingMovement: true,
+        lastEvaluatedMs: timeMs,
+      };
+
+      return evaluation(
+        previous,
+        state,
+        'none',
+        'movement_confirmation_pending',
+        band,
+      );
+    }
+
     const state: JourneyAutoPauseState = {
       mode: 'moving',
       anchor: sample,
       stationarySinceMs: timeMs,
       resumeConfirmations: 0,
+      pendingMovement: false,
       lastEvaluatedMs: timeMs,
     };
 
@@ -237,6 +258,7 @@ export function evaluateJourneyAutoPause(
     const state: JourneyAutoPauseState = {
       ...previous,
       stationarySinceMs,
+      pendingMovement: false,
       lastEvaluatedMs: timeMs,
     };
 
@@ -248,6 +270,7 @@ export function evaluateJourneyAutoPause(
     anchor: previous.anchor,
     stationarySinceMs,
     resumeConfirmations: 0,
+    pendingMovement: false,
     lastEvaluatedMs: timeMs,
   };
 

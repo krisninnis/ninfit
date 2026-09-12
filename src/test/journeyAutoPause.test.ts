@@ -36,20 +36,6 @@ describe('Journey auto-pause detector', () => {
     expect(result.state.mode).toBe('auto_paused');
   });
 
-  it('resets the stationary window when genuine movement leaves the radius', () => {
-    let result = feed(INITIAL_JOURNEY_AUTO_PAUSE_STATE, sample('2026-09-06T14:00:00.000Z'));
-    result = feed(result.state, sample('2026-09-06T14:00:04.000Z', 51.5074, -3.5792));
-    result = feed(result.state, sample('2026-09-06T14:00:05.000Z', 51.50746, -3.5792));
-    expect(result.signal).toBe('none');
-    expect(result.state.mode).toBe('moving');
-
-    result = feed(result.state, sample('2026-09-06T14:00:09.999Z', 51.507461, -3.5792));
-    expect(result.signal).toBe('none');
-
-    result = feed(result.state, sample('2026-09-06T14:00:10.000Z', 51.507461, -3.579199));
-    expect(result.signal).toBe('auto_pause');
-  });
-
   it('ignores poor-accuracy fixes rather than auto-pausing from weak evidence', () => {
     let result = feed(INITIAL_JOURNEY_AUTO_PAUSE_STATE, sample('2026-09-06T14:00:00.000Z'));
     result = feed(result.state, sample('2026-09-06T14:00:10.000Z', 51.5074, -3.5792, 35));
@@ -108,5 +94,98 @@ describe('Journey auto-pause detector', () => {
 
     expect(result.signal).toBe('none');
     expect(result.state).toEqual(beforeReplay);
+  });
+  it('does not count a replayed excursion as movement confirmation', () => {
+    let result = feed(
+      INITIAL_JOURNEY_AUTO_PAUSE_STATE,
+      sample('2026-09-06T14:00:00.000Z'),
+    );
+
+    result = feed(
+      result.state,
+      sample('2026-09-06T14:00:03.000Z'),
+    );
+
+    const excursion = sample(
+      '2026-09-06T14:00:04.000Z',
+      51.50746,
+      -3.5792,
+    );
+
+    result = feed(result.state, excursion);
+
+    expect(result.signal).toBe('none');
+    expect(result.state.pendingMovement).toBe(true);
+
+    const beforeReplay = result.state;
+    result = feed(result.state, excursion);
+
+    expect(result.signal).toBe('none');
+    expect(result.state).toEqual(beforeReplay);
+    expect(result.state.pendingMovement).toBe(true);
+  });
+
+  it('does not discard the stationary window for one isolated GPS excursion that returns to the anchor', () => {
+    let result = feed(
+      INITIAL_JOURNEY_AUTO_PAUSE_STATE,
+      sample('2026-09-06T14:00:00.000Z'),
+    );
+
+    result = feed(
+      result.state,
+      sample('2026-09-06T14:00:03.000Z', 51.5074, -3.5792),
+    );
+    expect(result.signal).toBe('none');
+
+    result = feed(
+      result.state,
+      sample('2026-09-06T14:00:04.000Z', 51.50746, -3.5792),
+    );
+    expect(result.signal).toBe('none');
+
+    result = feed(
+      result.state,
+      sample('2026-09-06T14:00:05.000Z', 51.5074, -3.5792),
+    );
+
+    expect(result.signal).toBe('auto_pause');
+    expect(result.state.mode).toBe('auto_paused');
+  });
+  it('resets the stationary window after repeated GPS fixes confirm genuine movement', () => {
+    let result = feed(
+      INITIAL_JOURNEY_AUTO_PAUSE_STATE,
+      sample('2026-09-06T15:00:00.000Z'),
+    );
+
+    result = feed(
+      result.state,
+      sample('2026-09-06T15:00:03.000Z'),
+    );
+    expect(result.signal).toBe('none');
+
+    result = feed(
+      result.state,
+      sample('2026-09-06T15:00:04.000Z', 51.50746, -3.5792),
+    );
+    expect(result.signal).toBe('none');
+
+    result = feed(
+      result.state,
+      sample('2026-09-06T15:00:05.000Z', 51.50747, -3.5792),
+    );
+    expect(result.signal).toBe('none');
+    expect(result.state.mode).toBe('moving');
+
+    result = feed(
+      result.state,
+      sample('2026-09-06T15:00:09.999Z', 51.507471, -3.5792),
+    );
+    expect(result.signal).toBe('none');
+
+    result = feed(
+      result.state,
+      sample('2026-09-06T15:00:10.000Z', 51.507471, -3.579199),
+    );
+    expect(result.signal).toBe('auto_pause');
   });
 });

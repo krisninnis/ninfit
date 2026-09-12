@@ -30,7 +30,9 @@ function reliableForMotion(
 }
 
 /**
- * Frozen reference of the pre-Flight-Recorder detector behaviour.
+ * Frozen reference of the detector behaviour expected to remain invariant
+ * under Flight Recorder instrumentation.
+ * Baseline advanced after the intentional confirmed-movement auto-pause fix.
  * This intentionally returns only state + signal.
  */
 function referenceEvaluate(
@@ -108,12 +110,24 @@ function referenceEvaluate(
   }
 
   if (distanceFromAnchorM > policy.stationaryRadiusM) {
+    if (!previous.pendingMovement) {
+      return {
+        state: {
+          ...previous,
+          pendingMovement: true,
+          lastEvaluatedMs: timeMs,
+        },
+        signal: 'none',
+      };
+    }
+
     return {
       state: {
         mode: 'moving',
         anchor: sample,
         stationarySinceMs: timeMs,
         resumeConfirmations: 0,
+        pendingMovement: false,
         lastEvaluatedMs: timeMs,
       },
       signal: 'none',
@@ -130,6 +144,7 @@ function referenceEvaluate(
       state: {
         ...previous,
         stationarySinceMs,
+        pendingMovement: false,
         lastEvaluatedMs: timeMs,
       },
       signal: 'none',
@@ -142,6 +157,7 @@ function referenceEvaluate(
       anchor: previous.anchor,
       stationarySinceMs,
       resumeConfirmations: 0,
+      pendingMovement: false,
       lastEvaluatedMs: timeMs,
     },
     signal: 'auto_pause',
