@@ -7,13 +7,13 @@ import {
 } from '../../app/journeyMotionSession';
 import {
   createJourneyFlightRecorder,
-  formatJourneyFlightRecorder,
 } from '../../app/journeyFlightRecorder';
+import { formatJourneyDiagnosticLog } from '../../app/journeyDiagnosticLog';
 import { subscribeInjectedJourneyAppLifecycle } from '../../app/journeyNativeAppLifecycle';
 import { resolveInjectedNativeJourneyDurableQueue } from '../../app/journeyNativeDurableQueueBootstrap';
 import type { NativeJourneyDurableReplayStopReason } from '../../app/journeyNativeDurableQueue';
 import {
-  formatJourneyNativeDiagnostics,
+  readJourneyNativeDiagnostics,
   recordJourneyNativeDiagnostic,
   recordJourneyNativeReplayDiagnostic,
 } from '../../app/journeyNativeDiagnostics';
@@ -177,6 +177,7 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
    */
   const collectionHoldsClock = journeyCollectionHoldsActiveTime(collection);
   const activeTimeHeld = recorderStopped || collectionHoldsClock;
+  const hasNativeJourneyDiagnostics = resolveInjectedNativeJourneyDurableQueue() !== null;
 
   useEffect(() => {
     if (journey?.status !== 'recording' || activeTimeHeld) return undefined;
@@ -584,6 +585,19 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     });
   };
 
+  const copyDiagnosticLog = async () => {
+    try {
+      const diagnosticLog = formatJourneyDiagnosticLog(
+        readJourneyNativeDiagnostics(),
+        flightRecorder.snapshot(),
+      );
+
+      await navigator.clipboard.writeText(diagnosticLog);
+    } catch {
+      // Diagnostic export failure must never affect Journey runtime.
+    }
+  };
+
   const leave = () => {
     if (controlsLocked || pausing || finishing) return;
     stopGps();
@@ -735,17 +749,18 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
         </div>
       ) : null}
 
-      {stopReason === null && !collectionHoldsClock && !autoPaused ? null : (
+      {hasNativeJourneyDiagnostics ? (
         <details className="active-journey__diagnostics">
           <summary>Technical details (for support)</summary>
-          <pre>{[
-            formatJourneyNativeDiagnostics(),
-            autoPaused
-              ? formatJourneyFlightRecorder(flightRecorder.snapshot())
-              : '',
-          ].filter(Boolean).join('\n')}</pre>
+          <pre>{formatJourneyDiagnosticLog(
+            readJourneyNativeDiagnostics(),
+            flightRecorder.snapshot(),
+          )}</pre>
+          <button type="button" className="btn" onClick={() => void copyDiagnosticLog()}>
+            Copy diagnostic log
+          </button>
         </details>
-      )}
+      ) : null}
 
       <div className="active-journey__dock" aria-label="Journey controls">
         {isCompleted ? (

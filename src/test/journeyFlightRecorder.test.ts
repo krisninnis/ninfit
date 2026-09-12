@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   evaluateJourneyAutoPause,
   INITIAL_JOURNEY_AUTO_PAUSE_STATE,
@@ -7,6 +7,7 @@ import {
 import type { JourneyGpsSample } from '../domain/journeyGps';
 import {
   createJourneyFlightRecorder,
+  formatJourneyFlightRecorder,
   type JourneyFlightRecorderEntry,
 } from '../app/journeyFlightRecorder';
 
@@ -136,6 +137,31 @@ describe('Journey Flight Recorder', () => {
     expect(recorder.snapshot()[0]).not.toBe(evaluation.evidence);
   });
 
+  it('formats motion evidence without exposing raw GPS details', () => {
+    const evaluation = evaluateJourneyAutoPause(
+      pausedState(),
+      sample('2026-09-11T09:00:01.000Z', 51.50747, -3.5792),
+    );
+
+    const formatted = formatJourneyFlightRecorder([evaluation.evidence]);
+
+    expect(formatted).toContain('resume_confirmation');
+    expect(formatted).toContain('movement=beyond_resume_threshold');
+
+    for (const forbidden of [
+      '51.50747',
+      '-3.5792',
+      '2026-09-11T09:00:01.000Z',
+      'latitude',
+      'longitude',
+      'accuracyM',
+      'recordedAt',
+      'bearing',
+      'speed',
+    ]) {
+      expect(formatted).not.toContain(forbidden);
+    }
+  });
   it('starts from the existing initial detector contract', () => {
     expect(INITIAL_JOURNEY_AUTO_PAUSE_STATE).toMatchObject({
       mode: 'moving',

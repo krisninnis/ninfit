@@ -120,7 +120,7 @@ describe('Journey GPS ownership', () => {
     const lifecycleEffect = between(
       screen,
       'return subscribeInjectedJourneyAppLifecycle((state) => {',
-      'useEffect(() => {\n    if (journey?.status !==',
+      "if (journey?.status !== 'recording' && !autoPaused && controlsLocked) {",
     );
     expect(lifecycleEffect).toContain("if (state === 'backgrounded') {");
     expect(lifecycleEffect).toContain('setControlsLocked(true);');

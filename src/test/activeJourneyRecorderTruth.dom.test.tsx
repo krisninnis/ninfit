@@ -248,6 +248,99 @@ describe('the Active Journey screen over a native recorder', () => {
   });
 });
 
+describe('Journey diagnostic evidence export', () => {
+  it('offers a copyable diagnostic log throughout a normal recording Journey', async () => {
+    const storage = createMemoryStorageAdapter();
+    mocks.adapter = storage;
+    const journey = recordingWalk();
+    saveActiveJourneySnapshot(storage, journey, journey.startedAt);
+
+    const queue: NativeJourneyDurablePositionQueue = {
+      async readPending() { return []; },
+      acknowledgeThrough: vi.fn(async () => undefined),
+      clear: vi.fn(async () => undefined),
+    };
+    (globalThis as QueueHost)[NINFIT_NATIVE_JOURNEY_DURABLE_QUEUE_KEY] = queue;
+
+    installSilentNativeBridge();
+
+    render(<ActiveJourneyScreen onClose={() => {}} />);
+    await settle();
+
+    expect(metricValue('State')).toBe('Recording');
+
+    expect(
+      screen.getByRole('button', { name: 'Copy diagnostic log' }),
+    ).toBeTruthy();
+  });
+
+  it('copies the current privacy-safe diagnostic evidence', async () => {
+    const storage = createMemoryStorageAdapter();
+    mocks.adapter = storage;
+    const journey = recordingWalk();
+    saveActiveJourneySnapshot(storage, journey, journey.startedAt);
+
+    const queue: NativeJourneyDurablePositionQueue = {
+      async readPending() { return []; },
+      acknowledgeThrough: vi.fn(async () => undefined),
+      clear: vi.fn(async () => undefined),
+    };
+    (globalThis as QueueHost)[NINFIT_NATIVE_JOURNEY_DURABLE_QUEUE_KEY] = queue;
+    installSilentNativeBridge();
+
+    const writeText = vi.fn(async (_text: string) => undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+
+    render(<ActiveJourneyScreen onClose={() => {}} />);
+    await settle();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy diagnostic log' }));
+    await settle();
+
+    expect(writeText).toHaveBeenCalledTimes(1);
+    const copied = String(writeText.mock.calls[0]?.[0] ?? '');
+    expect(copied).toContain('session_started');
+    expect(copied).toContain('queue=yes');
+    expect(copied).not.toMatch(/latitude|longitude|accuracyM/i);
+  });
+
+  it('keeps the Journey recording when diagnostic clipboard export fails', async () => {
+    const storage = createMemoryStorageAdapter();
+    mocks.adapter = storage;
+    const journey = recordingWalk();
+    saveActiveJourneySnapshot(storage, journey, journey.startedAt);
+
+    const queue: NativeJourneyDurablePositionQueue = {
+      async readPending() { return []; },
+      acknowledgeThrough: vi.fn(async () => undefined),
+      clear: vi.fn(async () => undefined),
+    };
+    (globalThis as QueueHost)[NINFIT_NATIVE_JOURNEY_DURABLE_QUEUE_KEY] = queue;
+    installSilentNativeBridge();
+
+    const writeText = vi.fn(async (_text: string) => {
+      throw new Error('Clipboard unavailable');
+    });
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+
+    render(<ActiveJourneyScreen onClose={() => {}} />);
+    await settle();
+
+    expect(metricValue('State')).toBe('Recording');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy diagnostic log' }));
+    await settle();
+
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(metricValue('State')).toBe('Recording');
+  });
+});
 describe('Journey Flight Recorder support evidence', () => {
   it('shows privacy-safe motion evidence when the real detector auto-pauses', async () => {
     const storage = createMemoryStorageAdapter();
