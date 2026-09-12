@@ -808,4 +808,3 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     </section>
   );
 }
-
