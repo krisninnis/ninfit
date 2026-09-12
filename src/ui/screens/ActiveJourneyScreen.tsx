@@ -9,6 +9,7 @@ import {
   createJourneyFlightRecorder,
 } from '../../app/journeyFlightRecorder';
 import { formatJourneyDiagnosticLog } from '../../app/journeyDiagnosticLog';
+import { preserveCompletedJourneyDiagnosticLog } from '../../app/journeyCompletedDiagnosticLog';
 import { subscribeInjectedJourneyAppLifecycle } from '../../app/journeyNativeAppLifecycle';
 import { resolveInjectedNativeJourneyDurableQueue } from '../../app/journeyNativeDurableQueueBootstrap';
 import type { NativeJourneyDurableReplayStopReason } from '../../app/journeyNativeDurableQueue';
@@ -532,6 +533,18 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     resetCollectionHealth();
     setGpsState('finished');
     setNow(next.endedAt ?? nowIso());
+    try {
+      preserveCompletedJourneyDiagnosticLog(
+        next.id,
+        formatJourneyDiagnosticLog(
+          readJourneyNativeDiagnostics(),
+          flightRecorder.snapshot(),
+        ),
+      );
+    } catch {
+      // Diagnostics must never affect Journey runtime or completion.
+    }
+
     onCompleted?.(next.id);
   };
 
@@ -795,3 +808,4 @@ export function ActiveJourneyScreen({ onClose, onCompleted }: ActiveJourneyScree
     </section>
   );
 }
+

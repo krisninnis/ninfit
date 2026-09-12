@@ -2,6 +2,7 @@
 
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { readCompletedJourneyDiagnosticLog } from '../app/journeyCompletedDiagnosticLog';
 import type { NativeJourneyBufferedPosition } from '../app/journeyNativePositionBuffer';
 import type { NativeJourneyDurablePositionQueue } from '../app/journeyNativeDurableQueue';
 import { NINFIT_NATIVE_JOURNEY_DURABLE_QUEUE_KEY } from '../app/journeyNativeDurableQueueBootstrap';
@@ -167,6 +168,12 @@ describe('Finish with a durable native queue', () => {
     expect(cleared).toEqual(['journey-finish-replay']);
     expect(bridge.stopped()).toBe(1);
     expect(onCompleted).toHaveBeenCalledWith('journey-finish-replay');
+
+    const diagnosticLog = readCompletedJourneyDiagnosticLog('journey-finish-replay');
+    expect(diagnosticLog).not.toBeNull();
+    expect(diagnosticLog).toContain('NinFit Journey Diagnostic Log');
+    expect(diagnosticLog).toContain('[NATIVE TRANSPORT]');
+    expect(diagnosticLog).toContain('[MOTION DETECTOR]');
 
     const completed = loadJourneyHistory(storage)[0];
     expect(completed?.status).toBe('completed');

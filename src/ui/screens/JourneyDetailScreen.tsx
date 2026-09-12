@@ -1,5 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { getAppContext } from '../../app/bootstrap';
+import { readCompletedJourneyDiagnosticLog } from '../../app/journeyCompletedDiagnosticLog';
 import { journeyTrustedRouteSegments } from '../../domain/journeyRouteSegments';
 import { loadJourneyHistory } from '../../storage/journeyHistory';
 import { journeyName, saveJourneyName } from '../../storage/journeyNames';
@@ -41,6 +42,7 @@ export function JourneyDetailScreen({
   const [savedName, setSavedName] = useState(() => journeyName(storage, journeyId) ?? '');
   const [draftName, setDraftName] = useState(() => journeyName(storage, journeyId) ?? '');
   const [nameSaved, setNameSaved] = useState(false);
+  const diagnosticLog = readCompletedJourneyDiagnosticLog(journeyId);
 
   if (journey === null) {
     return (
@@ -65,6 +67,16 @@ export function JourneyDetailScreen({
   const when = completedDate(journey);
   const drawableRoute = journeyTrustedRouteSegments(journey)
     .some((segment) => segment.length >= 2);
+
+  const copyDiagnosticLog = async () => {
+    if (diagnosticLog === null) return;
+
+    try {
+      await navigator.clipboard.writeText(diagnosticLog);
+    } catch {
+      // Diagnostic export failure must never affect completed Journey viewing.
+    }
+  };
 
   const saveName = () => {
     const next = saveJourneyName(storage, journey.id, draftName) ?? '';
@@ -186,6 +198,15 @@ export function JourneyDetailScreen({
         </button>
         <p>Uses this Journey's saved privacy settings. Sharing is not enabled yet.</p>
       </div>
+
+      {diagnosticLog !== null ? (
+        <div className="journey-detail__postcard-action">
+          <button type="button" className="btn btn--secondary" onClick={copyDiagnosticLog}>
+            Copy diagnostic log
+          </button>
+          <p>Copies the privacy-safe diagnostic evidence captured when this Journey finished.</p>
+        </div>
+      ) : null}
 
       <section className="journey-detail__facts" aria-label="Journey details">
         <div>
